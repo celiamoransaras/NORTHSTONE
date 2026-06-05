@@ -326,8 +326,8 @@ function AthleteTrainingWithRPE({ athleteId }) {
     return `${days[date.getDay()]} ${date.getDate()} ${months[date.getMonth()]}`
   }
 
-  const RPE_LABELS = ['','Muy fácil 😴','Fácil 🙂','Moderado 😐','Duro 😤','Máximo 🔥']
-  const RPE_COLORS = ['','var(--success)','var(--success)','var(--warning)','var(--error)','var(--error)']
+  const RPE_LABELS = ['','Muy fácil 😴','Fácil 🙂','Ligero 🙂','Moderado 😐','Algo duro 😐','Duro 😤','Muy duro 😤','Muy muy duro 🥵','Casi máximo 🔥','Máximo 🔥']
+  const RPE_COLORS = ['','var(--success)','var(--success)','var(--success)','var(--success)','var(--warning)','var(--warning)','var(--warning)','var(--error)','var(--error)','var(--error)']
 
   return (
     <div className="page fade-in">
@@ -438,9 +438,9 @@ function AthleteTrainingWithRPE({ athleteId }) {
               </div>
               <div className="section-title">Esfuerzo percibido (RPE)</div>
               <div style={{ display: 'flex', gap: 8, justifyContent: 'center', marginBottom: 16 }}>
-                {[1,2,3,4,5].map(v => (
+                {[1,2,3,4,5,6,7,8,9,10].map(v => (
                   <button key={v} onClick={() => setRpe(v)}
-                    style={{ width: 52, height: 52, borderRadius: 12, fontSize: 20, fontWeight: 800, border: `3px solid ${rpe === v ? RPE_COLORS[v] : 'var(--border)'}`, background: rpe === v ? RPE_COLORS[v]+'20' : 'var(--bg)', color: rpe === v ? RPE_COLORS[v] : 'var(--text-muted)', cursor: 'pointer', fontFamily: "'Barlow Condensed', sans-serif" }}>
+                    style={{ width: 44, height: 44, borderRadius: 10, fontSize: 16, fontWeight: 800, border: `3px solid ${rpe === v ? RPE_COLORS[v] : 'var(--border)'}`, background: rpe === v ? RPE_COLORS[v]+'20' : 'var(--bg)', color: rpe === v ? RPE_COLORS[v] : 'var(--text-muted)', cursor: 'pointer', fontFamily: "'Barlow Condensed', sans-serif" }}>
                     {v}
                   </button>
                 ))}
