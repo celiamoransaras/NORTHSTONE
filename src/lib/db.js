@@ -69,7 +69,7 @@ export const Sessions = {
     if (!newSession) return null
 
     if (exercises.length) {
-      await supabase.from('exercises').insert(exercises.map((e, i) => ({ ...e, session_id: newSession.id, sort_order: i })))
+      await supabase.from('exercises').insert(exercises.map((e, i) => ({ ...e, session_id: newSession.id, sort_order: i, id: undefined })))
     }
     if (athlete_ids.length) {
       await supabase.from('session_athletes').insert(athlete_ids.map(id => ({ session_id: newSession.id, athlete_id: id })))
