@@ -36,11 +36,12 @@ export const Sessions = {
   getAll: async () => {
     const { data } = await supabase
       .from('sessions')
-      .select('*, exercises(*), session_athletes(athlete_id)')
+      .select('*, exercises(*), session_athletes(athlete_id, attended)')
       .order('date')
     return (data || []).map(s => ({
       ...s,
-      athlete_ids: (s.session_athletes || []).map(sa => sa.athlete_id)
+      athlete_ids: (s.session_athletes || []).map(sa => sa.athlete_id),
+      attendance: (s.session_athletes || []).reduce((acc, sa) => ({ ...acc, [sa.athlete_id]: sa.attended }), {})
     }))
   },
   getByAthlete: async (athleteId) => {
@@ -89,6 +90,11 @@ export const Sessions = {
   },
   delete: async (id) => {
     await supabase.from('sessions').delete().eq('id', id)
+  },
+  toggleAttendance: async (sessionId, athleteId, current) => {
+    await supabase.from('session_athletes')
+      .update({ attended: !current })
+      .eq('session_id', sessionId).eq('athlete_id', athleteId)
   }
 }
 

@@ -103,10 +103,13 @@ export default function Training({ athleteId = null, coachView = false, embedded
         <div className="pill-tabs">
           <button className={`pill-tab ${tab==='upcoming'?'active':''}`} onClick={() => setTab('upcoming')}>Próximos ({upcoming.length})</button>
           <button className={`pill-tab ${tab==='past'?'active':''}`} onClick={() => setTab('past')}>Historial ({past.length})</button>
+          {!embedded && <button className={`pill-tab ${tab==='calendar'?'active':''}`} onClick={() => setTab('calendar')}>Calendario</button>}
         </div>
 
         {loading ? (
           <div style={{ color: 'var(--text-muted)', textAlign: 'center', padding: 24 }}>Cargando...</div>
+        ) : tab === 'calendar' ? (
+          <CalendarView sessions={sessions} onSelectDay={daySessions => { setDetailSession(daySessions[0]); setSheet('detail') }} />
         ) : displayed.length === 0 ? (
           <div className="empty-state">
             <div className="icon">📅</div>
@@ -146,16 +149,24 @@ export default function Training({ athleteId = null, coachView = false, embedded
                 </>
               )}
 
-              {!athleteId && detailSession.athlete_ids?.length > 0 && (
+              {(!athleteId || coachView) && detailSession.athlete_ids?.length > 0 && (
                 <>
-                  <div className="section-title" style={{ marginTop: 16 }}>Deportistas convocados</div>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                  <div className="section-title" style={{ marginTop: 16 }}>Asistencia</div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                     {detailSession.athlete_ids.map(id => {
                       const a = athletes.find(x=>x.id===id)
+                      const attended = detailSession.attendance?.[id] || false
                       return a ? (
-                        <div key={id} style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 20, padding: '4px 10px' }}>
-                          <div style={{ width: 8, height: 8, borderRadius: '50%', background: a.color }} />
-                          <span style={{ fontSize: 13 }}>{a.name}</span>
+                        <div key={id} onClick={async () => {
+                          await Sessions.toggleAttendance(detailSession.id, id, attended)
+                          setDetailSession(s => ({ ...s, attendance: { ...s.attendance, [id]: !attended } }))
+                        }} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px', background: attended ? 'var(--success-dim)' : 'var(--card)', borderRadius: 'var(--radius-sm)', cursor: 'pointer', border: `1px solid ${attended ? 'var(--success)' : 'var(--border)'}` }}>
+                          <div style={{ width: 22, height: 22, borderRadius: '50%', background: attended ? 'var(--success)' : 'var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                            {attended && <span style={{ color: '#fff', fontSize: 12 }}>✓</span>}
+                          </div>
+                          <div style={{ width: 8, height: 8, borderRadius: '50%', background: a.color, flexShrink: 0 }} />
+                          <span style={{ fontSize: 14, fontWeight: 500, flex: 1 }}>{a.name}</span>
+                          <span style={{ fontSize: 12, color: attended ? 'var(--success)' : 'var(--text-muted)' }}>{attended ? 'Asistió' : 'No asistió'}</span>
                         </div>
                       ) : null
                     })}
@@ -273,6 +284,65 @@ function SessionCard({ session, athletes, onPress, formatDate }) {
           {session.exercises?.length > 0 && <span className="tag">📋 {session.exercises.length} ejercicios</span>}
           {session.athlete_ids?.length > 0 && <span className="tag">👥 {session.athlete_ids.length}</span>}
         </div>
+      </div>
+    </div>
+  )
+}
+
+function CalendarView({ sessions, onSelectDay }) {
+  const [current, setCurrent] = useState(new Date())
+  const year = current.getFullYear()
+  const month = current.getMonth()
+  const MONTHS = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
+  const DAYS = ['L','M','X','J','V','S','D']
+
+  const firstDay = (new Date(year, month, 1).getDay() + 6) % 7
+  const daysInMonth = new Date(year, month + 1, 0).getDate()
+  const today = new Date().toISOString().slice(0,10)
+
+  const byDay = {}
+  sessions.forEach(s => {
+    const d = new Date(s.date + 'T12:00:00')
+    if (d.getFullYear() === year && d.getMonth() === month) {
+      const day = d.getDate()
+      if (!byDay[day]) byDay[day] = []
+      byDay[day].push(s)
+    }
+  })
+
+  const cells = [...Array(firstDay).fill(null), ...Array.from({length: daysInMonth}, (_,i) => i+1)]
+
+  return (
+    <div className="card" style={{ padding: 16 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+        <button className="btn btn-ghost btn-sm" onClick={() => setCurrent(new Date(year, month-1, 1))}>‹</button>
+        <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 800, fontSize: 17, textTransform: 'uppercase' }}>
+          {MONTHS[month]} {year}
+        </span>
+        <button className="btn btn-ghost btn-sm" onClick={() => setCurrent(new Date(year, month+1, 1))}>›</button>
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 2, marginBottom: 6 }}>
+        {DAYS.map(d => (
+          <div key={d} style={{ textAlign: 'center', fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', fontFamily: "'Barlow Condensed', sans-serif", padding: '4px 0' }}>{d}</div>
+        ))}
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4 }}>
+        {cells.map((day, i) => {
+          if (!day) return <div key={`e${i}`} />
+          const isToday = `${year}-${String(month+1).padStart(2,'0')}-${String(day).padStart(2,'0')}` === today
+          const hasSessions = byDay[day]
+          const allDone = hasSessions && hasSessions.every(s => s.athlete_ids?.length > 0 && Object.values(s.attendance||{}).some(Boolean))
+          return (
+            <div key={day} onClick={() => hasSessions && onSelectDay(hasSessions)}
+              style={{ aspectRatio: '1', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', borderRadius: 10, cursor: hasSessions ? 'pointer' : 'default',
+                background: isToday ? 'var(--accent)' : hasSessions ? 'var(--accent-dim)' : 'transparent' }}>
+              <span style={{ fontSize: 14, fontWeight: isToday ? 800 : 400, color: isToday ? '#fff' : hasSessions ? 'var(--accent)' : 'var(--text)' }}>{day}</span>
+              {hasSessions && <div style={{ width: 5, height: 5, borderRadius: '50%', background: isToday ? '#fff' : 'var(--accent)', marginTop: 1 }} />}
+            </div>
+          )
+        })}
       </div>
     </div>
   )
