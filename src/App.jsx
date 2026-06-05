@@ -21,15 +21,35 @@ const NAV = [
 ]
 
 function CoachApp() {
-  const { signOut } = useAuth()
+  const { signOut, profile, updateAvatar } = useAuth()
+
+  const handleAvatarClick = () => {
+    const input = document.createElement('input')
+    input.type = 'file'
+    input.accept = 'image/*'
+    input.onchange = async (e) => {
+      const file = e.target.files[0]
+      if (file) await updateAvatar(file)
+    }
+    input.click()
+  }
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100dvh', height: '100vh', overflow: 'hidden' }}>
       <header style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 20px', height: 'var(--header-height)', background: 'var(--bg)', flexShrink: 0 }}>
-        <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 900, fontSize: 22, letterSpacing: '1px', textTransform: 'uppercase' }}>
-          <span style={{ color: 'var(--accent)' }}>N</span>ORTHSTONE
-        </span>
+        <div>
+          <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 900, fontSize: 20, letterSpacing: '1px', textTransform: 'uppercase', lineHeight: 1.1 }}>
+            <span style={{ color: 'var(--accent)' }}>N</span>ORTHSTONE
+          </div>
+          <div style={{ fontFamily: "'Barlow', sans-serif", fontSize: 10, color: 'var(--text-muted)', fontWeight: 500, letterSpacing: '0.3px', marginTop: 1 }}>
+            by Celia Morán Saras
+          </div>
+        </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <div style={{ width: 34, height: 34, borderRadius: '50%', background: 'var(--accent)', color: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 900, fontSize: 15 }}>C</div>
+          <div onClick={handleAvatarClick} style={{ width: 34, height: 34, borderRadius: '50%', background: profile?.avatar_url ? 'transparent' : 'var(--accent)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 900, fontSize: 15, cursor: 'pointer', overflow: 'hidden', flexShrink: 0 }}>
+            {profile?.avatar_url
+              ? <img src={profile.avatar_url} alt="foto" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              : 'C'}
+          </div>
           <button className="btn btn-ghost btn-sm" onClick={signOut}>Salir</button>
         </div>
       </header>

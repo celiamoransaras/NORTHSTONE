@@ -2,9 +2,10 @@
  * Vista que ve un deportista cuando inicia sesión.
  * Solo muestra sus datos: sesiones, lesiones y pagos propios.
  */
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useAuth } from '../contexts/AuthContext'
-import { Sessions, Injuries, Payments } from '../lib/db'
+import { Sessions, Injuries, Payments, Documents, Storage } from '../lib/db'
+import { supabase } from '../lib/supabase'
 import Training from './Training'
 import Messages from './Messages'
 import Documents from './Documents'
@@ -89,7 +90,7 @@ function AthleteHome({ athlete, athleteId }) {
       ])
       const today = new Date().toISOString().slice(0,10)
       setUpcoming(sessions.filter(s => s.date >= today).slice(0,3))
-      setActiveInjury(injuries.find(i => !i.date_end) || null)
+      setActiveInjury(injuries.find(i => !i.date_end || i.date_end >= today) || null)
     }
     load()
   }, [athleteId])
@@ -155,19 +156,52 @@ function AthleteHome({ athlete, athleteId }) {
 // ---- Salud del deportista ----
 function AthleteHealth({ athleteId }) {
   const [injuries, setInjuries] = useState([])
+  const [medDocs, setMedDocs] = useState([])
+  const [uploading, setUploading] = useState(false)
+  const fileRef = useRef()
   const SEVERITY_COLOR = { mild: 'var(--success)', moderate: 'var(--warning)', severe: 'var(--error)' }
   const SEVERITY_LABEL = { mild: 'Leve', moderate: 'Moderada', severe: 'Grave' }
+  const today = new Date().toISOString().slice(0,10)
 
-  useEffect(() => { Injuries.getByAthlete(athleteId).then(setInjuries) }, [athleteId])
+  const loadDocs = async () => {
+    const { data } = await supabase.from('documents')
+      .select('*').eq('athlete_id', athleteId).eq('category', 'medical')
+      .order('created_at', { ascending: false })
+    setMedDocs(data || [])
+  }
+
+  useEffect(() => {
+    Injuries.getByAthlete(athleteId).then(setInjuries)
+    loadDocs()
+  }, [athleteId])
+
+  const handleUpload = async (e) => {
+    const file = e.target.files[0]
+    if (!file) return
+    setUploading(true)
+    try {
+      const { url, name, size } = await Storage.uploadDocument(file)
+      await supabase.from('documents').insert({
+        title: name, file_url: url, file_name: name, file_size: size,
+        athlete_id: athleteId, category: 'medical'
+      })
+      await loadDocs()
+    } catch { }
+    setUploading(false)
+  }
 
   return (
     <div className="page fade-in">
       <div className="page-header"><h2>Mi Salud</h2></div>
       <div className="page-content">
+
+        {/* Lesiones */}
+        <div className="section-title">Lesiones</div>
         {injuries.length === 0 ? (
-          <div className="empty-state"><div className="icon">🏃</div><h3>¡Sin lesiones!</h3><p>Tu historial está limpio</p></div>
+          <div className="empty-state" style={{ padding: '24px 0' }}><div className="icon">🏃</div><h3>¡Sin lesiones!</h3></div>
         ) : injuries.map(inj => {
           const sev = SEVERITY_COLOR[inj.severity] || 'var(--text-muted)'
+          const isActive = !inj.date_end || inj.date_end >= today
           return (
             <div key={inj.id} className="card" style={{ padding: 16 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
@@ -177,11 +211,37 @@ function AthleteHealth({ athleteId }) {
               <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>
                 {new Date(inj.date_start+'T12:00:00').toLocaleDateString('es-ES')}
                 {inj.date_end ? ` → ${new Date(inj.date_end+'T12:00:00').toLocaleDateString('es-ES')}` : ' → Activa'}
+                {isActive && <span className="badge badge-red" style={{ marginLeft: 8, fontSize: 11 }}>Activa</span>}
               </div>
               {inj.notes && <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 6, fontStyle: 'italic' }}>{inj.notes}</div>}
             </div>
           )
         })}
+
+        {/* Documentos médicos */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 8 }}>
+          <div className="section-title" style={{ margin: 0 }}>Documentos médicos</div>
+          <button className="btn btn-primary btn-sm" onClick={() => fileRef.current.click()} disabled={uploading}>
+            {uploading ? 'Subiendo...' : '+ Subir'}
+          </button>
+        </div>
+        <input ref={fileRef} type="file" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx" style={{ display: 'none' }} onChange={handleUpload} />
+
+        {medDocs.length === 0 ? (
+          <div style={{ color: 'var(--text-muted)', fontSize: 14, padding: '8px 0' }}>Sin documentos médicos</div>
+        ) : medDocs.map(doc => (
+          <a key={doc.id} href={doc.file_url} target="_blank" rel="noopener noreferrer"
+            style={{ textDecoration: 'none' }}>
+            <div className="card" style={{ padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
+              <span style={{ fontSize: 24 }}>📄</span>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontWeight: 600, fontSize: 14, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{doc.title}</div>
+                <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{new Date(doc.created_at).toLocaleDateString('es-ES')}</div>
+              </div>
+              <span style={{ color: 'var(--accent)', fontSize: 13, fontWeight: 600 }}>Ver →</span>
+            </div>
+          </a>
+        ))}
       </div>
     </div>
   )

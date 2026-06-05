@@ -26,8 +26,9 @@ export default function Health() {
   }
   useEffect(() => { load() }, [])
 
-  const active = injuries.filter(i => !i.date_end)
-  const resolved = injuries.filter(i => !!i.date_end)
+  const today = new Date().toISOString().slice(0,10)
+  const active = injuries.filter(i => !i.date_end || i.date_end >= today)
+  const resolved = injuries.filter(i => i.date_end && i.date_end < today)
   const displayed = tab === 'active' ? active : resolved
 
   const openNew = () => { setForm({ ...emptyForm, athlete_id: athletes[0]?.id || '' }); setEditing(null); setSheet('form') }

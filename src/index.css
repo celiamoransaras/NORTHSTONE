@@ -10,9 +10,9 @@
   --border: #E5E3DF;
   --border-light: #EDECEA;
 
-  --accent: #C8922A;
-  --accent-dim: rgba(200, 146, 42, 0.1);
-  --accent-hover: #B07D20;
+  --accent: #2563EB;
+  --accent-dim: rgba(37, 99, 235, 0.1);
+  --accent-hover: #1D4ED8;
 
   --text: #111111;
   --text-muted: #888888;
@@ -22,7 +22,7 @@
   --success-dim: rgba(26, 158, 92, 0.1);
   --error: #D93025;
   --error-dim: rgba(217, 48, 37, 0.1);
-  --warning: #C8922A;
+  --warning: #D97706;
   --info: #1A6FD4;
   --info-dim: rgba(26, 111, 212, 0.1);
 

@@ -82,8 +82,20 @@ export function AuthProvider({ children }) {
   const signOut = () => supabase.auth.signOut()
   const isCoach = profile?.role === 'coach'
 
+  const updateAvatar = async (file) => {
+    if (!user) return
+    const ext = file.name.split('.').pop()
+    const path = `coach_${user.id}.${ext}`
+    await supabase.storage.from('avatars').upload(path, file, { upsert: true })
+    const { data } = supabase.storage.from('avatars').getPublicUrl(path)
+    const url = data.publicUrl
+    await supabase.from('profiles').update({ avatar_url: url }).eq('id', user.id)
+    setProfile(p => ({ ...p, avatar_url: url }))
+    return url
+  }
+
   return (
-    <AuthContext.Provider value={{ user, profile, loading, isCoach, signIn, signOut }}>
+    <AuthContext.Provider value={{ user, profile, loading, isCoach, signIn, signOut, updateAvatar }}>
       {children}
     </AuthContext.Provider>
   )
