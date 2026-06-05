@@ -36,6 +36,10 @@
   --shadow-sm: 0 2px 8px rgba(0,0,0,0.06);
 }
 
+:root {
+  color-scheme: light only;
+}
+
 *, *::before, *::after {
   box-sizing: border-box;
   margin: 0;
