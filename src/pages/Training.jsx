@@ -356,16 +356,17 @@ function CalendarView({ sessions, onSelectDay }) {
 function ExerciseCard({ exercise }) {
   const ytId = getYouTubeId(exercise.youtube_url)
   return (
-    <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: 14, marginBottom: 10 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
-        <span style={{ fontWeight: 600 }}>{exercise.name}</span>
-        <span style={{ color: 'var(--accent)', fontSize: 13, fontWeight: 600 }}>{exercise.sets} × {exercise.reps}</span>
+    <div style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: 14, marginBottom: 10 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 4 }}>
+        <span style={{ fontWeight: 700, fontSize: 15, flex: 1 }}>{exercise.name}</span>
+        <span style={{ color: 'var(--accent)', fontSize: 14, fontWeight: 800, fontFamily: "'Barlow Condensed', sans-serif", flexShrink: 0, marginLeft: 8 }}>{exercise.sets} × {exercise.reps}</span>
       </div>
-      {exercise.notes && <div style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 8 }}>{exercise.notes}</div>}
+      {exercise.notes && <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 4 }}>{exercise.notes}</div>}
       {ytId && (
-        <div className="yt-embed" style={{ marginTop: 10 }}>
-          <iframe src={`https://www.youtube.com/embed/${ytId}`} title={exercise.name} allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen />
-        </div>
+        <a href={`https://www.youtube.com/watch?v=${ytId}`} target="_blank" rel="noopener noreferrer"
+          style={{ display: 'inline-flex', alignItems: 'center', gap: 6, marginTop: 10, background: '#FF0000', color: '#fff', padding: '6px 12px', borderRadius: 8, fontSize: 13, fontWeight: 700, textDecoration: 'none' }}>
+          ▶ Ver en YouTube
+        </a>
       )}
     </div>
   )

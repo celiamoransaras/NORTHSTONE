@@ -300,6 +300,7 @@ function AthleteProgressTab({ athleteId }) {
 function AthleteTrainingWithRPE({ athleteId }) {
   const [sessions, setSessions] = useState([])
   const [rpeSheet, setRpeSheet] = useState(null)
+  const [detailSession, setDetailSession] = useState(null)
   const [rpe, setRpe] = useState(0)
   const [saving, setSaving] = useState(false)
 
@@ -335,10 +336,11 @@ function AthleteTrainingWithRPE({ athleteId }) {
         {upcoming.length > 0 && <>
           <div className="section-title">Próximos</div>
           {upcoming.map(s => (
-            <div key={s.id} className="card" style={{ padding: '14px 16px' }}>
+            <div key={s.id} className="card" style={{ padding: '14px 16px', cursor: 'pointer' }}
+              onClick={() => setDetailSession(s)}>
               <div style={{ fontSize: 12, color: 'var(--accent)', fontWeight: 700 }}>{formatDate(s.date)}</div>
               <div style={{ fontWeight: 700, fontSize: 15, marginTop: 4 }}>{s.title}</div>
-              <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>{s.duration} min</div>
+              <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>{s.duration} min {s.exercises?.length > 0 && `· 📋 ${s.exercises.length} ejercicios`}</div>
             </div>
           ))}
         </>}
@@ -346,13 +348,15 @@ function AthleteTrainingWithRPE({ athleteId }) {
         {past.length > 0 && <>
           <div className="section-title" style={{ marginTop: 8 }}>Historial</div>
           {past.map(s => (
-            <div key={s.id} className="card" style={{ padding: '14px 16px' }}>
+            <div key={s.id} className="card" style={{ padding: '14px 16px', cursor: 'pointer' }}
+              onClick={() => setDetailSession(s)}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                 <div>
                   <div style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 600 }}>{formatDate(s.date)}</div>
                   <div style={{ fontWeight: 700, fontSize: 15, marginTop: 2 }}>{s.title}</div>
+                  {s.exercises?.length > 0 && <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>📋 {s.exercises.length} ejercicios</div>}
                 </div>
-                <button onClick={() => { setRpeSheet(s); setRpe(0) }}
+                <button onClick={e => { e.stopPropagation(); setRpeSheet(s); setRpe(0) }}
                   className="btn btn-sm"
                   style={{ background: 'var(--accent-dim)', color: 'var(--accent)', borderRadius: 8, fontSize: 12 }}>
                   ⭐ Valorar
@@ -366,6 +370,57 @@ function AthleteTrainingWithRPE({ athleteId }) {
           <div className="empty-state"><div className="icon">📅</div><h3>Sin sesiones</h3></div>
         )}
       </div>
+
+      {detailSession && (
+        <>
+          <div className="overlay" onClick={() => setDetailSession(null)} />
+          <div className="sheet">
+            <div className="sheet-handle" />
+            <div className="sheet-header">
+              <div>
+                <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{formatDate(detailSession.date)}</div>
+                <h3>{detailSession.title}</h3>
+              </div>
+              <button className="btn btn-ghost btn-sm" onClick={() => setDetailSession(null)}>✕</button>
+            </div>
+            <div className="sheet-body">
+              <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
+                <span className="badge badge-gray">⏱ {detailSession.duration} min</span>
+              </div>
+              {detailSession.notes && <div style={{ color: 'var(--text-muted)', fontSize: 14, marginBottom: 16 }}>{detailSession.notes}</div>}
+              {detailSession.exercises?.length > 0 ? (
+                <>
+                  <div className="section-title">Ejercicios</div>
+                  {detailSession.exercises.map((ex, i) => {
+                    const ytId = ex.youtube_url?.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/))([A-Za-z0-9_-]{11})/)?.[1]
+                    return (
+                      <div key={i} style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: 14, marginBottom: 10 }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                          <span style={{ fontWeight: 700, fontSize: 15, flex: 1 }}>{ex.name}</span>
+                          <span style={{ color: 'var(--accent)', fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 800, fontSize: 15, flexShrink: 0, marginLeft: 8 }}>{ex.sets} × {ex.reps}</span>
+                        </div>
+                        {ex.notes && <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 4 }}>{ex.notes}</div>}
+                        {ytId && (
+                          <a href={`https://www.youtube.com/watch?v=${ytId}`} target="_blank" rel="noopener noreferrer"
+                            style={{ display: 'inline-flex', alignItems: 'center', gap: 6, marginTop: 10, background: '#FF0000', color: '#fff', padding: '6px 12px', borderRadius: 8, fontSize: 13, fontWeight: 700, textDecoration: 'none' }}>
+                            ▶ Ver en YouTube
+                          </a>
+                        )}
+                      </div>
+                    )
+                  })}
+                </>
+              ) : (
+                <div style={{ color: 'var(--text-muted)', fontSize: 14 }}>Sin ejercicios registrados</div>
+              )}
+              <div className="divider" />
+              <button className="btn btn-primary btn-full" onClick={() => { setDetailSession(null); setRpeSheet(detailSession); setRpe(0) }}>
+                ⭐ Valorar este entrenamiento
+              </button>
+            </div>
+          </div>
+        </>
+      )}
 
       {rpeSheet && (
         <>
