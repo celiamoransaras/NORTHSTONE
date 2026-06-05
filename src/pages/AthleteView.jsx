@@ -42,15 +42,23 @@ export default function AthleteView() {
   const initials = (name) => name.split(' ').map(w => w[0]).join('').slice(0,2).toUpperCase()
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100dvh', height: '100vh', overflow: 'hidden' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100dvh', overflow: 'hidden' }}>
       {/* Header */}
-      <header style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 16px', height: 'var(--header-height)', background: 'var(--bg)', borderBottom: '1px solid var(--border)', flexShrink: 0 }}>
-        <span style={{ fontWeight: 800, fontSize: 20, letterSpacing: '-0.5px' }}>
-          <span style={{ color: 'var(--accent)' }}>N</span>ORTHSTONE
-        </span>
+      <header style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 20px', height: 'var(--header-height)', background: 'var(--bg)', flexShrink: 0 }}>
+        <div>
+          <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 900, fontSize: 20, letterSpacing: '1px', textTransform: 'uppercase', lineHeight: 1.1 }}>
+            <span style={{ color: 'var(--accent)' }}>N</span>ORTHSTONE
+          </div>
+          <div style={{ fontFamily: "'Barlow', sans-serif", fontSize: 10, color: 'var(--text-muted)', fontWeight: 500, marginTop: 1 }}>
+            by Celia Morán Saras
+          </div>
+        </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <div className="avatar" style={{ background: athlete.color+'30', color: athlete.color }}>{initials(athlete.name)}</div>
-          <button className="btn btn-ghost btn-sm" onClick={signOut} style={{ fontSize: 12 }}>Salir</button>
+          {athlete.avatar_url
+            ? <img src={athlete.avatar_url} alt={athlete.name} className="avatar-ring" style={{ width: 38, height: 38, borderRadius: '50%', objectFit: 'cover' }} />
+            : <div className="avatar avatar-ring" style={{ width: 38, height: 38, background: athlete.color+'30', color: athlete.color, fontSize: 15 }}>{initials(athlete.name)}</div>
+          }
+          <button className="btn btn-ghost btn-sm" onClick={signOut}>Salir</button>
         </div>
       </header>
 
@@ -64,12 +72,12 @@ export default function AthleteView() {
         {tab === 'messages'  && <Messages />}
       </main>
 
-      {/* Bottom nav */}
-      <nav style={{ display: 'flex', height: 'var(--nav-height)', background: 'var(--surface)', borderTop: '1px solid var(--border)', flexShrink: 0 }}>
+      {/* Bottom nav — glass */}
+      <nav className="glass-nav" style={{ display: 'flex', height: 'var(--nav-height)', flexShrink: 0, paddingBottom: 'env(safe-area-inset-bottom)' }}>
         {NAV.map(({ id, icon, label }) => (
           <button key={id} onClick={() => setTab(id)}
-            style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 2, color: tab===id ? 'var(--accent)' : 'var(--text-muted)', fontSize: 10, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.3px', background: 'none', border: 'none', borderTop: tab===id ? '2px solid var(--accent)' : '2px solid transparent', cursor: 'pointer' }}>
-            <span style={{ fontSize: 20 }}>{icon}</span>
+            style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 3, color: tab===id ? 'var(--accent)' : 'var(--text-muted)', fontFamily: "'Barlow Condensed', sans-serif", fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px', background: 'none', border: 'none', borderTop: tab===id ? '2px solid var(--accent)' : '2px solid transparent', cursor: 'pointer', transition: 'color 0.15s' }}>
+            <span style={{ fontSize: 22 }}>{icon}</span>
             {label}
           </button>
         ))}
@@ -96,13 +104,15 @@ function AthleteHome({ athlete, athleteId }) {
     load()
   }, [athleteId])
 
+  const h = new Date().getHours()
+  const greeting = h < 7 ? 'Buenas noches' : h < 13 ? 'Buenos días' : h < 20 ? 'Buenas tardes' : 'Buenas noches'
+
   return (
     <div className="page fade-in">
-      <div className="page-header">
-        <div>
-          <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>Mi perfil</div>
-          <h1>Hola, {athlete.name.split(' ')[0]} 👋</h1>
-        </div>
+      <div style={{ padding: '28px 20px 20px', background: `linear-gradient(160deg, ${athlete.color}12 0%, transparent 60%)` }}>
+        <div style={{ fontSize: 13, color: 'var(--text-muted)', fontWeight: 500, marginBottom: 4 }}>{greeting}</div>
+        <h1 style={{ fontSize: 36, lineHeight: 1.05, marginBottom: 2 }}>{athlete.name.split(' ')[0]} 👋</h1>
+        <div style={{ height: 3, width: 48, background: athlete.color, borderRadius: 2, marginTop: 12 }} />
       </div>
       <div className="page-content">
         {/* Athlete card */}
