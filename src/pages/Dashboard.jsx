@@ -7,35 +7,45 @@ export default function Dashboard() {
   const [stats, setStats] = useState(null)
   const [upcomingSessions, setUpcomingSessions] = useState([])
   const [recentInjuries, setRecentInjuries] = useState([])
+  const [athleteMap, setAthleteMap] = useState({})
 
   useEffect(() => {
-    const athletes = Athletes.getAll()
-    const sessions = Sessions.getAll()
-    const injuries = Injuries.getAll()
-    const now = new Date()
-    const month = now.getMonth() + 1
-    const year = now.getFullYear()
-    const payments = Payments.getByMonth(month, year)
+    const load = async () => {
+      const now = new Date()
+      const month = now.getMonth() + 1
+      const year = now.getFullYear()
+      const today = now.toISOString().slice(0, 10)
 
-    const today = now.toISOString().slice(0, 10)
-    const upcoming = sessions.filter(s => s.date >= today).slice(0, 3)
-    const activeInjuries = injuries.filter(i => !i.date_end)
-    const paidCount = payments.filter(p => p.status === 'paid').length
+      const [athletes, sessions, injuries, payments] = await Promise.all([
+        Athletes.getAll(),
+        Sessions.getAll(),
+        Injuries.getAll(),
+        Payments.getByMonth(month, year)
+      ])
 
-    setStats({
-      total: athletes.length,
-      active: athletes.filter(a => a.status === 'active').length,
-      injured: athletes.filter(a => a.status === 'injured').length,
-      sessionsThisMonth: sessions.filter(s => s.date.startsWith(`${year}-${String(month).padStart(2,'0')}`)).length,
-      paidCount,
-      totalPayments: athletes.length,
-      pendingPayments: athletes.length - paidCount,
-    })
-    setUpcomingSessions(upcoming)
-    setRecentInjuries(activeInjuries.slice(0, 3))
+      const map = {}
+      athletes.forEach(a => { map[a.id] = a })
+      setAthleteMap(map)
+
+      const upcoming = sessions.filter(s => s.date >= today).slice(0, 3)
+      const activeInjuries = injuries.filter(i => !i.date_end)
+      const paidCount = payments.filter(p => p.status === 'paid').length
+
+      setStats({
+        active: athletes.filter(a => a.status === 'active').length,
+        injured: athletes.filter(a => a.status === 'injured').length,
+        sessionsThisMonth: sessions.filter(s => s.date.startsWith(`${year}-${String(month).padStart(2,'0')}`)).length,
+        paidCount,
+        totalPayments: athletes.length,
+        pendingPayments: athletes.length - paidCount,
+      })
+      setUpcomingSessions(upcoming)
+      setRecentInjuries(activeInjuries.slice(0, 3))
+    }
+    load()
   }, [])
 
-  if (!stats) return null
+  if (!stats) return <div style={{ padding: 24, color: 'var(--text-muted)' }}>Cargando...</div>
 
   const today = new Date()
   const greeting = today.getHours() < 13 ? 'Buenos días' : today.getHours() < 20 ? 'Buenas tardes' : 'Buenas noches'
@@ -54,7 +64,6 @@ export default function Dashboard() {
       </div>
 
       <div className="page-content">
-        {/* Stats */}
         <div className="section-title">Resumen del equipo</div>
         <div className="grid-2">
           <StatCard value={stats.active} label="Deportistas activos" color="var(--success)" />
@@ -63,30 +72,23 @@ export default function Dashboard() {
           <StatCard value={`${stats.paidCount}/${stats.totalPayments}`} label="Pagos al día" color="var(--info)" />
         </div>
 
-        {/* Upcoming sessions */}
         <div className="section-title" style={{ marginTop: 8 }}>Próximas sesiones</div>
         {upcomingSessions.length === 0 ? (
-          <div style={{ color: 'var(--text-muted)', fontSize: 14, padding: '12px 0' }}>
-            No hay sesiones programadas
-          </div>
+          <div style={{ color: 'var(--text-muted)', fontSize: 14, padding: '12px 0' }}>No hay sesiones programadas</div>
         ) : (
           <div className="card">
-            {upcomingSessions.map((s, i) => (
-              <SessionRow key={s.id} session={s} last={i === upcomingSessions.length - 1} onClick={() => navigate('/training')} />
-            ))}
+            {upcomingSessions.map((s, i) => <SessionRow key={s.id} session={s} last={i === upcomingSessions.length - 1} onClick={() => navigate('/training')} />)}
           </div>
         )}
 
-        {/* Active injuries */}
         {recentInjuries.length > 0 && (
           <>
             <div className="section-title" style={{ marginTop: 8 }}>Lesiones activas</div>
             <div className="card">
-              {recentInjuries.map((inj, i) => {
-                const athlete = Athletes.getById(inj.athlete_id)
+              {recentInjuries.map(inj => {
+                const athlete = athleteMap[inj.athlete_id]
                 return (
-                  <div key={inj.id} className="list-item" style={{ cursor: 'default' }}
-                    onClick={() => navigate('/health')}>
+                  <div key={inj.id} className="list-item" onClick={() => navigate('/health')}>
                     <div className="avatar" style={{ background: 'var(--error-dim)', color: 'var(--error)', fontSize: 16 }}>🩹</div>
                     <div style={{ flex: 1 }}>
                       <div style={{ fontWeight: 600, fontSize: 14 }}>{athlete?.name || 'Deportista'}</div>
@@ -100,17 +102,14 @@ export default function Dashboard() {
           </>
         )}
 
-        {/* Pending payments alert */}
         {stats.pendingPayments > 0 && (
           <>
             <div className="section-title" style={{ marginTop: 8 }}>Alertas</div>
-            <div
-              onClick={() => navigate('/payments')}
-              style={{
-                background: 'var(--accent-dim)', border: '1px solid rgba(245,158,11,0.3)',
-                borderRadius: 'var(--radius)', padding: '14px 16px',
-                display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer'
-              }}>
+            <div onClick={() => navigate('/payments')} style={{
+              background: 'var(--accent-dim)', border: '1px solid rgba(245,158,11,0.3)',
+              borderRadius: 'var(--radius)', padding: '14px 16px',
+              display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer'
+            }}>
               <span style={{ fontSize: 24 }}>💳</span>
               <div>
                 <div style={{ fontWeight: 600, fontSize: 14 }}>{stats.pendingPayments} pago{stats.pendingPayments > 1 ? 's' : ''} pendiente{stats.pendingPayments > 1 ? 's' : ''}</div>

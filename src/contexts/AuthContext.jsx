@@ -1,0 +1,86 @@
+import { createContext, useContext, useEffect, useState } from 'react'
+import { supabase } from '../lib/supabase'
+
+const AuthContext = createContext(null)
+
+const COACH_EMAIL = import.meta.env.VITE_COACH_EMAIL || 'celia.moransaras@gmail.com'
+
+export function AuthProvider({ children }) {
+  const [user, setUser] = useState(null)
+  const [profile, setProfile] = useState(null)
+  const [loading, setLoading] = useState(true)
+
+  const loadProfile = async (userId, email) => {
+    const { data } = await supabase
+      .from('profiles')
+      .select('*, athletes(*)')
+      .eq('id', userId)
+      .single()
+
+    if (data) {
+      setProfile(data)
+    } else {
+      // Crear perfil automáticamente si no existe
+      const isCoach = email === COACH_EMAIL
+      let athleteId = null
+
+      if (!isCoach) {
+        // Buscar si el email corresponde a un atleta
+        const { data: athlete } = await supabase
+          .from('athletes')
+          .select('id')
+          .eq('email', email)
+          .single()
+        athleteId = athlete?.id || null
+      }
+
+      const newProfile = {
+        id: userId,
+        role: isCoach ? 'coach' : 'athlete',
+        athlete_id: athleteId
+      }
+
+      await supabase.from('profiles').insert(newProfile)
+      const { data: created } = await supabase
+        .from('profiles')
+        .select('*, athletes(*)')
+        .eq('id', userId)
+        .single()
+      setProfile(created)
+    }
+  }
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null)
+      if (session?.user) {
+        loadProfile(session.user.id, session.user.email).finally(() => setLoading(false))
+      } else {
+        setLoading(false)
+      }
+    })
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null)
+      if (session?.user) {
+        loadProfile(session.user.id, session.user.email)
+      } else {
+        setProfile(null)
+      }
+    })
+
+    return () => subscription.unsubscribe()
+  }, [])
+
+  const signIn = (email, password) => supabase.auth.signInWithPassword({ email, password })
+  const signOut = () => supabase.auth.signOut()
+  const isCoach = profile?.role === 'coach'
+
+  return (
+    <AuthContext.Provider value={{ user, profile, loading, isCoach, signIn, signOut }}>
+      {children}
+    </AuthContext.Provider>
+  )
+}
+
+export const useAuth = () => useContext(AuthContext)

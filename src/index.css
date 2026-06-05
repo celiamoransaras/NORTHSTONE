@@ -330,7 +330,9 @@ textarea { resize: vertical; min-height: 80px; }
 /* ---- Page layout ---- */
 .page {
   flex: 1;
+  height: 100%;
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
   padding-bottom: calc(var(--nav-height) + 16px);
 }
 

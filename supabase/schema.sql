@@ -1,13 +1,12 @@
 -- =============================================
--- NORTHSTONE — Esquema de base de datos Supabase
--- Ejecuta este SQL en el Editor SQL de Supabase
+-- NORTHSTONE — Esquema completo con autenticación
+-- Pega este SQL en Supabase → SQL Editor → Run
 -- =============================================
 
--- Habilitar extensión UUID
 create extension if not exists "uuid-ossp";
 
 -- ---- DEPORTISTAS ----
-create table athletes (
+create table if not exists athletes (
   id uuid primary key default uuid_generate_v4(),
   name text not null,
   email text,
@@ -20,8 +19,16 @@ create table athletes (
   created_at timestamp with time zone default now()
 );
 
+-- ---- PERFILES (vincula auth.users con roles) ----
+create table if not exists profiles (
+  id uuid primary key references auth.users(id) on delete cascade,
+  role text default 'athlete' check (role in ('coach','athlete')),
+  athlete_id uuid references athletes(id) on delete set null,
+  created_at timestamp with time zone default now()
+);
+
 -- ---- SESIONES DE ENTRENAMIENTO ----
-create table sessions (
+create table if not exists sessions (
   id uuid primary key default uuid_generate_v4(),
   date date not null,
   title text not null,
@@ -31,8 +38,8 @@ create table sessions (
   created_at timestamp with time zone default now()
 );
 
--- ---- EJERCICIOS POR SESIÓN ----
-create table exercises (
+-- ---- EJERCICIOS ----
+create table if not exists exercises (
   id uuid primary key default uuid_generate_v4(),
   session_id uuid references sessions(id) on delete cascade,
   name text not null,
@@ -44,7 +51,7 @@ create table exercises (
 );
 
 -- ---- DEPORTISTAS POR SESIÓN ----
-create table session_athletes (
+create table if not exists session_athletes (
   session_id uuid references sessions(id) on delete cascade,
   athlete_id uuid references athletes(id) on delete cascade,
   attended boolean default false,
@@ -52,7 +59,7 @@ create table session_athletes (
 );
 
 -- ---- LESIONES ----
-create table injuries (
+create table if not exists injuries (
   id uuid primary key default uuid_generate_v4(),
   athlete_id uuid references athletes(id) on delete cascade,
   date_start date not null,
@@ -65,7 +72,7 @@ create table injuries (
 );
 
 -- ---- PAGOS ----
-create table payments (
+create table if not exists payments (
   id uuid primary key default uuid_generate_v4(),
   athlete_id uuid references athletes(id) on delete cascade,
   month integer not null check (month between 1 and 12),
@@ -78,7 +85,7 @@ create table payments (
 );
 
 -- ---- MENSAJES ----
-create table messages (
+create table if not exists messages (
   id uuid primary key default uuid_generate_v4(),
   group_id text not null,
   sender text not null default 'me',
@@ -88,8 +95,23 @@ create table messages (
 );
 
 -- =============================================
--- Row Level Security (RLS) — Seguridad básica
--- Actívalo cuando añadas autenticación
+-- ÍNDICES
+-- =============================================
+create index if not exists idx_payments_month on payments (athlete_id, month, year);
+create index if not exists idx_injuries_athlete on injuries (athlete_id);
+create index if not exists idx_messages_group on messages (group_id, created_at);
+create index if not exists idx_sessions_date on sessions (date);
+create index if not exists idx_session_athletes on session_athletes (athlete_id);
+
+-- =============================================
+-- REALTIME (para el chat en tiempo real)
+-- =============================================
+alter publication supabase_realtime add table messages;
+
+-- =============================================
+-- ROW LEVEL SECURITY
+-- Descomenta estas líneas cuando quieras añadir
+-- seguridad por usuario (fase siguiente)
 -- =============================================
 
 -- alter table athletes enable row level security;
@@ -97,11 +119,7 @@ create table messages (
 -- alter table injuries enable row level security;
 -- alter table payments enable row level security;
 -- alter table messages enable row level security;
+-- alter table profiles enable row level security;
 
--- =============================================
--- Índices para mejor rendimiento
--- =============================================
-create index on payments (athlete_id, month, year);
-create index on injuries (athlete_id);
-create index on messages (group_id, created_at);
-create index on sessions (date);
+-- Política temporal: acceso total mientras desarrollas
+-- (ya protegida por la autenticación de la app)

@@ -6,88 +6,73 @@ const MONTHS = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto
 export default function Payments() {
   const [payments, setPayments] = useState([])
   const [athletes, setAthletes] = useState([])
+  const [loading, setLoading] = useState(true)
   const now = new Date()
   const [month, setMonth] = useState(now.getMonth() + 1)
   const [year, setYear] = useState(now.getFullYear())
   const [amount, setAmount] = useState(80)
   const [editingAmount, setEditingAmount] = useState(false)
 
-  const load = () => { setPayments(DB.getAll()); setAthletes(Athletes.getAll()) }
-  useEffect(() => { load() }, [])
+  const load = async () => {
+    setLoading(true)
+    const ath = await Athletes.getAll()
+    setAthletes(ath)
+    const pays = await DB.ensureMonth(ath, month, year, amount)
+    setPayments(pays)
+    setLoading(false)
+  }
 
-  const monthPayments = payments.filter(p => p.month === month && p.year === year)
+  useEffect(() => { load() }, [month, year])
 
-  // Ensure all athletes have a payment record for this month
-  useEffect(() => {
-    if (!athletes.length) return
-    athletes.forEach(a => {
-      const existing = payments.find(p => p.athlete_id === a.id && p.month === month && p.year === year)
-      if (!existing) {
-        DB.create({ athlete_id: a.id, month, year, amount, status: 'pending' })
-      }
-    })
-    setPayments(DB.getAll())
-  }, [athletes, month, year])
+  const toggle = async (id, currentStatus) => {
+    await DB.toggle(id, currentStatus)
+    const pays = await DB.getByMonth(month, year)
+    setPayments(pays)
+  }
 
-  const toggle = (id) => { DB.toggle(id); load() }
-
-  const paid = monthPayments.filter(p => p.status === 'paid').length
-  const total = monthPayments.length
+  const paid = payments.filter(p => p.status === 'paid').length
+  const total = payments.length
   const pct = total ? Math.round((paid / total) * 100) : 0
-  const collected = paid * amount
 
-  const prevMonth = () => {
-    if (month === 1) { setMonth(12); setYear(y => y - 1) }
-    else setMonth(m => m - 1)
-  }
-  const nextMonth = () => {
-    if (month === 12) { setMonth(1); setYear(y => y + 1) }
-    else setMonth(m => m + 1)
-  }
-
+  const prevMonth = () => { if (month === 1) { setMonth(12); setYear(y => y-1) } else setMonth(m => m-1) }
+  const nextMonth = () => { if (month === 12) { setMonth(1); setYear(y => y+1) } else setMonth(m => m+1) }
   const getAthlete = (id) => athletes.find(a => a.id === id)
 
   return (
-    <div className="page fade-in" style={{ overflowY: 'auto', height: '100%' }}>
+    <div className="page fade-in">
       <div className="page-header">
         <h2>Pagos</h2>
         {editingAmount ? (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <input className="input" type="number" value={amount} style={{ width: 80 }}
-              onChange={e => setAmount(Number(e.target.value))} />
+          <div style={{ display: 'flex', gap: 8 }}>
+            <input className="input" type="number" value={amount} style={{ width: 80 }} onChange={e => setAmount(Number(e.target.value))} />
             <button className="btn btn-primary btn-sm" onClick={() => setEditingAmount(false)}>OK</button>
           </div>
         ) : (
-          <button className="btn btn-secondary btn-sm" onClick={() => setEditingAmount(true)}>
-            Cuota: {amount}€
-          </button>
+          <button className="btn btn-secondary btn-sm" onClick={() => setEditingAmount(true)}>Cuota: {amount}€</button>
         )}
       </div>
 
       <div className="page-content">
-        {/* Month selector */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '12px 16px' }}>
-          <button className="btn btn-ghost btn-sm btn-icon" onClick={prevMonth} style={{ padding: 8, fontSize: 20 }}>‹</button>
+          <button className="btn btn-ghost btn-sm" onClick={prevMonth} style={{ fontSize: 20, padding: 8 }}>‹</button>
           <div style={{ textAlign: 'center' }}>
-            <div style={{ fontWeight: 700, fontSize: 18 }}>{MONTHS[month - 1]}</div>
+            <div style={{ fontWeight: 700, fontSize: 18 }}>{MONTHS[month-1]}</div>
             <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>{year}</div>
           </div>
-          <button className="btn btn-ghost btn-sm btn-icon" onClick={nextMonth} style={{ padding: 8, fontSize: 20 }}>›</button>
+          <button className="btn btn-ghost btn-sm" onClick={nextMonth} style={{ fontSize: 20, padding: 8 }}>›</button>
         </div>
 
-        {/* Summary */}
         <div className="grid-2">
           <div className="stat-card">
             <div className="stat-value" style={{ color: 'var(--success)' }}>{paid}/{total}</div>
             <div className="stat-label">Pagos recibidos</div>
           </div>
           <div className="stat-card">
-            <div className="stat-value" style={{ color: 'var(--accent)' }}>{collected}€</div>
+            <div className="stat-value" style={{ color: 'var(--accent)' }}>{paid * amount}€</div>
             <div className="stat-label">Cobrado este mes</div>
           </div>
         </div>
 
-        {/* Progress bar */}
         <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: 16 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
             <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>Progreso de cobros</span>
@@ -98,37 +83,27 @@ export default function Payments() {
           </div>
         </div>
 
-        {/* List */}
-        {monthPayments.length === 0 ? (
-          <div className="empty-state">
-            <div className="icon">💳</div>
-            <h3>Sin deportistas</h3>
-            <p>Añade deportistas desde la sección Equipo</p>
-          </div>
+        {loading ? (
+          <div style={{ color: 'var(--text-muted)', textAlign: 'center', padding: 24 }}>Cargando...</div>
         ) : (
           <>
-            {/* Pending */}
-            {monthPayments.filter(p => p.status === 'pending').length > 0 && (
+            {payments.filter(p => p.status === 'pending').length > 0 && (
               <>
                 <div className="section-title">Pendientes</div>
                 <div className="card">
-                  {monthPayments.filter(p => p.status === 'pending').map((p, i, arr) => {
+                  {payments.filter(p => p.status === 'pending').map((p, i, arr) => {
                     const a = getAthlete(p.athlete_id)
                     return (
-                      <div key={p.id} className="list-item"
-                        style={{ borderBottom: i < arr.length - 1 ? undefined : 'none' }}
-                        onClick={() => toggle(p.id)}>
-                        <div className="avatar" style={{ background: a?.color + '30' || 'var(--card-hover)', color: a?.color }}>
+                      <div key={p.id} className="list-item" style={{ borderBottom: i < arr.length-1 ? undefined : 'none' }}
+                        onClick={() => toggle(p.id, p.status)}>
+                        <div className="avatar" style={{ background: a?.color+'30', color: a?.color }}>
                           {a?.name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase() || '?'}
                         </div>
                         <div style={{ flex: 1 }}>
                           <div style={{ fontWeight: 600, fontSize: 14 }}>{a?.name || 'Desconocido'}</div>
                           <div style={{ fontSize: 12, color: 'var(--error)' }}>Pendiente · {p.amount}€</div>
                         </div>
-                        <div style={{
-                          width: 28, height: 28, border: '2px solid var(--border)',
-                          borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center'
-                        }} />
+                        <div style={{ width: 28, height: 28, border: '2px solid var(--border)', borderRadius: 6 }} />
                       </div>
                     )
                   })}
@@ -136,31 +111,23 @@ export default function Payments() {
               </>
             )}
 
-            {/* Paid */}
-            {monthPayments.filter(p => p.status === 'paid').length > 0 && (
+            {payments.filter(p => p.status === 'paid').length > 0 && (
               <>
                 <div className="section-title" style={{ marginTop: 8 }}>Pagados</div>
                 <div className="card">
-                  {monthPayments.filter(p => p.status === 'paid').map((p, i, arr) => {
+                  {payments.filter(p => p.status === 'paid').map((p, i, arr) => {
                     const a = getAthlete(p.athlete_id)
                     return (
-                      <div key={p.id} className="list-item"
-                        style={{ borderBottom: i < arr.length - 1 ? undefined : 'none', opacity: 0.7 }}
-                        onClick={() => toggle(p.id)}>
-                        <div className="avatar" style={{ background: a?.color + '30' || 'var(--card-hover)', color: a?.color }}>
+                      <div key={p.id} className="list-item" style={{ borderBottom: i < arr.length-1 ? undefined : 'none', opacity: 0.7 }}
+                        onClick={() => toggle(p.id, p.status)}>
+                        <div className="avatar" style={{ background: a?.color+'30', color: a?.color }}>
                           {a?.name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase() || '?'}
                         </div>
                         <div style={{ flex: 1 }}>
                           <div style={{ fontWeight: 600, fontSize: 14 }}>{a?.name || 'Desconocido'}</div>
-                          <div style={{ fontSize: 12, color: 'var(--success)' }}>
-                            Pagado ✓ · {p.amount}€
-                          </div>
+                          <div style={{ fontSize: 12, color: 'var(--success)' }}>Pagado ✓ · {p.amount}€</div>
                         </div>
-                        <div style={{
-                          width: 28, height: 28, background: 'var(--success)',
-                          borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          color: '#fff', fontSize: 16
-                        }}>✓</div>
+                        <div style={{ width: 28, height: 28, background: 'var(--success)', borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 16 }}>✓</div>
                       </div>
                     )
                   })}
