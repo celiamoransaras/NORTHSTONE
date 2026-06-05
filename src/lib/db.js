@@ -205,11 +205,19 @@ export const Messages = {
       ts: m.created_at
     }))
   },
-  send: async (group, text, sender = 'me', senderName = null) => {
+  send: async (group, text, sender = 'me', senderName = null, fileUrl = null, fileType = null) => {
     const { data } = await supabase.from('messages').insert({
-      group_id: group, sender, sender_name: senderName, text
+      group_id: group, sender, sender_name: senderName, text,
+      file_url: fileUrl, file_type: fileType
     }).select().single()
     return data
+  },
+  uploadFile: async (file) => {
+    const path = `${Date.now()}_${file.name}`
+    const { error } = await supabase.storage.from('chat').upload(path, file)
+    if (error) throw error
+    const { data } = supabase.storage.from('chat').getPublicUrl(path)
+    return { url: data.publicUrl, type: file.type, name: file.name }
   },
   subscribe: (group, callback) => {
     return supabase

@@ -16,8 +16,11 @@ export default function Dashboard() {
       const year = now.getFullYear()
       const today = now.toISOString().slice(0, 10)
 
-      const [athletes, sessions, injuries, payments] = await Promise.all([
-        Athletes.getAll(),
+      const athletes = await Athletes.getAll()
+      // Auto-crear pagos del mes si no existen
+      if (athletes.length > 0) await Payments.ensureMonth(athletes, month, year)
+
+      const [sessions, injuries, payments] = await Promise.all([
         Sessions.getAll(),
         Injuries.getAll(),
         Payments.getByMonth(month, year)
@@ -28,8 +31,10 @@ export default function Dashboard() {
       setAthleteMap(map)
 
       const upcoming = sessions.filter(s => s.date >= today).slice(0, 3)
-      const activeInjuries = injuries.filter(i => !i.date_end)
+      const activeInjuries = injuries.filter(i => !i.date_end || i.date_end >= today)
       const paidCount = payments.filter(p => p.status === 'paid').length
+      const pendingPayments = payments.filter(p => p.status === 'pending').length
+      const isStartOfMonth = now.getDate() <= 7
 
       setStats({
         active: athletes.filter(a => a.status === 'active').length,
@@ -37,7 +42,9 @@ export default function Dashboard() {
         sessionsThisMonth: sessions.filter(s => s.date.startsWith(`${year}-${String(month).padStart(2,'0')}`)).length,
         paidCount,
         totalPayments: athletes.length,
-        pendingPayments: athletes.length - paidCount,
+        pendingPayments,
+        showPaymentReminder: pendingPayments > 0 && isStartOfMonth,
+        monthName: ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'][month-1],
       })
       setUpcomingSessions(upcoming)
       setRecentInjuries(activeInjuries.slice(0, 3))
@@ -64,6 +71,20 @@ export default function Dashboard() {
       </div>
 
       <div className="page-content">
+        {stats.showPaymentReminder && (
+          <div onClick={() => navigate('/payments')} style={{ background: 'var(--accent)', borderRadius: 'var(--radius)', padding: '14px 16px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 12 }}>
+            <span style={{ fontSize: 24 }}>💳</span>
+            <div>
+              <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 800, fontSize: 16, color: '#fff', textTransform: 'uppercase' }}>
+                Recordatorio de pagos — {stats.monthName}
+              </div>
+              <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.85)', marginTop: 2 }}>
+                {stats.pendingPayments} deportista{stats.pendingPayments > 1 ? 's' : ''} con pago pendiente
+              </div>
+            </div>
+            <span style={{ marginLeft: 'auto', color: '#fff', fontSize: 18 }}>→</span>
+          </div>
+        )}
         <div className="section-title">Resumen del equipo</div>
         <div className="grid-2">
           <StatCard value={stats.active} label="Deportistas activos" color="var(--success)" />
