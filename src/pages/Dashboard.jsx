@@ -143,7 +143,7 @@ function SessionRow({ session, last, onClick }) {
   return (
     <div className="list-item" onClick={onClick} style={{ borderBottom: last ? 'none' : undefined }}>
       <div style={{
-        width: 44, height: 44, borderRadius: 'var(--radius-sm)',
+        width: 52, height: 52, borderRadius: 'var(--radius-sm)',
         background: 'var(--border)', display: 'flex', flexDirection: 'column',
         alignItems: 'center', justifyContent: 'center', flexShrink: 0
       }}>

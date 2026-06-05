@@ -134,7 +134,7 @@ function AthleteHome({ athlete, athleteId }) {
               const months = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic']
               return (
                 <div key={s.id} className="list-item" style={{ borderBottom: i < upcoming.length-1 ? undefined : 'none', cursor: 'default' }}>
-                  <div style={{ width: 44, height: 44, borderRadius: 'var(--radius-sm)', background: 'var(--border)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <div style={{ width: 52, height: 52, borderRadius: 'var(--radius-sm)', background: 'var(--border)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                     <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--accent)' }}>{days[d.getDay()]}</div>
                     <div style={{ fontSize: 16, fontWeight: 700 }}>{d.getDate()}</div>
                     <div style={{ fontSize: 10, color: 'var(--text-muted)' }}>{months[d.getMonth()]}</div>
