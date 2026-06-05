@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useAuth } from '../contexts/AuthContext'
+import { supabase } from '../lib/supabase'
 
 export default function Login() {
   const { signIn } = useAuth()
@@ -7,12 +8,8 @@ export default function Login() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
-  const [mode, setMode] = useState('login') // 'login' | 'signup'
+  const [mode, setMode] = useState('login')
   const [success, setSuccess] = useState('')
-
-  const { supabase } = (() => {
-    try { return require('../lib/supabase') } catch { return {} }
-  })()
 
   const handle = async (e) => {
     e.preventDefault()
@@ -23,15 +20,9 @@ export default function Login() {
       const { error: err } = await signIn(email, password)
       if (err) setError('Email o contraseña incorrectos')
     } else {
-      // Signup — importamos supabase directamente
-      const { createClient } = await import('@supabase/supabase-js')
-      const sb = createClient(
-        import.meta.env.VITE_SUPABASE_URL,
-        import.meta.env.VITE_SUPABASE_ANON_KEY
-      )
-      const { error: err } = await sb.auth.signUp({ email, password })
+      const { error: err } = await supabase.auth.signUp({ email, password })
       if (err) setError(err.message)
-      else setSuccess('¡Cuenta creada! Revisa tu email para confirmarla.')
+      else setSuccess('¡Cuenta creada! Ya puedes iniciar sesión.')
     }
     setLoading(false)
   }
@@ -42,7 +33,6 @@ export default function Login() {
       alignItems: 'center', justifyContent: 'center',
       background: 'var(--bg)', padding: 24
     }}>
-      {/* Logo */}
       <div style={{ textAlign: 'center', marginBottom: 40 }}>
         <div style={{
           width: 72, height: 72, borderRadius: 20,
@@ -55,7 +45,6 @@ export default function Login() {
         <p style={{ color: 'var(--text-muted)', marginTop: 4 }}>Tu plataforma deportiva</p>
       </div>
 
-      {/* Form */}
       <form onSubmit={handle} style={{
         width: '100%', maxWidth: 360,
         background: 'var(--card)', border: '1px solid var(--border)',
@@ -75,8 +64,8 @@ export default function Login() {
         <div className="input-group" style={{ marginBottom: 0 }}>
           <label className="input-label">Contraseña</label>
           <input className="input" type="password" placeholder="••••••••"
-            value={password} onChange={e => setPassword(e.target.value)} required
-            minLength={6} />
+            value={password} onChange={e => setPassword(e.target.value)}
+            required minLength={6} />
         </div>
 
         {error && (
