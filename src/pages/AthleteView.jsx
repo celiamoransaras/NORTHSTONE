@@ -4,17 +4,18 @@
  */
 import { useState, useEffect, useRef } from 'react'
 import { useAuth } from '../contexts/AuthContext'
-import { Sessions, Injuries, Payments, Storage } from '../lib/db'
+import { Sessions, Injuries, Payments, Storage, RPE } from '../lib/db'
 import { supabase } from '../lib/supabase'
 import Training from './Training'
 import Messages from './Messages'
 import DocsPage from './Documents'
+import Progress from './Progress'
 
 const NAV = [
   { id: 'home',      icon: '🏠', label: 'Inicio' },
   { id: 'training',  icon: '📅', label: 'Entrenos' },
   { id: 'health',    icon: '🩺', label: 'Salud' },
-  { id: 'payments',  icon: '💳', label: 'Pagos' },
+  { id: 'progress',  icon: '📈', label: 'Progreso' },
   { id: 'documents', icon: '📂', label: 'Docs' },
   { id: 'messages',  icon: '💬', label: 'Chat' },
 ]
@@ -55,12 +56,12 @@ export default function AthleteView() {
 
       {/* Content */}
       <main style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-        {tab === 'home'     && <AthleteHome athlete={athlete} athleteId={athleteId} />}
-        {tab === 'training' && <Training athleteId={athleteId} />}
-        {tab === 'health'   && <AthleteHealth athleteId={athleteId} />}
-        {tab === 'payments' && <AthletePayments athleteId={athleteId} />}
-        {tab === 'documents' && <Documents />}
-        {tab === 'messages' && <Messages />}
+        {tab === 'home'      && <AthleteHome athlete={athlete} athleteId={athleteId} />}
+        {tab === 'training'  && <AthleteTrainingWithRPE athleteId={athleteId} />}
+        {tab === 'health'    && <AthleteHealth athleteId={athleteId} />}
+        {tab === 'progress'  && <AthleteProgressTab athleteId={athleteId} />}
+        {tab === 'documents' && <DocsPage />}
+        {tab === 'messages'  && <Messages />}
       </main>
 
       {/* Bottom nav */}
@@ -284,6 +285,123 @@ function AthletePayments({ athleteId }) {
           </div>
         )}
       </div>
+    </div>
+  )
+}
+
+// ---- Tab Progreso ----
+function AthleteProgressTab({ athleteId }) {
+  const [sessions, setSessions] = useState([])
+  useEffect(() => { Sessions.getByAthlete(athleteId).then(setSessions) }, [athleteId])
+  return <Progress athleteId={athleteId} sessions={sessions} isCoach={false} />
+}
+
+// ---- Entrenos con RPE ----
+function AthleteTrainingWithRPE({ athleteId }) {
+  const [sessions, setSessions] = useState([])
+  const [rpeSheet, setRpeSheet] = useState(null)
+  const [rpe, setRpe] = useState(0)
+  const [saving, setSaving] = useState(false)
+
+  useEffect(() => { Sessions.getByAthlete(athleteId).then(setSessions) }, [athleteId])
+
+  const today = new Date().toISOString().slice(0,10)
+  const past = sessions.filter(s => s.date < today).reverse()
+  const upcoming = sessions.filter(s => s.date >= today)
+
+  const saveRpe = async () => {
+    if (!rpe) return
+    setSaving(true)
+    await RPE.set(rpeSheet.id, athleteId, rpe)
+    setSaving(false)
+    setRpeSheet(null)
+    setRpe(0)
+  }
+
+  const formatDate = (d) => {
+    const date = new Date(d+'T12:00:00')
+    const days = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb']
+    const months = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic']
+    return `${days[date.getDay()]} ${date.getDate()} ${months[date.getMonth()]}`
+  }
+
+  const RPE_LABELS = ['','Muy fácil 😴','Fácil 🙂','Moderado 😐','Duro 😤','Máximo 🔥']
+  const RPE_COLORS = ['','var(--success)','var(--success)','var(--warning)','var(--error)','var(--error)']
+
+  return (
+    <div className="page fade-in">
+      <div className="page-header"><h2>Mis entrenos</h2></div>
+      <div className="page-content">
+        {upcoming.length > 0 && <>
+          <div className="section-title">Próximos</div>
+          {upcoming.map(s => (
+            <div key={s.id} className="card" style={{ padding: '14px 16px' }}>
+              <div style={{ fontSize: 12, color: 'var(--accent)', fontWeight: 700 }}>{formatDate(s.date)}</div>
+              <div style={{ fontWeight: 700, fontSize: 15, marginTop: 4 }}>{s.title}</div>
+              <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>{s.duration} min</div>
+            </div>
+          ))}
+        </>}
+
+        {past.length > 0 && <>
+          <div className="section-title" style={{ marginTop: 8 }}>Historial</div>
+          {past.map(s => (
+            <div key={s.id} className="card" style={{ padding: '14px 16px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                <div>
+                  <div style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 600 }}>{formatDate(s.date)}</div>
+                  <div style={{ fontWeight: 700, fontSize: 15, marginTop: 2 }}>{s.title}</div>
+                </div>
+                <button onClick={() => { setRpeSheet(s); setRpe(0) }}
+                  className="btn btn-sm"
+                  style={{ background: 'var(--accent-dim)', color: 'var(--accent)', borderRadius: 8, fontSize: 12 }}>
+                  ⭐ Valorar
+                </button>
+              </div>
+            </div>
+          ))}
+        </>}
+
+        {sessions.length === 0 && (
+          <div className="empty-state"><div className="icon">📅</div><h3>Sin sesiones</h3></div>
+        )}
+      </div>
+
+      {rpeSheet && (
+        <>
+          <div className="overlay" onClick={() => setRpeSheet(null)} />
+          <div className="sheet">
+            <div className="sheet-handle" />
+            <div className="sheet-header">
+              <h3>¿Cómo fue el entreno?</h3>
+              <button className="btn btn-ghost btn-sm" onClick={() => setRpeSheet(null)}>✕</button>
+            </div>
+            <div className="sheet-body">
+              <div style={{ textAlign: 'center', marginBottom: 24 }}>
+                <div style={{ fontSize: 15, fontWeight: 600 }}>{rpeSheet.title}</div>
+                <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>{formatDate(rpeSheet.date)}</div>
+              </div>
+              <div className="section-title">Esfuerzo percibido (RPE)</div>
+              <div style={{ display: 'flex', gap: 8, justifyContent: 'center', marginBottom: 16 }}>
+                {[1,2,3,4,5].map(v => (
+                  <button key={v} onClick={() => setRpe(v)}
+                    style={{ width: 52, height: 52, borderRadius: 12, fontSize: 20, fontWeight: 800, border: `3px solid ${rpe === v ? RPE_COLORS[v] : 'var(--border)'}`, background: rpe === v ? RPE_COLORS[v]+'20' : 'var(--bg)', color: rpe === v ? RPE_COLORS[v] : 'var(--text-muted)', cursor: 'pointer', fontFamily: "'Barlow Condensed', sans-serif" }}>
+                    {v}
+                  </button>
+                ))}
+              </div>
+              {rpe > 0 && (
+                <div style={{ textAlign: 'center', fontSize: 15, color: RPE_COLORS[rpe], fontWeight: 600, marginBottom: 20 }}>
+                  {RPE_LABELS[rpe]}
+                </div>
+              )}
+              <button className="btn btn-primary btn-full" onClick={saveRpe} disabled={!rpe || saving}>
+                {saving ? 'Guardando...' : 'Guardar valoración'}
+              </button>
+            </div>
+          </div>
+        </>
+      )}
     </div>
   )
 }

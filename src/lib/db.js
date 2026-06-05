@@ -202,6 +202,8 @@ export const Messages = {
       sender: m.sender,
       senderName: m.sender_name,
       text: m.text,
+      file_url: m.file_url,
+      file_type: m.file_type,
       ts: m.created_at
     }))
   },
@@ -224,5 +226,67 @@ export const Messages = {
       .channel(`messages:${group}`)
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `group_id=eq.${group}` }, callback)
       .subscribe()
+  }
+}
+
+// ---- RECORDS ----
+export const Records = {
+  getByAthlete: async (athleteId) => {
+    const { data } = await supabase.from('personal_records').select('*').eq('athlete_id', athleteId).order('date', { ascending: false })
+    return data || []
+  },
+  create: async (record) => {
+    const { data } = await supabase.from('personal_records').insert(record).select().single()
+    return data
+  },
+  delete: async (id) => { await supabase.from('personal_records').delete().eq('id', id) }
+}
+
+// ---- GOALS ----
+export const Goals = {
+  getByAthlete: async (athleteId) => {
+    const { data } = await supabase.from('goals').select('*').eq('athlete_id', athleteId).order('created_at', { ascending: false })
+    return data || []
+  },
+  create: async (goal) => {
+    const { data } = await supabase.from('goals').insert(goal).select().single()
+    return data
+  },
+  update: async (id, updates) => {
+    const { data } = await supabase.from('goals').update(updates).eq('id', id).select().single()
+    return data
+  },
+  delete: async (id) => { await supabase.from('goals').delete().eq('id', id) }
+}
+
+// ---- WELLNESS ----
+export const Wellness = {
+  getToday: async (athleteId) => {
+    const today = new Date().toISOString().slice(0,10)
+    const { data } = await supabase.from('wellness').select('*').eq('athlete_id', athleteId).eq('date', today).single()
+    return data
+  },
+  getByAthlete: async (athleteId, limit = 14) => {
+    const { data } = await supabase.from('wellness').select('*').eq('athlete_id', athleteId).order('date', { ascending: false }).limit(limit)
+    return data || []
+  },
+  getAll: async () => {
+    const { data } = await supabase.from('wellness').select('*, athletes(name, color)').order('date', { ascending: false }).limit(50)
+    return data || []
+  },
+  upsert: async (entry) => {
+    const { data } = await supabase.from('wellness').upsert(entry, { onConflict: 'athlete_id,date' }).select().single()
+    return data
+  }
+}
+
+// ---- RPE ----
+export const RPE = {
+  set: async (sessionId, athleteId, rpe, notes = '') => {
+    await supabase.from('session_athletes').update({ rpe, rpe_notes: notes }).eq('session_id', sessionId).eq('athlete_id', athleteId)
+  },
+  get: async (sessionId, athleteId) => {
+    const { data } = await supabase.from('session_athletes').select('rpe, rpe_notes').eq('session_id', sessionId).eq('athlete_id', athleteId).single()
+    return data
   }
 }
