@@ -64,8 +64,13 @@ export default function Training({ athleteId = null, coachView = false, embedded
   const save = async () => {
     if (!form.title.trim()) return
     setSaving(true)
-    if (editing) await Sessions.update(editing, form)
-    else await Sessions.create(form)
+    // Protección: si hay un athleteId activo, asegurarse de que esté en la lista
+    const safeForm = { ...form }
+    if (athleteId && !safeForm.athlete_ids.includes(athleteId)) {
+      safeForm.athlete_ids = [...safeForm.athlete_ids, athleteId]
+    }
+    if (editing) await Sessions.update(editing, safeForm)
+    else await Sessions.create(safeForm)
     await load(); setSaving(false); setSheet(null)
   }
 
