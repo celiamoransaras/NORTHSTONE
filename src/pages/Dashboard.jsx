@@ -55,7 +55,8 @@ export default function Dashboard() {
   if (!stats) return <div style={{ padding: 24, color: 'var(--text-muted)' }}>Cargando...</div>
 
   const today = new Date()
-  const greeting = today.getHours() < 13 ? 'Buenos días' : today.getHours() < 20 ? 'Buenas tardes' : 'Buenas noches'
+  const h = today.getHours()
+  const greeting = h < 7 ? 'Buenas noches' : h < 13 ? 'Buenos días' : h < 20 ? 'Buenas tardes' : 'Buenas noches'
   const dayNames = ['domingo','lunes','martes','miércoles','jueves','viernes','sábado']
   const monthNames = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre']
 
