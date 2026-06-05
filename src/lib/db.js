@@ -69,7 +69,15 @@ export const Sessions = {
     if (!newSession) return null
 
     if (exercises.length) {
-      await supabase.from('exercises').insert(exercises.map((e, i) => ({ ...e, session_id: newSession.id, sort_order: i, id: undefined })))
+      await supabase.from('exercises').insert(exercises.map((e, i) => ({
+        session_id: newSession.id,
+        name: e.name || 'Ejercicio',
+        sets: parseInt(e.sets) || 3,
+        reps: String(e.reps || '10'),
+        notes: e.notes || null,
+        youtube_url: e.youtube_url || null,
+        sort_order: i
+      })))
     }
     if (athlete_ids.length) {
       await supabase.from('session_athletes').insert(athlete_ids.map(id => ({ session_id: newSession.id, athlete_id: id })))
@@ -82,7 +90,15 @@ export const Sessions = {
     if (exercises) {
       await supabase.from('exercises').delete().eq('session_id', id)
       if (exercises.length) {
-        await supabase.from('exercises').insert(exercises.map((e, i) => ({ ...e, session_id: id, sort_order: i, id: undefined })))
+        await supabase.from('exercises').insert(exercises.map((e, i) => ({
+          session_id: id,
+          name: e.name || 'Ejercicio',
+          sets: parseInt(e.sets) || 3,
+          reps: String(e.reps || '10'),
+          notes: e.notes || null,
+          youtube_url: e.youtube_url || null,
+          sort_order: i
+        })))
       }
     }
     if (athlete_ids) {
