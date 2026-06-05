@@ -235,9 +235,10 @@ export const Messages = {
     return data
   },
   uploadFile: async (file) => {
-    const path = `${Date.now()}_${file.name}`
-    const { error } = await supabase.storage.from('chat').upload(path, file)
-    if (error) throw error
+    const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_')
+    const path = `${Date.now()}_${safeName}`
+    const { error } = await supabase.storage.from('chat').upload(path, file, { upsert: true })
+    if (error) throw new Error(error.message)
     const { data } = supabase.storage.from('chat').getPublicUrl(path)
     return { url: data.publicUrl, type: file.type, name: file.name }
   },

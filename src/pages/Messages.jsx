@@ -49,7 +49,7 @@ export default function Messages() {
     try {
       const { url, type } = await DB.uploadFile(file)
       await send('', url, type)
-    } catch { alert('Error al subir el archivo') }
+    } catch (err) { alert('Error al subir: ' + (err.message || err)) }
     setUploading(false)
     e.target.value = ''
   }
