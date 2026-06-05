@@ -84,7 +84,7 @@ export const Sessions = {
     }
     return newSession
   },
-  update: async (id, { exercises = [], athlete_ids = [], ...session }) => {
+  update: async (id, { exercises = [], athlete_ids = [], attendance, session_athletes, id: _id, ...session }) => {
     await supabase.from('sessions').update(session).eq('id', id)
 
     if (exercises) {
