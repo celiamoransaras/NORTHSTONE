@@ -51,13 +51,19 @@ export function AuthProvider({ children }) {
   }
 
   useEffect(() => {
+    const timeout = setTimeout(() => setLoading(false), 5000)
+
     supabase.auth.getSession().then(({ data: { session } }) => {
+      clearTimeout(timeout)
       setUser(session?.user ?? null)
       if (session?.user) {
         loadProfile(session.user.id, session.user.email).finally(() => setLoading(false))
       } else {
         setLoading(false)
       }
+    }).catch(() => {
+      clearTimeout(timeout)
+      setLoading(false)
     })
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
