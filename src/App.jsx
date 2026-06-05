@@ -8,14 +8,16 @@ import Health from './pages/Health'
 import Payments from './pages/Payments'
 import Messages from './pages/Messages'
 import AthleteView from './pages/AthleteView'
+import Documents from './pages/Documents'
 
 const NAV = [
-  { to: '/',         icon: '⊞',  label: 'Inicio' },
-  { to: '/athletes', icon: '👥', label: 'Equipo' },
-  { to: '/training', icon: '📅', label: 'Entrenos' },
-  { to: '/health',   icon: '🩺', label: 'Salud' },
-  { to: '/payments', icon: '💳', label: 'Pagos' },
-  { to: '/messages', icon: '💬', label: 'Chat' },
+  { to: '/',          icon: '⊞',  label: 'Inicio' },
+  { to: '/athletes',  icon: '👥', label: 'Equipo' },
+  { to: '/training',  icon: '📅', label: 'Entrenos' },
+  { to: '/health',    icon: '🩺', label: 'Salud' },
+  { to: '/payments',  icon: '💳', label: 'Pagos' },
+  { to: '/documents', icon: '📂', label: 'Docs' },
+  { to: '/messages',  icon: '💬', label: 'Chat' },
 ]
 
 function CoachApp() {
@@ -39,6 +41,7 @@ function CoachApp() {
           <Route path="/training"  element={<Training />} />
           <Route path="/health"    element={<Health />} />
           <Route path="/payments"  element={<Payments />} />
+          <Route path="/documents" element={<Documents />} />
           <Route path="/messages"  element={<Messages />} />
           <Route path="*"          element={<Dashboard />} />
         </Routes>

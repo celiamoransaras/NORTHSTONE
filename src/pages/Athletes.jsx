@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
-import { Athletes as DB } from '../lib/db'
+import { Athletes as DB, Storage } from '../lib/db'
+import Training from './Training'
 
 const COLORS = ['#F59E0B','#10B981','#3B82F6','#EC4899','#8B5CF6','#EF4444','#14B8A6','#F97316']
 const STATUS_OPTS = [{ value: 'active', label: 'Activo' }, { value: 'injured', label: 'Lesionado' }, { value: 'inactive', label: 'Baja' }]
@@ -14,6 +15,8 @@ export default function Athletes() {
   const [editing, setEditing] = useState(null)
   const [saving, setSaving] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(null)
+  const [detailTab, setDetailTab] = useState('profile')
+  const [uploadingPhoto, setUploadingPhoto] = useState(false)
 
   const load = async () => {
     setLoading(true)
@@ -29,7 +32,7 @@ export default function Athletes() {
 
   const openNew = () => { setForm(emptyForm); setEditing(null); setSheet('form') }
   const openEdit = (a) => { setForm({ ...a }); setEditing(a.id); setSheet('form') }
-  const openDetail = (a) => setSheet({ ...a })
+  const openDetail = (a) => { setSheet({ ...a }); setDetailTab('profile') }
 
   const save = async () => {
     if (!form.name.trim()) return
@@ -39,6 +42,16 @@ export default function Athletes() {
     await load()
     setSaving(false)
     setSheet(null)
+  }
+
+  const handlePhotoUpload = async (file, athleteId) => {
+    if (!file) return
+    setUploadingPhoto(true)
+    try {
+      const url = await Storage.uploadAvatar(athleteId || 'new_' + Date.now(), file)
+      setForm(f => ({ ...f, avatar_url: url }))
+    } catch (e) { console.error(e) }
+    setUploadingPhoto(false)
   }
 
   const remove = async (id) => {
@@ -92,9 +105,10 @@ export default function Athletes() {
             {filtered.map((a, i) => (
               <div key={a.id} className="list-item" onClick={() => openDetail(a)}
                 style={{ borderBottom: i < filtered.length - 1 ? undefined : 'none' }}>
-                <div className="avatar" style={{ background: a.color + '30', color: a.color }}>
-                  {initials(a.name)}
-                </div>
+                {a.avatar_url
+                  ? <img src={a.avatar_url} alt={a.name} style={{ width: 40, height: 40, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
+                  : <div className="avatar" style={{ background: a.color + '30', color: a.color }}>{initials(a.name)}</div>
+                }
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontWeight: 600, fontSize: 14 }}>{a.name}</div>
                   <div style={{ color: 'var(--text-muted)', fontSize: 12 }}>{a.sport || 'Sin deporte'}</div>
@@ -116,23 +130,36 @@ export default function Athletes() {
               <h3>{sheet.name}</h3>
               <button className="btn btn-ghost btn-sm" onClick={() => openEdit(sheet)}>✏️ Editar</button>
             </div>
-            <div className="sheet-body">
-              <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 24 }}>
-                <div className="avatar" style={{ width: 64, height: 64, fontSize: 24, background: sheet.color + '30', color: sheet.color }}>
-                  {initials(sheet.name)}
-                </div>
-                <div>
-                  <div style={{ fontWeight: 700, fontSize: 18 }}>{sheet.name}</div>
-                  <span className={`badge ${statusBadge(sheet.status)}`}>{statusLabel(sheet.status)}</span>
-                </div>
-              </div>
-              <InfoRow icon="✉️" label="Email" val={sheet.email || '—'} />
-              <InfoRow icon="📱" label="Teléfono" val={sheet.phone || '—'} />
-              <InfoRow icon="🎂" label="Fecha de nacimiento" val={sheet.dob ? new Date(sheet.dob+'T12:00:00').toLocaleDateString('es-ES') : '—'} />
-              <InfoRow icon="🏋️" label="Deporte" val={sheet.sport || '—'} />
-              {sheet.notes && <><div className="divider" /><div style={{ color: 'var(--text-muted)', fontSize: 14 }}>{sheet.notes}</div></>}
-              <div className="divider" />
-              <button className="btn btn-danger btn-full" onClick={() => setConfirmDelete(sheet.id)}>🗑 Eliminar deportista</button>
+            {/* Tabs */}
+            <div style={{ display: 'flex', gap: 4, padding: '0 16px 12px' }}>
+              <button className={`pill-tab ${detailTab==='profile'?'active':''}`} onClick={() => setDetailTab('profile')}>Perfil</button>
+              <button className={`pill-tab ${detailTab==='training'?'active':''}`} onClick={() => setDetailTab('training')}>Entrenos</button>
+            </div>
+            <div className="sheet-body" style={{ paddingTop: 0 }}>
+              {detailTab === 'profile' && (
+                <>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 24 }}>
+                    {sheet.avatar_url
+                      ? <img src={sheet.avatar_url} alt={sheet.name} style={{ width: 64, height: 64, borderRadius: '50%', objectFit: 'cover' }} />
+                      : <div className="avatar" style={{ width: 64, height: 64, fontSize: 24, background: sheet.color + '30', color: sheet.color }}>{initials(sheet.name)}</div>
+                    }
+                    <div>
+                      <div style={{ fontWeight: 700, fontSize: 18 }}>{sheet.name}</div>
+                      <span className={`badge ${statusBadge(sheet.status)}`}>{statusLabel(sheet.status)}</span>
+                    </div>
+                  </div>
+                  <InfoRow icon="✉️" label="Email" val={sheet.email || '—'} />
+                  <InfoRow icon="📱" label="Teléfono" val={sheet.phone || '—'} />
+                  <InfoRow icon="🎂" label="Fecha de nacimiento" val={sheet.dob ? new Date(sheet.dob+'T12:00:00').toLocaleDateString('es-ES') : '—'} />
+                  <InfoRow icon="🏋️" label="Deporte" val={sheet.sport || '—'} />
+                  {sheet.notes && <><div className="divider" /><div style={{ color: 'var(--text-muted)', fontSize: 14 }}>{sheet.notes}</div></>}
+                  <div className="divider" />
+                  <button className="btn btn-danger btn-full" onClick={() => setConfirmDelete(sheet.id)}>🗑 Eliminar deportista</button>
+                </>
+              )}
+              {detailTab === 'training' && (
+                <Training athleteId={sheet.id} coachView embedded />
+              )}
             </div>
           </div>
         </>
@@ -149,6 +176,23 @@ export default function Athletes() {
               <button className="btn btn-ghost btn-sm" onClick={() => setSheet(null)}>✕</button>
             </div>
             <div className="sheet-body">
+              {/* Foto de perfil */}
+              <div className="input-group">
+                <label className="input-label">Foto de perfil</label>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  {form.avatar_url
+                    ? <img src={form.avatar_url} alt="foto" style={{ width: 56, height: 56, borderRadius: '50%', objectFit: 'cover' }} />
+                    : <div className="avatar" style={{ width: 56, height: 56, background: (form.color||COLORS[0])+'30', color: form.color||COLORS[0], fontSize: 18 }}>
+                        {form.name ? initials(form.name) : '?'}
+                      </div>
+                  }
+                  <label className="btn btn-secondary btn-sm" style={{ cursor: 'pointer' }}>
+                    {uploadingPhoto ? 'Subiendo...' : 'Cambiar foto'}
+                    <input type="file" accept="image/*" style={{ display: 'none' }}
+                      onChange={e => handlePhotoUpload(e.target.files[0], editing)} />
+                  </label>
+                </div>
+              </div>
               {[
                 { label: 'Nombre *', key: 'name', placeholder: 'Nombre completo' },
                 { label: 'Email', key: 'email', placeholder: 'email@ejemplo.com', type: 'email' },

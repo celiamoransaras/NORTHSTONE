@@ -149,6 +149,39 @@ export const Payments = {
   }
 }
 
+// ---- STORAGE ----
+export const Storage = {
+  uploadAvatar: async (athleteId, file) => {
+    const ext = file.name.split('.').pop()
+    const path = `${athleteId}.${ext}`
+    await supabase.storage.from('avatars').upload(path, file, { upsert: true })
+    const { data } = supabase.storage.from('avatars').getPublicUrl(path)
+    return data.publicUrl
+  },
+  uploadDocument: async (file) => {
+    const path = `${Date.now()}_${file.name}`
+    const { error } = await supabase.storage.from('documents').upload(path, file)
+    if (error) throw error
+    const { data } = supabase.storage.from('documents').getPublicUrl(path)
+    return { url: data.publicUrl, name: file.name, size: file.size }
+  }
+}
+
+// ---- DOCUMENTS ----
+export const Documents = {
+  getAll: async () => {
+    const { data } = await supabase.from('documents').select('*').order('created_at', { ascending: false })
+    return data || []
+  },
+  create: async (doc) => {
+    const { data } = await supabase.from('documents').insert(doc).select().single()
+    return data
+  },
+  delete: async (id) => {
+    await supabase.from('documents').delete().eq('id', id)
+  }
+}
+
 // ---- MESSAGES ----
 export const Messages = {
   getGroup: async (group) => {

@@ -2,13 +2,22 @@ import { useState, useEffect } from 'react'
 import { Sessions, Athletes } from '../lib/db'
 
 const TYPE_OPTS = [
-  { value: 'strength', label: '💪 Fuerza' },
-  { value: 'cardio', label: '🏃 Cardio' },
-  { value: 'flexibility', label: '🧘 Flexibilidad' },
-  { value: 'mixed', label: '⚡ Mixta' },
+  { value: 'run',        label: '🏃 Run' },
+  { value: 'fuerza',     label: '💪 Fuerza' },
+  { value: 'series',     label: '⚡ Series' },
+  { value: 'endurance',  label: '🫁 Endurance' },
+  { value: 'especifico', label: '🎯 Específico' },
+  { value: 'ergometros', label: '🚣 Ergómetros' },
+  { value: 'cardio',     label: '❤️ Cardio' },
+  { value: 'rest_day',   label: '😴 Rest Day' },
 ]
-const TYPE_COLOR = { strength: 'var(--accent)', cardio: 'var(--info)', flexibility: 'var(--success)', mixed: 'var(--text-muted)' }
-const emptyForm = { title: '', date: new Date().toISOString().slice(0,10), type: 'strength', duration: 60, notes: '', exercises: [], athlete_ids: [] }
+const TYPE_COLOR = {
+  run: '#10B981', fuerza: '#F59E0B', series: '#EF4444',
+  endurance: '#3B82F6', especifico: '#8B5CF6',
+  ergometros: '#14B8A6', cardio: '#EC4899', rest_day: '#707070',
+  strength: '#F59E0B', flexibility: '#10B981', mixed: '#707070'
+}
+const emptyForm = { title: '', date: new Date().toISOString().slice(0,10), type: 'run', duration: 60, notes: '', exercises: [], athlete_ids: [] }
 const emptyExercise = { name: '', sets: 3, reps: '10', notes: '', youtube_url: '' }
 
 function getYouTubeId(url) {
@@ -16,7 +25,7 @@ function getYouTubeId(url) {
   return m ? m[1] : null
 }
 
-export default function Training({ athleteId = null }) {
+export default function Training({ athleteId = null, coachView = false, embedded = false }) {
   const [sessions, setSessions] = useState([])
   const [athletes, setAthletes] = useState([])
   const [loading, setLoading] = useState(true)
@@ -44,7 +53,11 @@ export default function Training({ athleteId = null }) {
   const past = sessions.filter(s => s.date < today).reverse()
   const displayed = tab === 'upcoming' ? upcoming : past
 
-  const openNew = () => { setForm(emptyForm); setEditing(null); setSheet('form') }
+  const openNew = () => {
+    const base = { ...emptyForm }
+    if (athleteId) base.athlete_ids = [athleteId]
+    setForm(base); setEditing(null); setSheet('form')
+  }
   const openEdit = (s) => { setForm({ ...s, exercises: [...(s.exercises||[])], athlete_ids: [...(s.athlete_ids||[])] }); setEditing(s.id); setSheet('form') }
   const openDetail = (s) => { setDetailSession(s); setSheet('detail') }
 
@@ -70,12 +83,21 @@ export default function Training({ athleteId = null }) {
     return `${days[d.getDay()]} ${d.getDate()} ${months[d.getMonth()]}`
   }
 
-  return (
-    <div className="page fade-in">
-      <div className="page-header">
-        <h2>Entrenamientos</h2>
-        {!athleteId && <button className="btn btn-primary btn-sm" onClick={openNew}>+ Nuevo</button>}
-      </div>
+  const showCreate = !athleteId || coachView
+
+  const inner = (
+    <>
+      {!embedded && (
+        <div className="page-header">
+          <h2>Entrenamientos</h2>
+          {showCreate && <button className="btn btn-primary btn-sm" onClick={openNew}>+ Nuevo</button>}
+        </div>
+      )}
+      {embedded && (
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 12 }}>
+          <button className="btn btn-primary btn-sm" onClick={openNew}>+ Nueva sesión</button>
+        </div>
+      )}
 
       <div className="page-content">
         <div className="pill-tabs">
@@ -107,7 +129,7 @@ export default function Training({ athleteId = null }) {
                 <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{formatDate(detailSession.date)}</div>
                 <h3>{detailSession.title}</h3>
               </div>
-              {!athleteId && <button className="btn btn-ghost btn-sm" onClick={() => openEdit(detailSession)}>✏️</button>}
+              {(!athleteId || coachView) && <button className="btn btn-ghost btn-sm" onClick={() => openEdit(detailSession)}>✏️</button>}
             </div>
             <div className="sheet-body">
               <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
@@ -141,7 +163,7 @@ export default function Training({ athleteId = null }) {
                 </>
               )}
 
-              {!athleteId && (
+              {(!athleteId || coachView) && (
                 <><div className="divider" /><button className="btn btn-danger btn-full" onClick={() => remove(detailSession.id)}>🗑 Eliminar sesión</button></>
               )}
             </div>
@@ -222,8 +244,12 @@ export default function Training({ athleteId = null }) {
           </div>
         </>
       )}
-    </div>
+    </>
   )
+
+  return embedded
+    ? <div style={{ padding: '0 0 8px' }}>{inner}</div>
+    : <div className="page fade-in">{inner}</div>
 }
 
 function SessionCard({ session, athletes, onPress, formatDate }) {

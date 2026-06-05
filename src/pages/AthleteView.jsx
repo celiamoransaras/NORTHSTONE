@@ -7,13 +7,15 @@ import { useAuth } from '../contexts/AuthContext'
 import { Sessions, Injuries, Payments } from '../lib/db'
 import Training from './Training'
 import Messages from './Messages'
+import Documents from './Documents'
 
 const NAV = [
-  { id: 'home',     icon: '🏠', label: 'Inicio' },
-  { id: 'training', icon: '📅', label: 'Entrenos' },
-  { id: 'health',   icon: '🩺', label: 'Salud' },
-  { id: 'payments', icon: '💳', label: 'Pagos' },
-  { id: 'messages', icon: '💬', label: 'Chat' },
+  { id: 'home',      icon: '🏠', label: 'Inicio' },
+  { id: 'training',  icon: '📅', label: 'Entrenos' },
+  { id: 'health',    icon: '🩺', label: 'Salud' },
+  { id: 'payments',  icon: '💳', label: 'Pagos' },
+  { id: 'documents', icon: '📂', label: 'Docs' },
+  { id: 'messages',  icon: '💬', label: 'Chat' },
 ]
 
 export default function AthleteView() {
@@ -56,6 +58,7 @@ export default function AthleteView() {
         {tab === 'training' && <Training athleteId={athleteId} />}
         {tab === 'health'   && <AthleteHealth athleteId={athleteId} />}
         {tab === 'payments' && <AthletePayments athleteId={athleteId} />}
+        {tab === 'documents' && <Documents />}
         {tab === 'messages' && <Messages />}
       </main>
 
