@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
-import { Athletes as DB, Storage } from '../lib/db'
+import { Athletes as DB, Sessions, Storage } from '../lib/db'
 import Training from './Training'
+import { GoalsSection, RecordsSection, LoadChart } from './Progress'
 
 const COLORS = ['#F59E0B','#10B981','#3B82F6','#EC4899','#8B5CF6','#EF4444','#14B8A6','#F97316']
 const STATUS_OPTS = [{ value: 'active', label: 'Activo' }, { value: 'injured', label: 'Lesionado' }, { value: 'inactive', label: 'Baja' }]
@@ -131,9 +132,10 @@ export default function Athletes() {
               <button className="btn btn-ghost btn-sm" onClick={() => openEdit(sheet)}>✏️ Editar</button>
             </div>
             {/* Tabs */}
-            <div style={{ display: 'flex', gap: 4, padding: '0 16px 12px' }}>
+            <div style={{ display: 'flex', gap: 4, padding: '0 16px 12px', overflowX: 'auto' }}>
               <button className={`pill-tab ${detailTab==='profile'?'active':''}`} onClick={() => setDetailTab('profile')}>Perfil</button>
               <button className={`pill-tab ${detailTab==='training'?'active':''}`} onClick={() => setDetailTab('training')}>Entrenos</button>
+              <button className={`pill-tab ${detailTab==='progress'?'active':''}`} onClick={() => setDetailTab('progress')}>Progreso</button>
             </div>
             <div className="sheet-body" style={{ paddingTop: 0 }}>
               {detailTab === 'profile' && (
@@ -159,6 +161,9 @@ export default function Athletes() {
               )}
               {detailTab === 'training' && (
                 <Training athleteId={sheet.id} coachView embedded />
+              )}
+              {detailTab === 'progress' && (
+                <AthleteProgress athleteId={sheet.id} />
               )}
             </div>
           </div>
@@ -270,6 +275,18 @@ function InfoRow({ icon, label, val }) {
         <div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.4px' }}>{label}</div>
         <div style={{ fontSize: 15, marginTop: 2 }}>{val}</div>
       </div>
+    </div>
+  )
+}
+
+function AthleteProgress({ athleteId }) {
+  const [sessions, setSessions] = useState([])
+  useEffect(() => { Sessions.getByAthlete(athleteId).then(setSessions) }, [athleteId])
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      <LoadChart sessions={sessions} />
+      <GoalsSection athleteId={athleteId} canCreate={true} />
+      <RecordsSection athleteId={athleteId} canEdit={true} />
     </div>
   )
 }
