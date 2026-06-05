@@ -53,41 +53,51 @@ function LoadChart({ sessions }) {
 function RecordsSection({ athleteId, canEdit }) {
   const [records, setRecords] = useState([])
   const [sheet, setSheet] = useState(false)
-  const [form, setForm] = useState({ name: '', value: '', unit: 'min', date: new Date().toISOString().slice(0,10), notes: '' })
+  const [editing, setEditing] = useState(null)
+  const emptyForm = { name: '', value: '', unit: 'min', date: new Date().toISOString().slice(0,10), notes: '' }
+  const [form, setForm] = useState(emptyForm)
   const [saving, setSaving] = useState(false)
 
   const UNITS = ['min', 'seg', 'kg', 'km', 'rep', 'cm', 'w', 'm']
 
   useEffect(() => { Records.getByAthlete(athleteId).then(setRecords) }, [athleteId])
 
-  // Agrupar por nombre para mostrar mejor
   const grouped = records.reduce((acc, r) => {
     if (!acc[r.name]) acc[r.name] = []
     acc[r.name].push(r)
     return acc
   }, {})
 
+  const openNew = () => { setEditing(null); setForm(emptyForm); setSheet(true) }
+  const openEdit = (r) => { setEditing(r.id); setForm({ name: r.name, value: String(r.value), unit: r.unit, date: r.date, notes: r.notes || '' }); setSheet(true) }
+
   const save = async () => {
     if (!form.name || !form.value) return
     setSaving(true)
-    await Records.create({ ...form, value: parseFloat(form.value), athlete_id: athleteId })
+    if (editing) {
+      await Records.update(editing, { ...form, value: parseFloat(form.value) })
+    } else {
+      await Records.create({ ...form, value: parseFloat(form.value), athlete_id: athleteId })
+    }
     const updated = await Records.getByAthlete(athleteId)
     setRecords(updated)
     setSaving(false)
     setSheet(false)
-    setForm({ name: '', value: '', unit: 'min', date: new Date().toISOString().slice(0,10), notes: '' })
+    setForm(emptyForm)
+    setEditing(null)
   }
 
   const del = async (id) => {
     await Records.delete(id)
     setRecords(r => r.filter(x => x.id !== id))
+    setSheet(false)
   }
 
   return (
     <div>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
         <div className="section-title" style={{ margin: 0 }}>🏆 Marcas personales</div>
-        {canEdit && <button className="btn btn-primary btn-sm" onClick={() => setSheet(true)}>+ Nueva</button>}
+        {canEdit && <button className="btn btn-primary btn-sm" onClick={openNew}>+ Nueva</button>}
       </div>
 
       {records.length === 0 ? (
@@ -95,17 +105,21 @@ function RecordsSection({ athleteId, canEdit }) {
       ) : Object.entries(grouped).map(([name, recs]) => {
         const best = recs[0]
         return (
-          <div key={name} className="card" style={{ padding: '14px 16px', marginBottom: 8 }}>
+          <div key={name} className="card" style={{ padding: '14px 16px', marginBottom: 8, cursor: canEdit ? 'pointer' : 'default' }}
+            onClick={() => canEdit && openEdit(best)}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <div>
                 <div style={{ fontWeight: 700, fontSize: 15 }}>{name}</div>
                 <div style={{ color: 'var(--text-muted)', fontSize: 12, marginTop: 2 }}>
-                  {recs.length} registro{recs.length > 1 ? 's' : ''} · Último: {new Date(best.date+'T12:00:00').toLocaleDateString('es-ES')}
+                  {recs.length} registro{recs.length > 1 ? 's' : ''} · {new Date(best.date+'T12:00:00').toLocaleDateString('es-ES')}
                 </div>
               </div>
-              <div style={{ textAlign: 'right' }}>
-                <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 900, fontSize: 24, color: 'var(--accent)' }}>{best.value}</div>
-                <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{best.unit}</div>
+              <div style={{ textAlign: 'right', display: 'flex', alignItems: 'center', gap: 10 }}>
+                <div>
+                  <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 900, fontSize: 24, color: 'var(--accent)' }}>{best.value}</div>
+                  <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{best.unit}</div>
+                </div>
+                {canEdit && <span style={{ color: 'var(--text-muted)', fontSize: 16 }}>✏️</span>}
               </div>
             </div>
             {recs.length > 1 && (
@@ -117,11 +131,6 @@ function RecordsSection({ athleteId, canEdit }) {
                 ))}
               </div>
             )}
-            {canEdit && (
-              <button onClick={() => del(best.id)} style={{ marginTop: 8, fontSize: 12, color: 'var(--error)', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
-                🗑 Eliminar último
-              </button>
-            )}
           </div>
         )
       })}
@@ -132,8 +141,11 @@ function RecordsSection({ athleteId, canEdit }) {
           <div className="sheet">
             <div className="sheet-handle" />
             <div className="sheet-header">
-              <h3>Nueva marca</h3>
-              <button className="btn btn-ghost btn-sm" onClick={() => setSheet(false)}>✕</button>
+              <h3>{editing ? 'Editar marca' : 'Nueva marca'}</h3>
+              <div style={{ display: 'flex', gap: 8 }}>
+                {editing && <button className="btn btn-danger btn-sm" onClick={() => del(editing)}>🗑</button>}
+                <button className="btn btn-ghost btn-sm" onClick={() => setSheet(false)}>✕</button>
+              </div>
             </div>
             <div className="sheet-body">
               <div className="input-group">
@@ -161,7 +173,7 @@ function RecordsSection({ athleteId, canEdit }) {
                 <input className="input" placeholder="Condiciones, observaciones..." value={form.notes} onChange={e => setForm(f => ({...f, notes: e.target.value}))} />
               </div>
               <button className="btn btn-primary btn-full" onClick={save} disabled={saving}>
-                {saving ? 'Guardando...' : 'Guardar marca'}
+                {saving ? 'Guardando...' : editing ? 'Guardar cambios' : 'Guardar marca'}
               </button>
             </div>
           </div>

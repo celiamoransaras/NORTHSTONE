@@ -239,6 +239,10 @@ export const Records = {
     const { data } = await supabase.from('personal_records').insert(record).select().single()
     return data
   },
+  update: async (id, updates) => {
+    const { data } = await supabase.from('personal_records').update(updates).eq('id', id).select().single()
+    return data
+  },
   delete: async (id) => { await supabase.from('personal_records').delete().eq('id', id) }
 }
 
