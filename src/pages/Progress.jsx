@@ -183,8 +183,17 @@ function GoalsSection({ athleteId, canCreate }) {
   const save = async () => {
     if (!form.title) return
     setSaving(true)
-    await Goals.create({ ...form, athlete_id: athleteId, target_value: parseFloat(form.target_value) || null, current_value: parseFloat(form.current_value) || null })
-    Goals.getByAthlete(athleteId).then(setGoals)
+    await Goals.create({
+      ...form,
+      athlete_id: athleteId,
+      target_value: parseFloat(form.target_value) || null,
+      current_value: parseFloat(form.current_value) || null,
+      deadline: form.deadline || null,
+      description: form.description || null,
+      unit: form.unit || null,
+    })
+    const updated = await Goals.getByAthlete(athleteId)
+    setGoals(updated)
     setSaving(false)
     setSheet(false)
     setForm({ title: '', description: '', target_value: '', current_value: '', unit: '', deadline: '' })
