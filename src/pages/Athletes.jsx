@@ -105,7 +105,7 @@ export default function Athletes() {
           <div className="card">
             {filtered.map((a, i) => (
               <div key={a.id} className="list-item" onClick={() => openDetail(a)}
-                style={{ borderBottom: i < filtered.length - 1 ? undefined : 'none' }}>
+                style={{ borderBottom: i < filtered.length - 1 ? undefined : 'none', borderLeft: `3px solid ${a.color}`, paddingLeft: 14 }}>
                 {a.avatar_url
                   ? <img src={a.avatar_url} alt={a.name} style={{ width: 40, height: 40, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
                   : <div className="avatar" style={{ background: a.color + '30', color: a.color }}>{initials(a.name)}</div>

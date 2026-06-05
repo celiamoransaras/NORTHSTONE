@@ -52,7 +52,17 @@ export default function Dashboard() {
     load()
   }, [])
 
-  if (!stats) return <div style={{ padding: 24, color: 'var(--text-muted)' }}>Cargando...</div>
+  if (!stats) return (
+    <div className="page">
+      <div style={{ padding: '32px 20px 0' }}>
+        <div className="skeleton" style={{ height: 16, width: 120, marginBottom: 10 }} />
+        <div className="skeleton" style={{ height: 40, width: 220, marginBottom: 24 }} />
+        <div className="grid-2" style={{ gap: 12 }}>
+          {[1,2,3,4].map(i => <div key={i} className="skeleton" style={{ height: 90, borderRadius: 18 }} />)}
+        </div>
+      </div>
+    </div>
+  )
 
   const today = new Date()
   const h = today.getHours()
@@ -62,35 +72,36 @@ export default function Dashboard() {
 
   return (
     <div className="page fade-in">
-      <div className="page-header">
-        <div>
-          <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>
-            {dayNames[today.getDay()]}, {today.getDate()} {monthNames[today.getMonth()]}
-          </div>
-          <h1>{greeting}, Celia 👋</h1>
+      {/* Hero */}
+      <div style={{ padding: '28px 20px 20px', background: 'linear-gradient(160deg, #1e3a8a08 0%, transparent 60%)' }}>
+        <div style={{ fontSize: 13, color: 'var(--text-muted)', fontWeight: 500, marginBottom: 4 }}>
+          {dayNames[today.getDay()]}, {today.getDate()} {monthNames[today.getMonth()]}
         </div>
+        <h1 style={{ fontSize: 36, lineHeight: 1.05, marginBottom: 2 }}>{greeting},<br />Celia 👋</h1>
+        <div style={{ height: 3, width: 48, background: 'var(--accent-gradient)', borderRadius: 2, marginTop: 12 }} />
       </div>
 
-      <div className="page-content">
+      <div className="page-content" style={{ paddingTop: 4 }}>
         {stats.showPaymentReminder && (
-          <div onClick={() => navigate('/payments')} style={{ background: 'var(--accent)', borderRadius: 'var(--radius)', padding: '14px 16px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 12 }}>
-            <span style={{ fontSize: 24 }}>💳</span>
-            <div>
+          <div className="fade-in-1" onClick={() => navigate('/payments')} style={{ background: 'var(--accent-gradient)', borderRadius: 'var(--radius)', padding: '16px 18px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 12, boxShadow: 'var(--accent-glow)' }}>
+            <span style={{ fontSize: 26 }}>💳</span>
+            <div style={{ flex: 1 }}>
               <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 800, fontSize: 16, color: '#fff', textTransform: 'uppercase' }}>
-                Recordatorio de pagos — {stats.monthName}
+                Pagos pendientes — {stats.monthName}
               </div>
-              <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.85)', marginTop: 2 }}>
-                {stats.pendingPayments} deportista{stats.pendingPayments > 1 ? 's' : ''} con pago pendiente
+              <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.8)', marginTop: 2 }}>
+                {stats.pendingPayments} deportista{stats.pendingPayments > 1 ? 's' : ''} sin pagar
               </div>
             </div>
-            <span style={{ marginLeft: 'auto', color: '#fff', fontSize: 18 }}>→</span>
+            <span style={{ color: 'rgba(255,255,255,0.8)', fontSize: 20 }}>→</span>
           </div>
         )}
-        <div className="section-title">Resumen del equipo</div>
-        <div className="grid-2">
-          <StatCard value={stats.active} label="Deportistas activos" color="var(--success)" />
-          <StatCard value={stats.injured} label="Con lesión activa" color="var(--error)" />
-          <StatCard value={stats.sessionsThisMonth} label="Sesiones este mes" color="var(--accent)" />
+
+        <div className="section-title fade-in-1">Resumen del equipo</div>
+        <div className="grid-2 fade-in-2">
+          <StatCard value={stats.active} label="Activos" color="var(--success)" />
+          <StatCard value={stats.injured} label="Lesionados" color="var(--error)" />
+          <StatCard value={stats.sessionsThisMonth} label="Sesiones" color="var(--accent)" />
           <StatCard value={`${stats.paidCount}/${stats.totalPayments}`} label="Pagos al día" color="var(--info)" />
         </div>
 

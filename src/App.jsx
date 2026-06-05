@@ -45,7 +45,7 @@ function CoachApp() {
           </div>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <div onClick={handleAvatarClick} style={{ width: 34, height: 34, borderRadius: '50%', background: profile?.avatar_url ? 'transparent' : 'var(--accent)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 900, fontSize: 15, cursor: 'pointer', overflow: 'hidden', flexShrink: 0 }}>
+          <div onClick={handleAvatarClick} className="avatar-ring" style={{ width: 38, height: 38, borderRadius: '50%', background: profile?.avatar_url ? 'transparent' : 'var(--accent-gradient)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 900, fontSize: 15, cursor: 'pointer', overflow: 'hidden', flexShrink: 0 }}>
             {profile?.avatar_url
               ? <img src={profile.avatar_url} alt="foto" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
               : 'C'}
@@ -67,7 +67,7 @@ function CoachApp() {
         </Routes>
       </main>
 
-      <nav style={{ display: 'flex', alignItems: 'stretch', height: 'var(--nav-height)', background: 'var(--bg)', borderTop: '1px solid var(--border)', flexShrink: 0, paddingBottom: 'env(safe-area-inset-bottom)' }}>
+      <nav className="glass-nav" style={{ display: 'flex', alignItems: 'stretch', height: 'var(--nav-height)', flexShrink: 0, paddingBottom: 'env(safe-area-inset-bottom)' }}>
         {NAV.map(({ to, icon, label }) => (
           <NavLink key={to} to={to} end={to === '/'}
             style={({ isActive }) => ({ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 3, textDecoration: 'none', color: isActive ? 'var(--accent)' : 'var(--text-muted)', fontFamily: "'Barlow Condensed', sans-serif", fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px', transition: 'color 0.15s' })}>
