@@ -4,11 +4,11 @@
  */
 import { useState, useEffect, useRef } from 'react'
 import { useAuth } from '../contexts/AuthContext'
-import { Sessions, Injuries, Payments, Documents, Storage } from '../lib/db'
+import { Sessions, Injuries, Payments, Storage } from '../lib/db'
 import { supabase } from '../lib/supabase'
 import Training from './Training'
 import Messages from './Messages'
-import Documents from './Documents'
+import DocsPage from './Documents'
 
 const NAV = [
   { id: 'home',      icon: '🏠', label: 'Inicio' },
