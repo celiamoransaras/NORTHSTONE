@@ -41,8 +41,8 @@ export default function Login() {
           fontSize: 36, fontWeight: 900, color: '#000',
           margin: '0 auto 16px'
         }}>N</div>
-        <h1 style={{ fontSize: 28, fontWeight: 800, letterSpacing: '-0.5px' }}>NORTHSTONE</h1>
-        <p style={{ color: 'var(--text-muted)', marginTop: 4 }}>Tu plataforma deportiva</p>
+        <h1 style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 28, fontWeight: 900, letterSpacing: '1px', textTransform: 'uppercase' }}>NORTHSTONE</h1>
+        <p style={{ fontFamily: "'Barlow', sans-serif", fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>by Celia Morán Saras</p>
       </div>
 
       <form onSubmit={handle} style={{
