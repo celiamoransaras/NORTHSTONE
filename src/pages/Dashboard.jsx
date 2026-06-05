@@ -38,7 +38,7 @@ export default function Dashboard() {
 
       setStats({
         active: athletes.filter(a => a.status === 'active').length,
-        injured: athletes.filter(a => a.status === 'injured').length,
+        injured: new Set(activeInjuries.map(i => i.athlete_id)).size,
         sessionsThisMonth: sessions.filter(s => s.date.startsWith(`${year}-${String(month).padStart(2,'0')}`)).length,
         paidCount,
         totalPayments: athletes.length,
