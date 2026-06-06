@@ -460,6 +460,7 @@ function AthleteTrainingWithRPE({ athleteId }) {
           <div className="sheet">
             <div className="sheet-handle" />
             <div className="sheet-header">
+              <button className="btn btn-ghost btn-sm" onClick={() => { setRpeSheet(null); setDetailSession(rpeSheet) }} style={{ gap: 4 }}>← Volver</button>
               <h3>Valorar sesión</h3>
               <button className="btn btn-ghost btn-sm" onClick={() => setRpeSheet(null)}>✕</button>
             </div>
