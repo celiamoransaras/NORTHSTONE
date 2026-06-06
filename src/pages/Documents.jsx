@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Documents as DB, Storage } from '../lib/db'
 import { useAuth } from '../contexts/AuthContext'
+import { useToast } from '../contexts/ToastContext'
 
 function formatSize(bytes) {
   if (!bytes) return ''
@@ -15,6 +16,7 @@ function formatDate(iso) {
 
 export default function Documents() {
   const { isCoach } = useAuth()
+  const toast = useToast()
   const [docs, setDocs] = useState([])
   const [loading, setLoading] = useState(true)
   const [uploading, setUploading] = useState(false)
@@ -59,7 +61,7 @@ export default function Documents() {
       setSelectedFile(null)
       setForm({ title: '', description: '' })
     } catch (e) {
-      alert('Error al subir el archivo. Asegúrate de que el bucket "documents" existe en Supabase Storage.')
+      toast('Error al subir el archivo', 'error')
     }
     setUploading(false)
   }

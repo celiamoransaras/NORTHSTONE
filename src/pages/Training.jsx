@@ -130,7 +130,7 @@ export default function Training({ athleteId = null, coachView = false, embedded
     const updated = [...templates.filter(t => t.title !== tpl.title), tpl]
     localStorage.setItem('ns_session_templates', JSON.stringify(updated))
     setTemplates(updated)
-    alert('Plantilla guardada ✓')
+    toast('Plantilla guardada ✓')
   }
   const deleteTemplate = (id) => {
     const updated = templates.filter(t => t.id !== id)
