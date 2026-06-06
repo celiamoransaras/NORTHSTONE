@@ -101,7 +101,7 @@ export default function Dashboard() {
               return (
                 <div key={i} onClick={() => {
                   setDismissedAlerts(d => [...d, a.athlete_id])
-                  navigate('/messages', { state: { chatId: a.athlete_id } })
+                  navigate('/messages', { state: { chatId: a.athlete_id, fatigueAlert: { name: athlete?.name, fatigue: a.fatigue_pre, session: a.sessions?.title } } })
                 }} style={{ fontSize: 13, color: 'var(--text)', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', background: 'rgba(220,38,38,0.08)', borderRadius: 10, cursor: 'pointer', transition: 'background 0.15s' }}>
                   <div style={{ width: 10, height: 10, borderRadius: '50%', background: athlete?.color || 'var(--error)', flexShrink: 0 }} />
                   <div style={{ flex: 1 }}>

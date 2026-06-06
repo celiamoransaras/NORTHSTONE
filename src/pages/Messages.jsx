@@ -13,6 +13,7 @@ export default function Messages() {
   const [athletes, setAthletes] = useState([])
   const [coachAvatar, setCoachAvatar] = useState(null)
   const [activeChat, setActiveChat] = useState(location.state?.chatId || 'general')
+  const [fatigueAlert, setFatigueAlert] = useState(location.state?.fatigueAlert || null)
   const [messages, setMessages] = useState([])
   const [reactions, setReactions] = useState({})
   const [reactionTarget, setReactionTarget] = useState(null)
@@ -206,6 +207,15 @@ export default function Messages() {
         {reactionTarget && (
           <div onClick={() => setReactionTarget(null)}
             style={{ position: 'fixed', inset: 0, zIndex: 5 }} />
+        )}
+        {fatigueAlert && activeChat !== 'general' && (
+          <div style={{ background: 'var(--error-dim)', borderBottom: '1px solid rgba(220,38,38,0.2)', padding: '10px 16px', display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
+            <span style={{ fontSize: 18 }}>⚠️</span>
+            <div style={{ flex: 1, fontSize: 13 }}>
+              <strong>{fatigueAlert.name}</strong> reportó cansancio <strong style={{ color: 'var(--error)' }}>{fatigueAlert.fatigue}/10</strong> antes de <em>{fatigueAlert.session}</em>
+            </div>
+            <button onClick={() => setFatigueAlert(null)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: 18, cursor: 'pointer', padding: 4 }}>✕</button>
+          </div>
         )}
         <div style={{ flex: 1, overflowY: 'auto', padding: 16 }}>
           {messages.length === 0 && (
