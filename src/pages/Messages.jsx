@@ -222,7 +222,7 @@ export default function Messages() {
               <strong>{fatigueAlert.name}</strong> reportó cansancio <strong style={{ color: 'var(--error)' }}>{fatigueAlert.fatigue}/10</strong> antes de <em>{fatigueAlert.session}</em>
             </div>
             <button onClick={() => {
-              if (fatigueAlert?.athleteId) dismissFatigueAlert(fatigueAlert.athleteId)
+              if (fatigueAlert?.athleteId) dismissFatigueAlert(fatigueAlert.athleteId, fatigueAlert.sessionId)
               setFatigueAlert(null)
             }} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: 18, cursor: 'pointer', padding: 4 }}>✕</button>
           </div>

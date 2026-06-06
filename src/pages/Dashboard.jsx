@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Athletes, Sessions, Injuries, Payments } from '../lib/db'
 import { supabase } from '../lib/supabase'
-import { getDismissed, dismissFatigueAlert, subscribeAlerts } from '../lib/alertState'
+import { getDismissed, dismissFatigueAlert, isFatigueDismissed, subscribeAlerts } from '../lib/alertState'
 
 const TYPE_ICONS = { run:'🏃', fuerza:'💪', series:'⚡', endurance:'🫁', especifico:'🎯', ergometros:'🚣', cardio:'❤️', rest_day:'😴', strength:'💪', flexibility:'🧘', mixed:'⚡' }
 const TYPE_COLORS = { run:'#10B981', fuerza:'#F59E0B', series:'#EF4444', endurance:'#3B82F6', especifico:'#8B5CF6', ergometros:'#14B8A6', cardio:'#EC4899', rest_day:'#9CA3AF', strength:'#F59E0B', cardio_:'#3B82F6', flexibility:'#10B981', mixed:'#9CA3AF' }
@@ -21,8 +21,8 @@ export default function Dashboard() {
     return subscribeAlerts(() => setDismissedAlerts(new Set(getDismissed())))
   }, [])
 
-  const dismissAlert = (athleteId) => {
-    dismissFatigueAlert(athleteId)
+  const dismissAlert = (athleteId, sessionId) => {
+    dismissFatigueAlert(athleteId, sessionId)
     setDismissedAlerts(new Set(getDismissed()))
   }
 
@@ -41,9 +41,14 @@ export default function Dashboard() {
         Injuries.getAll(),
         Payments.getByMonth(month, year),
         supabase.from('session_athletes')
-          .select('athlete_id, fatigue_pre, sessions(title, date)')
+          .select('athlete_id, session_id, fatigue_pre, sessions(title, date)')
           .gte('fatigue_pre', 8)
-          .then(({ data }) => (data || []).filter(d => d.sessions && d.sessions.date >= today))
+          .then(({ data }) => {
+            const twoDaysFromNow = new Date()
+            twoDaysFromNow.setDate(twoDaysFromNow.getDate() + 2)
+            const limit = twoDaysFromNow.toISOString().slice(0, 10)
+            return (data || []).filter(d => d.sessions && d.sessions.date >= today && d.sessions.date <= limit)
+          })
       ])
 
       const map = {}
@@ -91,7 +96,7 @@ export default function Dashboard() {
   const greeting = h < 7 ? 'Buenas noches' : h < 13 ? 'Buenos días' : h < 20 ? 'Buenas tardes' : 'Buenas noches'
   const dayNames = ['domingo','lunes','martes','miércoles','jueves','viernes','sábado']
   const monthNames = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre']
-  const visibleFatigueAlerts = stats.fatigueAlerts?.filter(a => !dismissedAlerts.has(a.athlete_id)) || []
+  const visibleFatigueAlerts = stats.fatigueAlerts?.filter(a => !isFatigueDismissed(a.athlete_id, a.session_id)) || []
 
   return (
     <div className="page fade-in">
@@ -119,8 +124,8 @@ export default function Dashboard() {
               const athlete = athleteMap[a.athlete_id]
               return (
                 <div key={i} onClick={() => {
-                  dismissAlert(a.athlete_id)
-                  navigate('/messages', { state: { chatId: a.athlete_id, fatigueAlert: { name: athlete?.name, fatigue: a.fatigue_pre, session: a.sessions?.title, athleteId: a.athlete_id } } })
+                  dismissAlert(a.athlete_id, a.session_id)
+                  navigate('/messages', { state: { chatId: a.athlete_id, fatigueAlert: { name: athlete?.name, fatigue: a.fatigue_pre, session: a.sessions?.title, athleteId: a.athlete_id, sessionId: a.session_id } } })
                 }} style={{ background: 'var(--card)', padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer', borderBottom: i < visibleFatigueAlerts.length-1 ? '1px solid var(--border)' : 'none' }}>
                   {athlete?.avatar_url
                     ? <img src={athlete.avatar_url} style={{ width: 36, height: 36, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
