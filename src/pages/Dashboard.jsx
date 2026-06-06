@@ -9,6 +9,7 @@ export default function Dashboard() {
   const [upcomingSessions, setUpcomingSessions] = useState([])
   const [recentInjuries, setRecentInjuries] = useState([])
   const [athleteMap, setAthleteMap] = useState({})
+  const [dismissedAlerts, setDismissedAlerts] = useState([])
 
   useEffect(() => {
     const load = async () => {
@@ -90,22 +91,29 @@ export default function Dashboard() {
       </div>
 
       <div className="page-content" style={{ paddingTop: 4 }}>
-        {stats.fatigueAlerts?.length > 0 && (
+        {stats.fatigueAlerts?.filter(a => !dismissedAlerts.includes(a.athlete_id)).length > 0 && (
           <div className="fade-in-1" style={{ background: 'var(--error-dim)', border: '1px solid rgba(220,38,38,0.25)', borderRadius: 'var(--radius)', padding: '14px 16px' }}>
             <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 800, fontSize: 15, color: 'var(--error)', textTransform: 'uppercase', marginBottom: 8 }}>
               ⚠️ Cansancio alto pre-sesión
             </div>
-            {stats.fatigueAlerts.map((a, i) => {
+            {stats.fatigueAlerts.filter(a => !dismissedAlerts.includes(a.athlete_id)).map((a, i) => {
               const athlete = athleteMap[a.athlete_id]
               return (
-                <div key={i} style={{ fontSize: 13, color: 'var(--text)', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <div style={{ width: 8, height: 8, borderRadius: '50%', background: athlete?.color || 'var(--error)', flexShrink: 0 }} />
-                  <strong>{athlete?.name || 'Deportista'}</strong> — {a.sessions?.title} · Cansancio: <strong style={{ color: 'var(--error)' }}>{a.fatigue_pre}/10</strong>
+                <div key={i} onClick={() => {
+                  setDismissedAlerts(d => [...d, a.athlete_id])
+                  navigate('/messages', { state: { chatId: a.athlete_id } })
+                }} style={{ fontSize: 13, color: 'var(--text)', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', background: 'rgba(220,38,38,0.08)', borderRadius: 10, cursor: 'pointer', transition: 'background 0.15s' }}>
+                  <div style={{ width: 10, height: 10, borderRadius: '50%', background: athlete?.color || 'var(--error)', flexShrink: 0 }} />
+                  <div style={{ flex: 1 }}>
+                    <strong>{athlete?.name || 'Deportista'}</strong> — {a.sessions?.title}
+                    <span style={{ color: 'var(--error)', marginLeft: 6 }}>Cansancio: <strong>{a.fatigue_pre}/10</strong></span>
+                  </div>
+                  <span style={{ fontSize: 16, color: 'var(--accent)' }}>💬 →</span>
                 </div>
               )
             })}
-            <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 8 }}>
-              Valora con ellos si realizar la sesión
+            <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>
+              Toca para abrir el chat y valorar con ellas
             </div>
           </div>
         )}

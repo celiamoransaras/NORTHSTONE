@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import { useLocation } from 'react-router-dom'
 import { Messages as DB, Athletes, Reactions } from '../lib/db'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
@@ -7,10 +8,11 @@ const REACTION_EMOJIS = ['👍','❤️','🔥','💪','😂','👏']
 
 export default function Messages() {
   const { profile, isCoach } = useAuth()
+  const location = useLocation()
   const myAthleteId = profile?.athlete_id
   const [athletes, setAthletes] = useState([])
   const [coachAvatar, setCoachAvatar] = useState(null)
-  const [activeChat, setActiveChat] = useState('general')
+  const [activeChat, setActiveChat] = useState(location.state?.chatId || 'general')
   const [messages, setMessages] = useState([])
   const [reactions, setReactions] = useState({})
   const [reactionTarget, setReactionTarget] = useState(null)
