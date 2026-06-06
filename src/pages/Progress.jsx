@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
-import { Records, Goals, Wellness, Sessions } from '../lib/db'
+import { Records, Goals, Wellness } from '../lib/db'
+import { supabase } from '../lib/supabase'
 
 // ---- Gráfica de carga semanal (SVG) ----
 function LoadChart({ sessions }) {
@@ -226,6 +227,25 @@ function GoalsSection({ athleteId, canCreate }) {
     return Math.min(100, Math.round((g.current_value / g.target_value) * 100))
   }
 
+  const CircleProgress = ({ pct, color, size = 56 }) => {
+    const r = (size - 8) / 2
+    const circ = 2 * Math.PI * r
+    const dash = (pct / 100) * circ
+    return (
+      <svg width={size} height={size} style={{ transform: 'rotate(-90deg)', flexShrink: 0 }}>
+        <circle cx={size/2} cy={size/2} r={r} fill="none" stroke="var(--border)" strokeWidth={6} />
+        <circle cx={size/2} cy={size/2} r={r} fill="none" stroke={color} strokeWidth={6}
+          strokeDasharray={`${dash} ${circ}`} strokeLinecap="round"
+          style={{ transition: 'stroke-dasharray 0.8s ease' }} />
+        <text x={size/2} y={size/2} textAnchor="middle" dominantBaseline="middle"
+          style={{ transform: 'rotate(90deg)', transformOrigin: `${size/2}px ${size/2}px` }}
+          fontSize="11" fontWeight="800" fill={color} fontFamily="'Barlow Condensed', sans-serif">
+          {pct}%
+        </text>
+      </svg>
+    )
+  }
+
   return (
     <div>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
@@ -249,13 +269,11 @@ function GoalsSection({ athleteId, canCreate }) {
                 </div>
                 {g.description && <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 4, marginLeft: 30 }}>{g.description}</div>}
                 {pct !== null && (
-                  <div style={{ marginTop: 10 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: 'var(--text-muted)', marginBottom: 4 }}>
-                      <span>{g.current_value} {g.unit}</span>
-                      <span>{pct}% · meta: {g.target_value} {g.unit}</span>
-                    </div>
-                    <div style={{ height: 6, background: 'var(--border)', borderRadius: 3, overflow: 'hidden' }}>
-                      <div style={{ height: '100%', width: `${pct}%`, background: pct >= 100 ? 'var(--success)' : 'var(--accent)', borderRadius: 3, transition: 'width 0.5s' }} />
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 10 }}>
+                    <CircleProgress pct={pct} color={pct >= 100 ? 'var(--success)' : 'var(--accent)'} />
+                    <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>
+                      <div>{g.current_value} <span style={{ color: 'var(--text-dim)' }}>/ {g.target_value} {g.unit}</span></div>
+                      {g.deadline && <div style={{ fontSize: 12, marginTop: 2 }}>📅 {new Date(g.deadline+'T12:00:00').toLocaleDateString('es-ES')}</div>}
                     </div>
                   </div>
                 )}
@@ -370,13 +388,104 @@ function WellnessCheckin({ athleteId }) {
   )
 }
 
+// ---- Stats rápidas ----
+function StatsHeader({ athleteId, sessions }) {
+  const [avgRpe, setAvgRpe] = useState(null)
+  const now = new Date()
+  const monthStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`
+  const sessionsThisMonth = sessions.filter(s => s.date.startsWith(monthStr))
+  const totalMinutes = sessions.reduce((acc, s) => acc + (s.duration || 0), 0)
+  const hours = Math.floor(totalMinutes / 60)
+  const mins = totalMinutes % 60
+
+  useEffect(() => {
+    supabase.from('session_athletes').select('rpe').eq('athlete_id', athleteId).not('rpe', 'is', null)
+      .then(({ data }) => {
+        if (data?.length) setAvgRpe((data.reduce((a, r) => a + r.rpe, 0) / data.length).toFixed(1))
+      })
+  }, [athleteId])
+
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
+      {[
+        { value: sessionsThisMonth.length, label: 'Este mes', color: 'var(--accent)' },
+        { value: hours > 0 ? `${hours}h` : `${mins}m`, label: 'Tiempo total', color: 'var(--success)' },
+        { value: avgRpe ?? '—', label: 'RPE medio', color: 'var(--error)' },
+      ].map(({ value, label, color }) => (
+        <div key={label} className="card" style={{ padding: '14px 10px', textAlign: 'center' }}>
+          <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 900, fontSize: 28, color, letterSpacing: '-1px', lineHeight: 1 }}>{value}</div>
+          <div style={{ fontSize: 10, fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)', marginTop: 4, letterSpacing: '0.5px' }}>{label}</div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+// ---- Historial bienestar (14 días) ----
+function WellnessHistory({ athleteId }) {
+  const [data, setData] = useState([])
+
+  useEffect(() => {
+    Wellness.getByAthlete(athleteId, 14).then(d => setData([...d].reverse()))
+  }, [athleteId])
+
+  if (!data.length) return null
+
+  const W = 300, H = 60
+  const FIELDS = [
+    { key: 'mood', color: '#2563EB', label: 'Ánimo' },
+    { key: 'fatigue', color: '#EF4444', label: 'Cansancio' },
+  ]
+
+  const toX = (i) => (i / (data.length - 1)) * W
+  const toY = (v) => H - ((v - 1) / 4) * H
+
+  const pathFor = (field) => data.map((d, i) => {
+    const x = toX(i), y = d[field] ? toY(d[field]) : null
+    if (y === null) return null
+    return `${i === 0 ? 'M' : 'L'} ${x} ${y}`
+  }).filter(Boolean).join(' ')
+
+  return (
+    <div className="card" style={{ padding: 16 }}>
+      <div className="section-title" style={{ marginBottom: 12 }}>Historial de bienestar (14 días)</div>
+      <div style={{ display: 'flex', gap: 12, marginBottom: 8 }}>
+        {FIELDS.map(f => (
+          <div key={f.key} style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 12, color: 'var(--text-muted)' }}>
+            <div style={{ width: 12, height: 3, borderRadius: 2, background: f.color }} />
+            {f.label}
+          </div>
+        ))}
+      </div>
+      <svg width="100%" viewBox={`0 0 ${W} ${H}`} style={{ overflow: 'visible' }}>
+        {/* Grid lines */}
+        {[1,2,3,4,5].map(v => (
+          <line key={v} x1={0} x2={W} y1={toY(v)} y2={toY(v)} stroke="var(--border)" strokeWidth={0.5} />
+        ))}
+        {FIELDS.map(f => (
+          <path key={f.key} d={pathFor(f.key)} fill="none" stroke={f.color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+        ))}
+        {/* Dots */}
+        {data.map((d, i) => FIELDS.map(f => d[f.key] ? (
+          <circle key={f.key+i} cx={toX(i)} cy={toY(d[f.key])} r={3} fill={f.color} />
+        ) : null))}
+      </svg>
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6 }}>
+        <span style={{ fontSize: 10, color: 'var(--text-dim)' }}>{data[0] && new Date(data[0].date+'T12:00:00').toLocaleDateString('es-ES', { day:'numeric', month:'short' })}</span>
+        <span style={{ fontSize: 10, color: 'var(--text-dim)' }}>Hoy</span>
+      </div>
+    </div>
+  )
+}
+
 // ---- Página principal de Progreso ----
 export default function Progress({ athleteId, sessions = [], isCoach = false }) {
   return (
     <div className="page fade-in">
       {!isCoach && <div className="page-header"><h2>Mi Progreso</h2></div>}
       <div className="page-content">
-        {!isCoach && <WellnessCheckin athleteId={athleteId} />}
+        {!isCoach && <StatsHeader athleteId={athleteId} sessions={sessions} />}
+        {!isCoach && <WellnessHistory athleteId={athleteId} />}
         <LoadChart sessions={sessions} />
         <GoalsSection athleteId={athleteId} canCreate={isCoach} />
         <RecordsSection athleteId={athleteId} canEdit={!isCoach} />

@@ -177,7 +177,8 @@ function AthleteHome({ athlete, athleteId }) {
       const usedTypes = new Set(sessions.map(s => s.type))
       const allTypes = TYPE_OPTS.every(t => usedTypes.has(t))
 
-      await checkAndUnlockAchievements(athleteId, sessions.length, records.length, s, {
+      const attendedCount = sessions.filter(s => s.attendance?.[athleteId] === true).length
+      await checkAndUnlockAchievements(athleteId, attendedCount, records.length, s, {
         firstGoal:    goalCount >= 1,
         threeGoals:   goalCount >= 3,
         tenGoals:     goalCount >= 10,
