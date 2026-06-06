@@ -307,11 +307,11 @@ export const Wellness = {
 
 // ---- RPE ----
 export const RPE = {
-  set: async (sessionId, athleteId, rpe, notes = '') => {
-    await supabase.from('session_athletes').update({ rpe, rpe_notes: notes }).eq('session_id', sessionId).eq('athlete_id', athleteId)
+  set: async (sessionId, athleteId, fields) => {
+    await supabase.from('session_athletes').update(fields).eq('session_id', sessionId).eq('athlete_id', athleteId)
   },
   get: async (sessionId, athleteId) => {
-    const { data } = await supabase.from('session_athletes').select('rpe, rpe_notes').eq('session_id', sessionId).eq('athlete_id', athleteId).single()
+    const { data } = await supabase.from('session_athletes').select('rpe, rpe_notes, fatigue_pre, fatigue_post, mood_post').eq('session_id', sessionId).eq('athlete_id', athleteId).single()
     return data
   }
 }

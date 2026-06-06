@@ -312,6 +312,9 @@ function AthleteTrainingWithRPE({ athleteId }) {
   const [rpeSheet, setRpeSheet] = useState(null)
   const [detailSession, setDetailSession] = useState(null)
   const [rpe, setRpe] = useState(0)
+  const [fatiguePre, setFatiguePre] = useState(0)
+  const [fatiguePost, setFatiguePost] = useState(0)
+  const [moodPost, setMoodPost] = useState(0)
   const [saving, setSaving] = useState(false)
 
   useEffect(() => { Sessions.getByAthlete(athleteId).then(setSessions) }, [athleteId])
@@ -323,10 +326,15 @@ function AthleteTrainingWithRPE({ athleteId }) {
   const saveRpe = async () => {
     if (!rpe) return
     setSaving(true)
-    await RPE.set(rpeSheet.id, athleteId, rpe)
+    await RPE.set(rpeSheet.id, athleteId, {
+      rpe,
+      fatigue_pre: fatiguePre || null,
+      fatigue_post: fatiguePost || null,
+      mood_post: moodPost || null,
+    })
     setSaving(false)
     setRpeSheet(null)
-    setRpe(0)
+    setRpe(0); setFatiguePre(0); setFatiguePost(0); setMoodPost(0)
   }
 
   const formatDate = (d) => {
@@ -438,34 +446,69 @@ function AthleteTrainingWithRPE({ athleteId }) {
           <div className="sheet">
             <div className="sheet-handle" />
             <div className="sheet-header">
-              <h3>¿Cómo fue el entreno?</h3>
+              <h3>Valorar sesión</h3>
               <button className="btn btn-ghost btn-sm" onClick={() => setRpeSheet(null)}>✕</button>
             </div>
             <div className="sheet-body">
-              <div style={{ textAlign: 'center', marginBottom: 24 }}>
-                <div style={{ fontSize: 15, fontWeight: 600 }}>{rpeSheet.title}</div>
-                <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>{formatDate(rpeSheet.date)}</div>
+              <div style={{ textAlign: 'center', marginBottom: 20, padding: '12px 16px', background: 'var(--bg)', borderRadius: 'var(--radius-sm)' }}>
+                <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 800, fontSize: 18, textTransform: 'uppercase' }}>{rpeSheet.title}</div>
+                <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 2 }}>{formatDate(rpeSheet.date)}</div>
               </div>
-              <div className="section-title">Esfuerzo percibido (RPE)</div>
-              <div style={{ display: 'flex', gap: 8, justifyContent: 'center', marginBottom: 16 }}>
-                {[1,2,3,4,5,6,7,8,9,10].map(v => (
-                  <button key={v} onClick={() => setRpe(v)}
-                    style={{ width: 44, height: 44, borderRadius: 10, fontSize: 16, fontWeight: 800, border: `3px solid ${rpe === v ? RPE_COLORS[v] : 'var(--border)'}`, background: rpe === v ? RPE_COLORS[v]+'20' : 'var(--bg)', color: rpe === v ? RPE_COLORS[v] : 'var(--text-muted)', cursor: 'pointer', fontFamily: "'Barlow Condensed', sans-serif" }}>
-                    {v}
-                  </button>
-                ))}
-              </div>
-              {rpe > 0 && (
-                <div style={{ textAlign: 'center', fontSize: 15, color: RPE_COLORS[rpe], fontWeight: 600, marginBottom: 20 }}>
-                  {RPE_LABELS[rpe]}
+
+              {/* Cansancio pre-sesión */}
+              <ScaleRow label="😴 Cansancio al empezar" value={fatiguePre} onChange={setFatiguePre}
+                colors={['','var(--success)','var(--success)','var(--success)','var(--success)','var(--warning)','var(--warning)','var(--warning)','var(--error)','var(--error)','var(--error)']} />
+
+              {fatiguePre >= 8 && (
+                <div style={{ background: 'var(--error-dim)', border: '1px solid rgba(220,38,38,0.3)', borderRadius: 'var(--radius-sm)', padding: '12px 14px', marginBottom: 16, fontSize: 13 }}>
+                  ⚠️ <strong>Tu cansancio pre-sesión es superior a 7,5.</strong> Valora con tu entrenadora si realizar la sesión.
                 </div>
               )}
-              <button className="btn btn-primary btn-full" onClick={saveRpe} disabled={!rpe || saving}>
+
+              {/* RPE */}
+              <ScaleRow label="💪 Esfuerzo percibido (RPE)" value={rpe} onChange={setRpe}
+                colors={RPE_COLORS} labels={RPE_LABELS} />
+
+              {/* Cansancio post-sesión */}
+              <ScaleRow label="🥵 Cansancio al acabar" value={fatiguePost} onChange={setFatiguePost}
+                colors={['','var(--success)','var(--success)','var(--success)','var(--success)','var(--warning)','var(--warning)','var(--warning)','var(--error)','var(--error)','var(--error)']} />
+
+              {/* Ánimo */}
+              <ScaleRow label="😊 Ánimo al salir" value={moodPost} onChange={setMoodPost}
+                colors={['','var(--error)','var(--error)','var(--warning)','var(--warning)','var(--warning)','var(--success)','var(--success)','var(--success)','var(--success)','var(--success)']} />
+
+              <button className="btn btn-primary btn-full" onClick={saveRpe} disabled={!rpe || saving} style={{ marginTop: 8 }}>
                 {saving ? 'Guardando...' : 'Guardar valoración'}
               </button>
             </div>
           </div>
         </>
+      )}
+    </div>
+  )
+}
+
+function ScaleRow({ label, value, onChange, colors, labels }) {
+  return (
+    <div style={{ marginBottom: 20 }}>
+      <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700, fontSize: 14, marginBottom: 10, textTransform: 'uppercase', letterSpacing: '0.5px' }}>{label}</div>
+      <div style={{ display: 'flex', gap: 6, justifyContent: 'space-between' }}>
+        {[1,2,3,4,5,6,7,8,9,10].map(v => (
+          <button key={v} onClick={() => onChange(v)}
+            style={{ flex: 1, height: 42, borderRadius: 10, fontSize: 15, fontWeight: 800,
+              border: `2px solid ${value === v ? colors[v] : 'var(--border)'}`,
+              background: value === v ? colors[v]+'25' : 'var(--bg)',
+              color: value === v ? colors[v] : 'var(--text-muted)',
+              cursor: 'pointer', fontFamily: "'Barlow Condensed', sans-serif",
+              transition: 'all 0.1s' }}>
+            {v}
+          </button>
+        ))}
+      </div>
+      {value > 0 && labels && (
+        <div style={{ textAlign: 'center', fontSize: 13, color: colors[value], fontWeight: 600, marginTop: 6 }}>
+          {labels[value]}
+        </div>
       )}
     </div>
   )
