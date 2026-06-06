@@ -5,7 +5,9 @@ import { supabase } from '../lib/supabase'
 
 export default function Messages() {
   const { profile, isCoach } = useAuth()
+  const myAthleteId = profile?.athlete_id
   const [athletes, setAthletes] = useState([])
+  const [coachAvatar, setCoachAvatar] = useState(null)
   const [activeChat, setActiveChat] = useState('general')
   const [messages, setMessages] = useState([])
   const [input, setInput] = useState('')
@@ -15,6 +17,9 @@ export default function Messages() {
 
   useEffect(() => {
     Athletes.getAll().then(setAthletes)
+    // Cargar foto del coach
+    supabase.from('profiles').select('avatar_url').eq('role', 'coach').single()
+      .then(({ data }) => { if (data?.avatar_url) setCoachAvatar(data.avatar_url) })
   }, [])
 
   const loadMessages = async () => {
@@ -64,7 +69,7 @@ export default function Messages() {
       ]
     : [
         { id: 'general', name: 'Grupo general', subtitle: 'Todo el equipo', icon: '👥' },
-        { id: 'me', name: 'Celia (Entrenadora)', subtitle: 'Chat privado', icon: '👩‍💼' }
+        { id: myAthleteId, name: 'Celia (Entrenadora)', subtitle: 'Chat privado', icon: '👩‍💼' }
       ]
 
   const activeInfo = chats.find(c => c.id === activeChat)
@@ -132,11 +137,15 @@ export default function Messages() {
               {msgs.map(msg => {
                 const isMe = msg.sender === myId || msg.sender === 'me'
                 const sender = !isMe ? athletes.find(a => a.id === msg.sender) : null
+                const isCoachMsg = msg.sender === 'me' || (!isMe && !sender)
+                const avatarUrl = isCoachMsg ? coachAvatar : sender?.avatar_url
                 return (
                   <div key={msg.id} style={{ display: 'flex', flexDirection: isMe ? 'row-reverse' : 'row', gap: 8, marginBottom: 10, alignItems: 'flex-end' }}>
                     {!isMe && (
-                      <div style={{ width: 28, height: 28, borderRadius: '50%', flexShrink: 0, background: sender?.color+'30' || 'var(--card)', color: sender?.color || 'var(--text)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 700 }}>
-                        {msg.senderName ? initials(msg.senderName) : '?'}
+                      <div style={{ width: 28, height: 28, borderRadius: '50%', flexShrink: 0, overflow: 'hidden', background: sender?.color+'30' || 'var(--accent-dim)', color: sender?.color || 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 700 }}>
+                        {avatarUrl
+                          ? <img src={avatarUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                          : (msg.senderName ? initials(msg.senderName) : '?')}
                       </div>
                     )}
                     <div style={{ maxWidth: '75%' }}>
