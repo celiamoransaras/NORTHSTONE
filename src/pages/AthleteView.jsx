@@ -325,6 +325,18 @@ function AthleteTrainingWithRPE({ athleteId }) {
 
   const canSave = rpe > 0 || fatiguePre > 0 || fatiguePost > 0 || moodPost > 0
 
+  useEffect(() => {
+    if (!rpeSheet) return
+    RPE.get(rpeSheet.id, athleteId).then(data => {
+      if (data) {
+        setRpe(data.rpe || 0)
+        setFatiguePre(data.fatigue_pre || 0)
+        setFatiguePost(data.fatigue_post || 0)
+        setMoodPost(data.mood_post || 0)
+      }
+    })
+  }, [rpeSheet])
+
   const saveRpe = async () => {
     if (!canSave) return
     setSaving(true)
