@@ -97,20 +97,31 @@ export default function Messages() {
   return (
     <div style={{ display: 'flex', height: '100%', overflow: 'hidden' }}>
       {/* Sidebar */}
-      <div style={{ width: 72, flexShrink: 0, background: 'var(--surface)', borderRight: '1px solid var(--border)', display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '12px 0', gap: 6, overflowY: 'auto' }}>
-        {chats.map(c => (
-          <button key={c.id} onClick={() => setActiveChat(c.id)}
-            style={{
-              width: 48, height: 48, borderRadius: '50%', flexShrink: 0, cursor: 'pointer',
-              background: activeChat === c.id ? (c.id === 'general' ? 'var(--accent)' : c.color+'40') : 'var(--card)',
-              border: activeChat === c.id ? `2px solid ${c.id === 'general' ? 'var(--accent)' : c.color}` : '2px solid transparent',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: c.icon ? 22 : 14, fontWeight: 700,
-              color: c.id === 'general' && activeChat === c.id ? '#000' : (c.color || 'var(--text)'),
-            }}>
-            {c.icon ? c.icon : initials(c.name)}
-          </button>
-        ))}
+      <div style={{ width: 76, flexShrink: 0, background: 'var(--surface)', borderRight: '1px solid var(--border)', display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '12px 4px', gap: 4, overflowY: 'auto' }}>
+        {chats.map(c => {
+          const isActive = activeChat === c.id
+          const shortName = c.name.split(' ')[0]
+          return (
+            <button key={c.id} onClick={() => setActiveChat(c.id)}
+              style={{ width: '100%', padding: '8px 4px', borderRadius: 12, cursor: 'pointer', background: isActive ? (c.id === 'general' ? 'var(--accent-dim)' : c.color+'15') : 'transparent', border: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+              <div style={{
+                width: 44, height: 44, borderRadius: '50%', flexShrink: 0,
+                background: isActive ? (c.id === 'general' ? 'var(--accent)' : c.color) : 'var(--card)',
+                border: isActive ? 'none' : `2px solid ${c.color || 'var(--border)'}`,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: c.icon ? 20 : 13, fontWeight: 800,
+                color: isActive ? '#fff' : (c.color || 'var(--text-muted)'),
+                boxShadow: isActive ? `0 4px 12px ${c.color || 'var(--accent)'}40` : 'none',
+                transition: 'all 0.15s'
+              }}>
+                {c.icon ? c.icon : initials(c.name)}
+              </div>
+              <span style={{ fontSize: 9, fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.3px', color: isActive ? 'var(--accent)' : 'var(--text-muted)', maxWidth: 68, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {shortName}
+              </span>
+            </button>
+          )
+        })}
       </div>
 
       {/* Chat */}
