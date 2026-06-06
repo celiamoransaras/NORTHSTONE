@@ -25,6 +25,28 @@ export default function AthleteView() {
   const athlete = profile?.athletes
   const athleteId = profile?.athlete_id
   const [tab, setTab] = useState('home')
+  const [unreadMessages, setUnreadMessages] = useState(0)
+
+  useEffect(() => {
+    const checkUnread = async () => {
+      const lastRead = localStorage.getItem('chat_last_read_athlete') || new Date(0).toISOString()
+      const { count } = await supabase.from('messages').select('*', { count: 'exact', head: true })
+        .eq('sender', 'coach').gt('created_at', lastRead)
+      setUnreadMessages(count || 0)
+    }
+    checkUnread()
+    const channel = supabase.channel('unread_athlete')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, checkUnread)
+      .subscribe()
+    return () => channel.unsubscribe()
+  }, [])
+
+  useEffect(() => {
+    if (tab === 'messages') {
+      localStorage.setItem('chat_last_read_athlete', new Date().toISOString())
+      setUnreadMessages(0)
+    }
+  }, [tab])
 
   if (!athlete) {
     return (
@@ -77,7 +99,14 @@ export default function AthleteView() {
         {NAV.map(({ id, icon, label }) => (
           <button key={id} onClick={() => setTab(id)}
             style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 3, color: tab===id ? 'var(--accent)' : 'var(--text-muted)', fontFamily: "'Barlow Condensed', sans-serif", fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px', background: 'none', border: 'none', borderTop: tab===id ? '2px solid var(--accent)' : '2px solid transparent', cursor: 'pointer', transition: 'color 0.15s' }}>
-            <span style={{ fontSize: 22 }}>{icon}</span>
+            <span style={{ fontSize: 22, position: 'relative', display: 'inline-block' }}>
+              {icon}
+              {id === 'messages' && unreadMessages > 0 && (
+                <span style={{ position: 'absolute', top: -4, right: -8, background: 'var(--error)', color: '#fff', borderRadius: '50%', fontSize: 10, fontWeight: 800, minWidth: 18, height: 18, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 3px', fontFamily: "'Barlow Condensed', sans-serif" }}>
+                  {unreadMessages > 99 ? '99+' : unreadMessages}
+                </span>
+              )}
+            </span>
             {label}
           </button>
         ))}
