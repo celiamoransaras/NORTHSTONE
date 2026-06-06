@@ -93,13 +93,19 @@ function CoachApp() {
           </div>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          {pushSupported && (
-            <button onClick={pushSubscribed ? disablePush : enablePush} disabled={pushLoading}
-              title={pushSubscribed ? 'Desactivar notificaciones' : 'Activar notificaciones'}
-              style={{ background: pushSubscribed ? 'var(--accent-dim)' : 'var(--card)', border: `1px solid ${pushSubscribed ? 'var(--accent)' : 'var(--border)'}`, borderRadius: 10, padding: '6px 10px', cursor: 'pointer', fontSize: 16, lineHeight: 1, color: pushSubscribed ? 'var(--accent)' : 'var(--text-muted)', transition: 'all 0.15s' }}>
-              {pushLoading ? '⏳' : pushSubscribed ? '🔔' : '🔕'}
-            </button>
-          )}
+          <button
+            onClick={() => {
+              if (!pushSupported) {
+                alert('Para activar notificaciones, añade la app a tu pantalla de inicio:\nSafari → botón compartir → "Añadir a pantalla de inicio"')
+                return
+              }
+              pushSubscribed ? disablePush() : enablePush()
+            }}
+            disabled={pushLoading}
+            title={pushSubscribed ? 'Desactivar notificaciones' : 'Activar notificaciones'}
+            style={{ background: pushSubscribed ? 'var(--accent-dim)' : 'var(--card)', border: `1px solid ${pushSubscribed ? 'var(--accent)' : 'var(--border)'}`, borderRadius: 10, padding: '6px 10px', cursor: 'pointer', fontSize: 16, lineHeight: 1, color: pushSubscribed ? 'var(--accent)' : 'var(--text-muted)', transition: 'all 0.15s' }}>
+            {pushLoading ? '⏳' : pushSubscribed ? '🔔' : '🔕'}
+          </button>
           <div onClick={handleAvatarClick} className="avatar-ring" style={{ width: 38, height: 38, borderRadius: '50%', background: profile?.avatar_url ? 'transparent' : 'var(--accent-gradient)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 900, fontSize: 15, cursor: 'pointer', overflow: 'hidden', flexShrink: 0 }}>
             {profile?.avatar_url
               ? <img src={profile.avatar_url} alt="foto" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />

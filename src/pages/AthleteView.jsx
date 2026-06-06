@@ -150,16 +150,20 @@ export default function AthleteView() {
                   <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 2 }}>Deportista · Northstone</div>
                 </div>
               </div>
-              {pushSupported && (
-                <button
-                  className="btn btn-secondary btn-full"
-                  onClick={pushSubscribed ? disablePush : enablePush}
-                  disabled={pushLoading}
-                  style={{ marginBottom: 12 }}
-                >
-                  {pushLoading ? 'Un momento...' : pushSubscribed ? '🔕 Desactivar notificaciones' : '🔔 Activar notificaciones'}
-                </button>
-              )}
+              <button
+                className="btn btn-secondary btn-full"
+                onClick={() => {
+                  if (!pushSupported) {
+                    alert('Para activar notificaciones, añade la app a tu pantalla de inicio:\nSafari → botón compartir → "Añadir a pantalla de inicio"')
+                    return
+                  }
+                  pushSubscribed ? disablePush() : enablePush()
+                }}
+                disabled={pushLoading}
+                style={{ marginBottom: 12 }}
+              >
+                {pushLoading ? 'Un momento...' : pushSubscribed ? '🔕 Desactivar notificaciones' : '🔔 Activar notificaciones'}
+              </button>
               <button className="btn btn-secondary btn-full" onClick={signOut} style={{ color: 'var(--error)', borderColor: 'rgba(220,38,38,0.3)' }}>
                 Cerrar sesión
               </button>
