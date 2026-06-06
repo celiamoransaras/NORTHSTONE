@@ -49,7 +49,7 @@ export async function subscribeCoachToPush(userId) {
     p256dh: subJson.keys.p256dh,
     auth: subJson.keys.auth,
   })
-  console.log('[Push] insert result:', { data, error })
+  console.log('[Push] insert result:', { data, error: error?.message, details: error?.details, code: error?.code })
   return sub
 }
 
