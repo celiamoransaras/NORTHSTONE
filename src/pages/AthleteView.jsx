@@ -31,7 +31,7 @@ export default function AthleteView() {
   const [unreadMessages, setUnreadMessages] = useState(0)
   const [unratedCount, setUnratedCount] = useState(0)
   const [profileOpen, setProfileOpen] = useState(false)
-  const { subscribed: pushSubscribed, loading: pushLoading, supported: pushSupported, enable: enablePush, disable: disablePush } = usePushNotifications(athleteId)
+  const { subscribed: pushSubscribed, loading: pushLoading, supported: pushSupported, enable: enablePush, disable: disablePush } = usePushNotifications({ athleteId })
 
   // Mensajes no leídos
   useEffect(() => {

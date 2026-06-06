@@ -12,34 +12,34 @@ const supabase = createClient(
   Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 )
 
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+}
+
 Deno.serve(async (req) => {
-  // CORS preflight
-  if (req.method === 'OPTIONS') {
-    return new Response(null, {
-      headers: {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-      },
-    })
-  }
+  if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders })
 
   try {
-    const { athleteIds, notification } = await req.json()
+    const { athleteIds, toCoach, notification } = await req.json()
 
-    if (!athleteIds?.length || !notification) {
-      return new Response(JSON.stringify({ error: 'Missing athleteIds or notification' }), { status: 400 })
+    if (!notification) return new Response(JSON.stringify({ error: 'Missing notification' }), { status: 400 })
+
+    // Obtener suscripciones según el destinatario
+    let query = supabase.from('push_subscriptions').select('endpoint, p256dh, auth')
+
+    if (toCoach) {
+      // Suscripciones del coach: athlete_id es null
+      query = query.is('athlete_id', null)
+    } else if (athleteIds?.length) {
+      query = query.in('athlete_id', athleteIds)
+    } else {
+      return new Response(JSON.stringify({ error: 'Missing athleteIds or toCoach' }), { status: 400 })
     }
 
-    // Obtener suscripciones de los deportistas
-    const { data: subs, error } = await supabase
-      .from('push_subscriptions')
-      .select('endpoint, p256dh, auth')
-      .in('athlete_id', athleteIds)
-
+    const { data: subs, error } = await query
     if (error) throw error
-    if (!subs?.length) {
-      return new Response(JSON.stringify({ sent: 0, reason: 'No subscriptions found' }), { status: 200 })
-    }
+    if (!subs?.length) return new Response(JSON.stringify({ sent: 0 }), { status: 200 })
 
     const payload = JSON.stringify({
       title: notification.title || 'Northstone',
@@ -48,7 +48,6 @@ Deno.serve(async (req) => {
       icon:  '/icon-192.png',
     })
 
-    // Enviar a cada suscripción (en paralelo, ignorar fallos individuales)
     const results = await Promise.allSettled(
       subs.map(sub =>
         webpush.sendNotification(
@@ -58,17 +57,15 @@ Deno.serve(async (req) => {
       )
     )
 
-    const sent     = results.filter(r => r.status === 'fulfilled').length
-    const failed   = results.filter(r => r.status === 'rejected').length
-
-    return new Response(JSON.stringify({ sent, failed }), {
-      headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
-    })
+    return new Response(
+      JSON.stringify({ sent: results.filter(r => r.status === 'fulfilled').length }),
+      { headers: { 'Content-Type': 'application/json', ...corsHeaders } }
+    )
 
   } catch (err) {
     return new Response(JSON.stringify({ error: err.message }), {
       status: 500,
-      headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+      headers: { 'Content-Type': 'application/json', ...corsHeaders },
     })
   }
 })

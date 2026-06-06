@@ -9,22 +9,20 @@ function urlBase64ToUint8Array(base64String) {
   return new Uint8Array([...rawData].map(c => c.charCodeAt(0)))
 }
 
-export async function subscribeToPush(athleteId) {
+async function getOrCreateSubscription() {
   if (!('serviceWorker' in navigator) || !('PushManager' in window)) return null
-
   const reg = await navigator.serviceWorker.ready
-
-  // Pedir permiso
   const permission = await Notification.requestPermission()
   if (permission !== 'granted') return null
-
-  // Crear suscripción
-  const sub = await reg.pushManager.subscribe({
+  return reg.pushManager.subscribe({
     userVisibleOnly: true,
     applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
   })
+}
 
-  // Guardar en Supabase
+export async function subscribeToPush(athleteId) {
+  const sub = await getOrCreateSubscription()
+  if (!sub) return null
   const subJson = sub.toJSON()
   await supabase.from('push_subscriptions').upsert({
     athlete_id: athleteId,
@@ -32,21 +30,30 @@ export async function subscribeToPush(athleteId) {
     p256dh: subJson.keys.p256dh,
     auth: subJson.keys.auth,
   }, { onConflict: 'athlete_id,endpoint' })
+  return sub
+}
 
+export async function subscribeCoachToPush(userId) {
+  const sub = await getOrCreateSubscription()
+  if (!sub) return null
+  const subJson = sub.toJSON()
+  await supabase.from('push_subscriptions').upsert({
+    user_id: userId,
+    athlete_id: null,
+    endpoint: subJson.endpoint,
+    p256dh: subJson.keys.p256dh,
+    auth: subJson.keys.auth,
+  }, { onConflict: 'endpoint' })
   return sub
 }
 
 export async function unsubscribeFromPush(athleteId) {
   if (!('serviceWorker' in navigator)) return
-
   const reg = await navigator.serviceWorker.ready
   const sub = await reg.pushManager.getSubscription()
   if (sub) {
     await sub.unsubscribe()
-    await supabase.from('push_subscriptions')
-      .delete()
-      .eq('athlete_id', athleteId)
-      .eq('endpoint', sub.endpoint)
+    await supabase.from('push_subscriptions').delete().eq('endpoint', sub.endpoint)
   }
 }
 
@@ -57,14 +64,21 @@ export async function isPushSubscribed() {
   return !!sub
 }
 
-// Enviar notificación a uno o varios deportistas via Edge Function
+// Enviar notificación a deportistas
 export async function sendPushToAthletes(athleteIds, notification) {
   if (!athleteIds?.length) return
   try {
-    await supabase.functions.invoke('send-push', {
-      body: { athleteIds, notification },
-    })
+    await supabase.functions.invoke('send-push', { body: { athleteIds, notification } })
   } catch (err) {
-    console.warn('Push send failed (non-critical):', err.message)
+    console.warn('Push send failed:', err.message)
+  }
+}
+
+// Enviar notificación al coach (suscripciones sin athlete_id)
+export async function sendPushToCoach(notification) {
+  try {
+    await supabase.functions.invoke('send-push', { body: { toCoach: true, notification } })
+  } catch (err) {
+    console.warn('Push to coach failed:', err.message)
   }
 }

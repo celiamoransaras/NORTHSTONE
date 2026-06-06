@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase'
 import ConfirmSheet from '../components/ConfirmSheet'
 import { useToast } from '../contexts/ToastContext'
 import { haptic } from '../lib/haptic'
+import { sendPushToCoach } from '../lib/pushNotifications'
 
 // ---- Check-in diario ----
 function WellnessCheckin({ athleteId }) {
@@ -25,6 +26,18 @@ function WellnessCheckin({ athleteId }) {
     await Wellness.upsert({ athlete_id: athleteId, date: new Date().toISOString().slice(0,10), ...today })
     setSaving(false)
     setDone(true)
+    // Alertar al coach si el cansancio o dolor es alto (≥ 4)
+    if (today.fatigue >= 4 || today.soreness >= 4) {
+      const fatigueLabels = ['', 'Muy baja', 'Baja', 'Normal', 'Alta', 'Muy alta']
+      const parts = []
+      if (today.fatigue >= 4) parts.push(`Cansancio: ${fatigueLabels[today.fatigue]}`)
+      if (today.soreness >= 4) parts.push(`Dolor: ${fatigueLabels[today.soreness]}`)
+      sendPushToCoach({
+        title: '⚠️ Deportista con señales de alerta',
+        body: parts.join(' · '),
+        url: '/',
+      })
+    }
   }
 
   const EmojiRow = ({ label, field, emojis, colors }) => (

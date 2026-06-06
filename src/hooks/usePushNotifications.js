@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
-import { subscribeToPush, unsubscribeFromPush, isPushSubscribed } from '../lib/pushNotifications'
+import { subscribeToPush, subscribeCoachToPush, unsubscribeFromPush, isPushSubscribed } from '../lib/pushNotifications'
 
-export function usePushNotifications(athleteId) {
+export function usePushNotifications({ athleteId, userId, isCoach } = {}) {
   const [subscribed, setSubscribed] = useState(false)
   const [loading, setLoading] = useState(false)
   const [supported, setSupported] = useState(false)
@@ -9,21 +9,19 @@ export function usePushNotifications(athleteId) {
   useEffect(() => {
     const ok = 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window
     setSupported(ok)
-    if (ok && athleteId) {
-      isPushSubscribed().then(setSubscribed)
-    }
-  }, [athleteId])
+    if (ok) isPushSubscribed().then(setSubscribed)
+  }, [athleteId, userId])
 
   const enable = async () => {
-    if (!athleteId) return
     setLoading(true)
-    const sub = await subscribeToPush(athleteId)
+    const sub = isCoach
+      ? await subscribeCoachToPush(userId)
+      : await subscribeToPush(athleteId)
     setSubscribed(!!sub)
     setLoading(false)
   }
 
   const disable = async () => {
-    if (!athleteId) return
     setLoading(true)
     await unsubscribeFromPush(athleteId)
     setSubscribed(false)
