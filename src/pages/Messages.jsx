@@ -222,10 +222,8 @@ export default function Messages() {
                       {!isMe && msg.senderName && (
                         <div style={{ fontSize: 11, color: sender?.color || 'var(--text-muted)', marginBottom: 3, marginLeft: 4, fontWeight: 600 }}>{msg.senderName}</div>
                       )}
-                      <div onLongPress={() => setReactionTarget(msg.id)}
-                        onContextMenu={e => { e.preventDefault(); setReactionTarget(msg.id) }}
-                        onClick={() => reactionTarget === msg.id ? setReactionTarget(null) : null}
-                        style={{ background: isMe ? 'var(--accent-gradient)' : 'var(--card)', color: isMe ? '#fff' : 'var(--text)', borderRadius: isMe ? '18px 18px 4px 18px' : '18px 18px 18px 4px', padding: msg.file_url && msg.file_type?.startsWith('image/') ? 4 : '10px 14px', fontSize: 14, border: isMe ? 'none' : '1px solid var(--border-light)', wordBreak: 'break-word', overflow: 'hidden', boxShadow: 'var(--shadow-sm)', cursor: 'pointer' }}>
+                      <div style={{ display: 'flex', alignItems: 'flex-end', gap: 4, flexDirection: isMe ? 'row-reverse' : 'row' }}>
+                      <div style={{ background: isMe ? 'var(--accent-gradient)' : 'var(--card)', color: isMe ? '#fff' : 'var(--text)', borderRadius: isMe ? '18px 18px 4px 18px' : '18px 18px 18px 4px', padding: msg.file_url && msg.file_type?.startsWith('image/') ? 4 : '10px 14px', fontSize: 14, border: isMe ? 'none' : '1px solid var(--border-light)', wordBreak: 'break-word', overflow: 'hidden', boxShadow: 'var(--shadow-sm)' }}>
                         {msg.file_url && msg.file_type?.startsWith('image/') ? (
                           <img src={msg.file_url} alt="imagen" style={{ maxWidth: 220, maxHeight: 220, borderRadius: 14, display: 'block' }} />
                         ) : msg.file_url && msg.file_type?.startsWith('audio/') ? (
@@ -235,6 +233,11 @@ export default function Messages() {
                             <span style={{ fontSize: 20 }}>📎</span>{msg.text}
                           </a>
                         ) : msg.text}
+                      </div>
+                      <button onClick={() => setReactionTarget(reactionTarget === msg.id ? null : msg.id)}
+                        style={{ background: 'none', border: 'none', fontSize: 16, cursor: 'pointer', opacity: 0.5, padding: '2px 4px', borderRadius: 8, flexShrink: 0, marginBottom: 4 }}>
+                        😊
+                      </button>
                       </div>
                       {/* Reacciones */}
                       {reactionTarget === msg.id && (
