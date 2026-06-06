@@ -38,6 +38,7 @@ export default function Messages() {
   const loadMessages = async () => {
     const msgs = await DB.getGroup(activeChat)
     setMessages(msgs)
+    if (!msgs.length) { setReactions({}); return }
     const { data: reactionData } = await supabase.from('message_reactions').select('*').in('message_id', msgs.map(m => m.id))
     const grouped = {}
     ;(reactionData || []).forEach(r => {
@@ -59,13 +60,19 @@ export default function Messages() {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
+  const myId = isCoach ? 'coach' : (profile?.athlete_id || 'athlete')
+
   const send = async (text = input.trim(), fileUrl = null, fileType = null) => {
     if (!text && !fileUrl) return
+    const prev = input
     setInput('')
     const senderName = isCoach ? 'Celia (Entrenadora)' : profile?.athletes?.name || 'Deportista'
-    const senderId = isCoach ? 'coach' : (profile?.athlete_id || 'athlete')
-    await DB.send(activeChat, text || (fileType?.startsWith('image/') ? '📷 Imagen' : '📎 Archivo'), senderId, senderName, fileUrl, fileType)
-    await loadMessages()
+    try {
+      await DB.send(activeChat, text || (fileType?.startsWith('image/') ? '📷 Imagen' : '📎 Archivo'), myId, senderName, fileUrl, fileType)
+      await loadMessages()
+    } catch {
+      setInput(prev)
+    }
   }
 
   const handleFile = async (e) => {
@@ -124,8 +131,7 @@ export default function Messages() {
   }
 
   const toggleReaction = async (messageId, emoji) => {
-    const senderId = myId
-    await Reactions.toggle(messageId, senderId, emoji, activeChat)
+    await Reactions.toggle(messageId, myId, emoji, activeChat)
     setReactionTarget(null)
     await loadMessages()
   }
@@ -160,8 +166,6 @@ export default function Messages() {
     if (d.toDateString() === yesterday.toDateString()) return 'Ayer'
     return d.toLocaleDateString('es-ES', { day: 'numeric', month: 'long' })
   }
-
-  const myId = isCoach ? 'coach' : (profile?.athlete_id || 'athlete')
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>

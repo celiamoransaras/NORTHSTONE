@@ -694,8 +694,12 @@ function AthleteTrainingWithRPE({ athleteId }) {
                   </div>
                   <button onClick={async e => {
                     e.stopPropagation()
-                    await Sessions.toggleAttendance(s.id, athleteId, attended)
                     setAttendanceMap(m => ({...m, [s.id]: !attended}))
+                    try {
+                      await Sessions.toggleAttendance(s.id, athleteId, attended)
+                    } catch {
+                      setAttendanceMap(m => ({...m, [s.id]: attended}))
+                    }
                   }}
                     style={{ marginTop: 10, width: '100%', padding: '7px 12px', borderRadius: 10,
                       background: attended ? 'var(--success-dim)' : 'var(--bg)',

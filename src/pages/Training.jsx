@@ -264,7 +264,7 @@ export default function Training({ athleteId = null, coachView = false, embedded
                 </div>
                 <div style={{ width: 90 }} className="input-group">
                   <label className="input-label">Min</label>
-                  <input className="input" type="number" value={form.duration} onChange={e => setForm(f=>({...f,duration:parseInt(e.target.value)||60}))} />
+                  <input className="input" type="number" min="1" value={form.duration} onChange={e => setForm(f=>({...f,duration:Math.max(1,parseInt(e.target.value)||60)}))} />
                 </div>
               </div>
               <div className="input-group">

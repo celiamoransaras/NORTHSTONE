@@ -41,6 +41,10 @@ export default function Health() {
 
   const save = async () => {
     if (!form.athlete_id) return
+    if (form.date_end && form.date_end < form.date_start) {
+      alert('La fecha de alta no puede ser anterior a la fecha de inicio')
+      return
+    }
     setSaving(true)
     const clean = { ...form, date_end: form.date_end || null, notes: form.notes || null }
     if (editing) {
@@ -232,7 +236,7 @@ export default function Health() {
                 </div>
                 <div style={{ flex: 1 }} className="input-group">
                   <label className="input-label">Alta</label>
-                  <input className="input" type="date" value={form.date_end} onChange={e => setForm(f => ({ ...f, date_end: e.target.value }))} />
+                  <input className="input" type="date" value={form.date_end} min={form.date_start} onChange={e => setForm(f => ({ ...f, date_end: e.target.value }))} />
                 </div>
               </div>
               <div className="input-group">

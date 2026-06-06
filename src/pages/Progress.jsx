@@ -76,6 +76,11 @@ function WellnessCheckin({ athleteId }) {
         colors={['#059669','#059669','#D97706','#DC2626','#DC2626']} />
       <EmojiRow label="Ánimo" field="mood" emojis={['😔','😐','🙂','😄','🤩']}
         colors={['#DC2626','#D97706','#D97706','#059669','#059669']} />
+      {(!today?.fatigue || !today?.soreness || !today?.mood) && (
+        <div style={{ fontSize: 12, color: 'var(--text-muted)', textAlign: 'center', marginTop: 8, marginBottom: 4 }}>
+          Selecciona{!today?.fatigue ? ' cansancio' : ''}{!today?.soreness ? (!today?.fatigue ? ',' : '') + ' dolor' : ''}{!today?.mood ? ' y ánimo' : ''} para continuar
+        </div>
+      )}
       <button className="btn btn-primary btn-full" onClick={save}
         disabled={saving || !today?.fatigue || !today?.soreness || !today?.mood}
         style={{ marginTop: 4 }}>
@@ -411,7 +416,7 @@ function GoalsSection({ athleteId, canCreate }) {
               </div>
               <div className="input-group">
                 <label className="input-label">Fecha límite</label>
-                <input className="input" type="date" value={form.deadline} onChange={e => setForm(f => ({...f, deadline: e.target.value}))} />
+                <input className="input" type="date" min={new Date().toISOString().slice(0,10)} value={form.deadline} onChange={e => setForm(f => ({...f, deadline: e.target.value}))} />
               </div>
               <button className="btn btn-primary btn-full" onClick={save} disabled={saving}>
                 {saving ? 'Guardando...' : 'Crear objetivo'}
@@ -529,11 +534,14 @@ function RecordsSection({ athleteId, canEdit }) {
 
   useEffect(() => { Records.getByAthlete(athleteId).then(setRecords) }, [athleteId])
 
-  const grouped = records.reduce((acc, r) => {
-    if (!acc[r.name]) acc[r.name] = []
-    acc[r.name].push(r)
-    return acc
-  }, {})
+  // Agrupar por nombre normalizado (case-insensitive) preservando el nombre original del primer registro
+  const groupMap = {}
+  records.forEach(r => {
+    const key = r.name.trim().toLowerCase()
+    if (!groupMap[key]) groupMap[key] = { displayName: r.name, recs: [] }
+    groupMap[key].recs.push(r)
+  })
+  const grouped = Object.fromEntries(Object.values(groupMap).map(g => [g.displayName, g.recs]))
 
   const openNew  = () => { setEditing(null); setForm(emptyForm); setSheet(true) }
   const openEdit = (r) => { setEditing(r.id); setForm({ name: r.name, value: String(r.value), unit: r.unit, date: r.date, notes: r.notes || '' }); setSheet(true) }
