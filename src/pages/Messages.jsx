@@ -195,6 +195,10 @@ export default function Messages() {
           </div>
         </div>
 
+        {reactionTarget && (
+          <div onClick={() => setReactionTarget(null)}
+            style={{ position: 'fixed', inset: 0, zIndex: 5 }} />
+        )}
         <div style={{ flex: 1, overflowY: 'auto', padding: 16 }}>
           {messages.length === 0 && (
             <div className="empty-state"><div className="icon">💬</div><p>Empieza la conversación</p></div>
@@ -241,7 +245,7 @@ export default function Messages() {
                       </div>
                       {/* Reacciones */}
                       {reactionTarget === msg.id && (
-                        <div style={{ display: 'flex', gap: 4, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 24, padding: '6px 10px', boxShadow: 'var(--shadow-md)', position: 'absolute', zIndex: 10, [isMe ? 'right' : 'left']: 0, bottom: 40 }}>
+                        <div style={{ display: 'flex', gap: 4, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 24, padding: '6px 10px', boxShadow: 'var(--shadow-md)', position: 'absolute', zIndex: 20, [isMe ? 'right' : 'left']: 0, bottom: 40 }}>
                           {REACTION_EMOJIS.map(emoji => (
                             <button key={emoji} onClick={() => toggleReaction(msg.id, emoji)}
                               style={{ fontSize: 22, background: 'none', border: 'none', cursor: 'pointer', padding: '2px 4px', borderRadius: 8, transition: 'transform 0.1s' }}>
