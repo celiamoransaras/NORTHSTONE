@@ -24,12 +24,14 @@ export async function subscribeToPush(athleteId) {
   const sub = await getOrCreateSubscription()
   if (!sub) return null
   const subJson = sub.toJSON()
-  await supabase.from('push_subscriptions').upsert({
+  await supabase.from('push_subscriptions').delete().eq('endpoint', subJson.endpoint)
+  const { error } = await supabase.from('push_subscriptions').insert({
     athlete_id: athleteId,
     endpoint: subJson.endpoint,
     p256dh: subJson.keys.p256dh,
     auth: subJson.keys.auth,
-  }, { onConflict: 'athlete_id,endpoint' })
+  })
+  if (error) console.warn('[Push] athlete insert error:', error.message)
   return sub
 }
 
