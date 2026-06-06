@@ -197,7 +197,9 @@ export const Storage = {
 // ---- DOCUMENTS ----
 export const Documents = {
   getAll: async () => {
-    const { data } = await supabase.from('documents').select('*').order('created_at', { ascending: false })
+    const { data } = await supabase.from('documents').select('*')
+      .or('category.is.null,category.eq.general')
+      .order('created_at', { ascending: false })
     return data || []
   },
   create: async (doc) => {

@@ -18,6 +18,7 @@ const NAV = [
   { id: 'training',  icon: '📅', label: 'Entrenos' },
   { id: 'health',    icon: '🩺', label: 'Salud' },
   { id: 'progress',  icon: '📈', label: 'Progreso' },
+  { id: 'payments',  icon: '💳', label: 'Pagos' },
   { id: 'documents', icon: '📂', label: 'Docs' },
   { id: 'messages',  icon: '💬', label: 'Chat' },
 ]
@@ -33,7 +34,7 @@ export default function AthleteView() {
     const checkUnread = async () => {
       const lastRead = localStorage.getItem('chat_last_read_athlete') || new Date(0).toISOString()
       const { count } = await supabase.from('messages').select('*', { count: 'exact', head: true })
-        .eq('sender', 'coach').gt('created_at', lastRead)
+        .in('sender', ['coach', 'me']).gt('created_at', lastRead)
       setUnreadMessages(count || 0)
     }
     checkUnread()
@@ -92,15 +93,16 @@ export default function AthleteView() {
         {tab === 'training'  && <AthleteTrainingWithRPE athleteId={athleteId} />}
         {tab === 'health'    && <AthleteHealth athleteId={athleteId} />}
         {tab === 'progress'  && <AthleteProgressTab athleteId={athleteId} />}
+        {tab === 'payments'  && <AthletePayments athleteId={athleteId} />}
         {tab === 'documents' && <DocsPage />}
         {tab === 'messages'  && <Messages />}
       </main>
 
       {/* Bottom nav — glass */}
-      <nav className="glass-nav" style={{ display: 'flex', height: 'var(--nav-height)', flexShrink: 0, paddingBottom: 'env(safe-area-inset-bottom)' }}>
+      <nav className="glass-nav" style={{ display: 'flex', height: 'var(--nav-height)', flexShrink: 0, paddingBottom: 'env(safe-area-inset-bottom)', overflowX: 'auto' }}>
         {NAV.map(({ id, icon, label }) => (
           <button key={id} onClick={() => setTab(id)}
-            style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 3, color: tab===id ? 'var(--accent)' : 'var(--text-muted)', fontFamily: "'Barlow Condensed', sans-serif", fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px', background: 'none', border: 'none', borderTop: tab===id ? '2px solid var(--accent)' : '2px solid transparent', cursor: 'pointer', transition: 'color 0.15s' }}>
+            style={{ minWidth: 52, flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 2, color: tab===id ? 'var(--accent)' : 'var(--text-muted)', fontFamily: "'Barlow Condensed', sans-serif", fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.3px', background: 'none', border: 'none', borderTop: tab===id ? '2px solid var(--accent)' : '2px solid transparent', cursor: 'pointer', transition: 'color 0.15s', padding: '0 4px' }}>
             <span style={{ fontSize: 22, position: 'relative', display: 'inline-block' }}>
               {icon}
               {id === 'messages' && unreadMessages > 0 && (
@@ -237,7 +239,7 @@ function AthleteHealth({ athleteId }) {
         athlete_id: athleteId, category: 'medical'
       })
       await loadDocs()
-    } catch { }
+    } catch (err) { alert('Error al subir: ' + (err.message || err)) }
     setUploading(false)
   }
 

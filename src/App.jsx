@@ -30,7 +30,7 @@ function useUnreadMessages() {
     const lastRead = localStorage.getItem('chat_last_read') || new Date(0).toISOString()
     const { count } = await supabase.from('messages')
       .select('*', { count: 'exact', head: true })
-      .neq('sender', 'coach')
+      .not('sender', 'in', '(coach,me)')
       .gt('created_at', lastRead)
     setUnread(count || 0)
   }
