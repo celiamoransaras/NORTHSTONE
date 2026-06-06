@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react'
 import { Injuries, Athletes } from '../lib/db'
 import { supabase } from '../lib/supabase'
 import ConfirmSheet from '../components/ConfirmSheet'
+import { useToast } from '../contexts/ToastContext'
+import { haptic } from '../lib/haptic'
 
 const BODY_PARTS = ['Tobillo','Rodilla','Cadera','Espalda baja','Espalda alta','Hombro','Codo','Muñeca','Cuello','Muslo','Gemelo','Pie','Mano','Cabeza']
 const TYPES = ['Esguince','Contractura','Rotura fibrilar','Tendinitis','Fractura','Contusión','Sobrecarga','Luxación','Otro']
@@ -24,6 +26,7 @@ export default function Health() {
   const [editing, setEditing] = useState(null)
   const [saving, setSaving] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(null)
+  const toast = useToast()
 
   const load = async () => {
     const [inj, ath] = await Promise.all([Injuries.getAll(), Athletes.getAll()])
@@ -48,15 +51,25 @@ export default function Health() {
       return
     }
     setSaving(true)
-    const clean = { ...form, date_end: form.date_end || null, notes: form.notes || null }
-    if (editing) {
-      await Injuries.update(editing, clean)
-    } else {
-      await Injuries.create(clean)
-      const isActive = !clean.date_end || clean.date_end >= today
-      if (isActive) await supabase.from('athletes').update({ status: 'injured' }).eq('id', form.athlete_id)
+    try {
+      const clean = { ...form, date_end: form.date_end || null, notes: form.notes || null }
+      if (editing) {
+        await Injuries.update(editing, clean)
+      } else {
+        await Injuries.create(clean)
+        const isActive = !clean.date_end || clean.date_end >= today
+        if (isActive) await supabase.from('athletes').update({ status: 'injured' }).eq('id', form.athlete_id)
+      }
+      await load()
+      setSheet(null)
+      haptic('success')
+      toast(editing ? 'Lesión actualizada' : 'Lesión registrada')
+    } catch {
+      toast('Error al guardar', 'error')
+      haptic('error')
+    } finally {
+      setSaving(false)
     }
-    await load(); setSaving(false); setSheet(null)
   }
 
   const discharge = async (id) => {
@@ -70,7 +83,16 @@ export default function Health() {
   }
 
   const remove = async (id) => {
-    await Injuries.delete(id); await load(); setSheet(null); setConfirmDelete(null)
+    try {
+      await Injuries.delete(id)
+      await load()
+      setSheet(null)
+      setConfirmDelete(null)
+      haptic('medium')
+      toast('Lesión eliminada')
+    } catch {
+      toast('Error al eliminar', 'error')
+    }
   }
 
   const getAthlete = (id) => athletes.find(a => a.id === id)

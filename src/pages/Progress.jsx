@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react'
 import { Records, Goals, Wellness } from '../lib/db'
 import { supabase } from '../lib/supabase'
 import ConfirmSheet from '../components/ConfirmSheet'
+import { useToast } from '../contexts/ToastContext'
+import { haptic } from '../lib/haptic'
 
 // ---- Check-in diario ----
 function WellnessCheckin({ athleteId }) {
@@ -284,24 +286,37 @@ function GoalsSection({ athleteId, canCreate }) {
   const [confirmDelete, setConfirmDelete] = useState(null)
   const [form, setForm] = useState({ title: '', description: '', target_value: '', current_value: '', unit: '', deadline: '' })
   const [saving, setSaving] = useState(false)
+  const [titleError, setTitleError] = useState(false)
+  const toast = useToast()
 
   useEffect(() => { Goals.getByAthlete(athleteId).then(setGoals) }, [athleteId])
 
   const save = async () => {
-    if (!form.title) return
+    if (!form.title.trim()) {
+      setTitleError(true); haptic('error')
+      setTimeout(() => setTitleError(false), 600)
+      return
+    }
     setSaving(true)
-    await Goals.create({
-      ...form, athlete_id: athleteId,
-      target_value: parseFloat(form.target_value) || null,
-      current_value: parseFloat(form.current_value) || null,
-      deadline: form.deadline || null,
-      description: form.description || null,
-      unit: form.unit || null,
-    })
-    setGoals(await Goals.getByAthlete(athleteId))
-    setSaving(false)
-    setSheet(false)
-    setForm({ title: '', description: '', target_value: '', current_value: '', unit: '', deadline: '' })
+    try {
+      await Goals.create({
+        ...form, athlete_id: athleteId,
+        target_value: parseFloat(form.target_value) || null,
+        current_value: parseFloat(form.current_value) || null,
+        deadline: form.deadline || null,
+        description: form.description || null,
+        unit: form.unit || null,
+      })
+      setGoals(await Goals.getByAthlete(athleteId))
+      setSheet(false)
+      setForm({ title: '', description: '', target_value: '', current_value: '', unit: '', deadline: '' })
+      haptic('success')
+      toast('Objetivo creado')
+    } catch {
+      toast('Error al guardar', 'error')
+    } finally {
+      setSaving(false)
+    }
   }
 
   const toggle = async (goal) => {
@@ -310,9 +325,12 @@ function GoalsSection({ athleteId, canCreate }) {
   }
 
   const del = async (id) => {
-    await Goals.delete(id)
-    setGoals(g => g.filter(x => x.id !== id))
-    setConfirmDelete(null)
+    try {
+      await Goals.delete(id)
+      setGoals(g => g.filter(x => x.id !== id))
+      setConfirmDelete(null)
+      haptic('medium'); toast('Objetivo eliminado')
+    } catch { toast('Error al eliminar', 'error') }
   }
 
   const pct = (g) => g.target_value && g.current_value ? Math.min(100, Math.round((g.current_value / g.target_value) * 100)) : null
@@ -406,7 +424,7 @@ function GoalsSection({ athleteId, canCreate }) {
             <div className="sheet-body">
               <div className="input-group">
                 <label className="input-label">Objetivo *</label>
-                <input className="input" placeholder="ej. Correr 10k en menos de 50 min" value={form.title} onChange={e => setForm(f => ({...f, title: e.target.value}))} />
+                <input className={`input${titleError ? ' input-error' : ''}`} placeholder="ej. Correr 10k en menos de 50 min" value={form.title} onChange={e => { setForm(f => ({...f, title: e.target.value})); if(titleError) setTitleError(false) }} />
               </div>
               <div className="input-group">
                 <label className="input-label">Descripción</label>
@@ -538,7 +556,9 @@ function RecordsSection({ athleteId, canEdit }) {
   const [sheet, setSheet] = useState(false)
   const [editing, setEditing] = useState(null)
   const [chartGroup, setChartGroup] = useState(null)
-  const [confirmDelete, setConfirmDelete] = useState(null) // {name, recs, unit}
+  const [confirmDelete, setConfirmDelete] = useState(null)
+  const [nameError, setNameError] = useState(false)
+  const toast = useToast() // {name, recs, unit}
   const emptyForm = { name: '', value: '', unit: 'min', date: new Date().toISOString().slice(0,10), notes: '' }
   const [form, setForm] = useState(emptyForm)
   const [saving, setSaving] = useState(false)
@@ -560,21 +580,35 @@ function RecordsSection({ athleteId, canEdit }) {
   const openEdit = (r) => { setEditing(r.id); setForm({ name: r.name, value: String(r.value), unit: r.unit, date: r.date, notes: r.notes || '' }); setSheet(true) }
 
   const save = async () => {
-    if (!form.name || !form.value) return
+    if (!form.name.trim() || !form.value) {
+      setNameError(true); haptic('error')
+      setTimeout(() => setNameError(false), 600)
+      return
+    }
     setSaving(true)
-    if (editing) await Records.update(editing, { ...form, value: parseFloat(form.value) })
-    else await Records.create({ ...form, value: parseFloat(form.value), athlete_id: athleteId })
-    setRecords(await Records.getByAthlete(athleteId))
-    setSaving(false)
-    setSheet(false)
-    setEditing(null)
+    try {
+      if (editing) await Records.update(editing, { ...form, value: parseFloat(form.value) })
+      else await Records.create({ ...form, value: parseFloat(form.value), athlete_id: athleteId })
+      setRecords(await Records.getByAthlete(athleteId))
+      setSheet(false)
+      setEditing(null)
+      haptic('success')
+      toast(editing ? 'Marca actualizada' : 'Marca guardada')
+    } catch {
+      toast('Error al guardar', 'error')
+    } finally {
+      setSaving(false)
+    }
   }
 
   const del = async (id) => {
-    await Records.delete(id)
-    setRecords(r => r.filter(x => x.id !== id))
-    setSheet(false)
-    setConfirmDelete(null)
+    try {
+      await Records.delete(id)
+      setRecords(r => r.filter(x => x.id !== id))
+      setSheet(false)
+      setConfirmDelete(null)
+      haptic('medium'); toast('Marca eliminada')
+    } catch { toast('Error al eliminar', 'error') }
   }
 
   return (
@@ -737,7 +771,7 @@ function RecordsSection({ athleteId, canEdit }) {
             <div className="sheet-body">
               <div className="input-group">
                 <label className="input-label">Ejercicio / Prueba *</label>
-                <input className="input" placeholder="ej. 5k, Sentadilla, Peso muerto" value={form.name} onChange={e => setForm(f => ({...f, name: e.target.value}))} />
+                <input className={`input${nameError ? ' input-error' : ''}`} placeholder="ej. 5k, Sentadilla, Peso muerto" value={form.name} onChange={e => { setForm(f => ({...f, name: e.target.value})); if(nameError) setNameError(false) }} />
               </div>
               <div style={{ display: 'flex', gap: 10 }}>
                 <div style={{ flex: 1 }} className="input-group">

@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react'
 import { Sessions, Athletes } from '../lib/db'
 import ConfirmSheet from '../components/ConfirmSheet'
+import { useToast } from '../contexts/ToastContext'
+import { haptic } from '../lib/haptic'
 
 const TYPE_OPTS = [
   { value: 'run',        label: '🏃 Run' },
@@ -37,6 +39,8 @@ export default function Training({ athleteId = null, coachView = false, embedded
   const [saving, setSaving] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(null)
   const [tab, setTab] = useState('upcoming')
+  const [titleError, setTitleError] = useState(false)
+  const toast = useToast()
   const [templates, setTemplates] = useState(() => {
     try { return JSON.parse(localStorage.getItem('ns_session_templates') || '[]') } catch { return [] }
   })
@@ -68,19 +72,44 @@ export default function Training({ athleteId = null, coachView = false, embedded
   const openDetail = (s) => { setDetailSession(s); setSheet('detail') }
 
   const save = async () => {
-    if (!form.title.trim()) return
-    setSaving(true)
-    // Protección: si hay un athleteId activo, asegurarse de que esté en la lista
-    const safeForm = { ...form }
-    if (athleteId && !safeForm.athlete_ids.includes(athleteId)) {
-      safeForm.athlete_ids = [...safeForm.athlete_ids, athleteId]
+    if (!form.title.trim()) {
+      setTitleError(true)
+      haptic('error')
+      setTimeout(() => setTitleError(false), 600)
+      return
     }
-    if (editing) await Sessions.update(editing, safeForm)
-    else await Sessions.create(safeForm)
-    await load(); setSaving(false); setSheet(null)
+    setSaving(true)
+    try {
+      const safeForm = { ...form }
+      if (athleteId && !safeForm.athlete_ids.includes(athleteId)) {
+        safeForm.athlete_ids = [...safeForm.athlete_ids, athleteId]
+      }
+      if (editing) await Sessions.update(editing, safeForm)
+      else await Sessions.create(safeForm)
+      await load()
+      setSheet(null)
+      haptic('success')
+      toast(editing ? 'Sesión actualizada' : 'Sesión creada')
+    } catch {
+      toast('Error al guardar la sesión', 'error')
+      haptic('error')
+    } finally {
+      setSaving(false)
+    }
   }
 
-  const remove = async (id) => { await Sessions.delete(id); await load(); setSheet(null); setConfirmDelete(null) }
+  const remove = async (id) => {
+    try {
+      await Sessions.delete(id)
+      await load()
+      setSheet(null)
+      setConfirmDelete(null)
+      haptic('medium')
+      toast('Sesión eliminada')
+    } catch {
+      toast('Error al eliminar', 'error')
+    }
+  }
 
   const saveAsTemplate = () => {
     if (!form.title.trim()) return
@@ -266,7 +295,7 @@ export default function Training({ athleteId = null, coachView = false, embedded
               )}
               <div className="input-group">
                 <label className="input-label">Nombre *</label>
-                <input className="input" placeholder="ej. Fuerza tren superior" value={form.title} onChange={e => setForm(f=>({...f,title:e.target.value}))} />
+                <input className={`input${titleError ? ' input-error' : ''}`} placeholder="ej. Fuerza tren superior" value={form.title} onChange={e => { setForm(f=>({...f,title:e.target.value})); if(titleError) setTitleError(false) }} />
               </div>
               <div style={{ display: 'flex', gap: 10 }}>
                 <div style={{ flex: 1 }} className="input-group">

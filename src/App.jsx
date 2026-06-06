@@ -1,16 +1,28 @@
 import { Routes, Route, NavLink, useLocation } from 'react-router-dom'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
-import { useState, useEffect } from 'react'
+import { ToastProvider } from './contexts/ToastContext'
+import { useState, useEffect, lazy, Suspense } from 'react'
 import { supabase } from './lib/supabase'
 import Login from './pages/Login'
-import Dashboard from './pages/Dashboard'
-import Athletes from './pages/Athletes'
-import Training from './pages/Training'
-import Health from './pages/Health'
-import Payments from './pages/Payments'
-import Messages from './pages/Messages'
-import AthleteView from './pages/AthleteView'
-import Documents from './pages/Documents'
+
+const Dashboard  = lazy(() => import('./pages/Dashboard'))
+const Athletes   = lazy(() => import('./pages/Athletes'))
+const Training   = lazy(() => import('./pages/Training'))
+const Health     = lazy(() => import('./pages/Health'))
+const Payments   = lazy(() => import('./pages/Payments'))
+const Messages   = lazy(() => import('./pages/Messages'))
+const AthleteView = lazy(() => import('./pages/AthleteView'))
+const Documents  = lazy(() => import('./pages/Documents'))
+
+function PageLoader() {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--text-muted)', fontSize: 13 }}>
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
+        <div style={{ width: 24, height: 24, borderRadius: '50%', border: '2px solid var(--border)', borderTopColor: 'var(--accent)', animation: 'spin 0.7s linear infinite' }} />
+      </div>
+    </div>
+  )
+}
 
 const NAV = [
   { to: '/',          icon: '⊞',  label: 'Inicio' },
@@ -89,16 +101,18 @@ function CoachApp() {
       </header>
 
       <main style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-        <Routes>
-          <Route path="/"          element={<Dashboard />} />
-          <Route path="/athletes"  element={<Athletes />} />
-          <Route path="/training"  element={<Training />} />
-          <Route path="/health"    element={<Health />} />
-          <Route path="/payments"  element={<Payments />} />
-          <Route path="/documents" element={<Documents />} />
-          <Route path="/messages"  element={<Messages />} />
-          <Route path="*"          element={<Dashboard />} />
-        </Routes>
+        <Suspense fallback={<PageLoader />}>
+          <Routes>
+            <Route path="/"          element={<Dashboard />} />
+            <Route path="/athletes"  element={<Athletes />} />
+            <Route path="/training"  element={<Training />} />
+            <Route path="/health"    element={<Health />} />
+            <Route path="/payments"  element={<Payments />} />
+            <Route path="/documents" element={<Documents />} />
+            <Route path="/messages"  element={<Messages />} />
+            <Route path="*"          element={<Dashboard />} />
+          </Routes>
+        </Suspense>
       </main>
 
       <nav className="glass-nav" style={{ display: 'flex', alignItems: 'stretch', height: 'var(--nav-height)', flexShrink: 0, paddingBottom: 'env(safe-area-inset-bottom)' }}>
@@ -137,13 +151,19 @@ function AppContent() {
 
   if (!user) return <Login />
   if (isCoach) return <CoachApp />
-  return <AthleteView />
+  return (
+    <Suspense fallback={<PageLoader />}>
+      <AthleteView />
+    </Suspense>
+  )
 }
 
 export default function App() {
   return (
     <AuthProvider>
-      <AppContent />
+      <ToastProvider>
+        <AppContent />
+      </ToastProvider>
     </AuthProvider>
   )
 }
