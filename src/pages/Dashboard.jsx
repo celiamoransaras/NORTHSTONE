@@ -9,7 +9,17 @@ export default function Dashboard() {
   const [upcomingSessions, setUpcomingSessions] = useState([])
   const [recentInjuries, setRecentInjuries] = useState([])
   const [athleteMap, setAthleteMap] = useState({})
-  const [dismissedAlerts, setDismissedAlerts] = useState([])
+  const today = new Date().toISOString().slice(0,10)
+  const STORAGE_KEY = `dismissed_fatigue_${today}`
+  const [dismissedAlerts, setDismissedAlerts] = useState(
+    () => JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]')
+  )
+
+  const dismissAlert = (athleteId) => {
+    const updated = [...new Set([...dismissedAlerts, athleteId])]
+    setDismissedAlerts(updated)
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(updated))
+  }
 
   useEffect(() => {
     const load = async () => {
@@ -100,8 +110,8 @@ export default function Dashboard() {
               const athlete = athleteMap[a.athlete_id]
               return (
                 <div key={i} onClick={() => {
-                  setDismissedAlerts(d => [...d, a.athlete_id])
-                  navigate('/messages', { state: { chatId: a.athlete_id, fatigueAlert: { name: athlete?.name, fatigue: a.fatigue_pre, session: a.sessions?.title } } })
+                  dismissAlert(a.athlete_id)
+                  navigate('/messages', { state: { chatId: a.athlete_id, fatigueAlert: { name: athlete?.name, fatigue: a.fatigue_pre, session: a.sessions?.title, athleteId: a.athlete_id } } })
                 }} style={{ fontSize: 13, color: 'var(--text)', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', background: 'rgba(220,38,38,0.08)', borderRadius: 10, cursor: 'pointer', transition: 'background 0.15s' }}>
                   <div style={{ width: 10, height: 10, borderRadius: '50%', background: athlete?.color || 'var(--error)', flexShrink: 0 }} />
                   <div style={{ flex: 1 }}>
