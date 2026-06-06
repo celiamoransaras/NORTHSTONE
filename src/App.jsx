@@ -1,5 +1,7 @@
-import { Routes, Route, NavLink } from 'react-router-dom'
+import { Routes, Route, NavLink, useLocation } from 'react-router-dom'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
+import { useState, useEffect } from 'react'
+import { supabase } from './lib/supabase'
 import Login from './pages/Login'
 import Dashboard from './pages/Dashboard'
 import Athletes from './pages/Athletes'
@@ -20,8 +22,40 @@ const NAV = [
   { to: '/messages',  icon: '💬', label: 'Chat' },
 ]
 
+function useUnreadMessages() {
+  const [unread, setUnread] = useState(0)
+  const location = useLocation()
+
+  const checkUnread = async () => {
+    const lastRead = localStorage.getItem('chat_last_read') || new Date(0).toISOString()
+    const { count } = await supabase.from('messages')
+      .select('*', { count: 'exact', head: true })
+      .neq('sender', 'coach')
+      .gt('created_at', lastRead)
+    setUnread(count || 0)
+  }
+
+  useEffect(() => {
+    checkUnread()
+    const channel = supabase.channel('unread_check')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, checkUnread)
+      .subscribe()
+    return () => channel.unsubscribe()
+  }, [])
+
+  useEffect(() => {
+    if (location.pathname === '/messages') {
+      localStorage.setItem('chat_last_read', new Date().toISOString())
+      setUnread(0)
+    }
+  }, [location.pathname])
+
+  return unread
+}
+
 function CoachApp() {
   const { signOut, profile, updateAvatar } = useAuth()
+  const unreadMessages = useUnreadMessages()
 
   const handleAvatarClick = () => {
     const input = document.createElement('input')
@@ -71,7 +105,14 @@ function CoachApp() {
         {NAV.map(({ to, icon, label }) => (
           <NavLink key={to} to={to} end={to === '/'}
             style={({ isActive }) => ({ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 3, textDecoration: 'none', color: isActive ? 'var(--accent)' : 'var(--text-muted)', fontFamily: "'Barlow Condensed', sans-serif", fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px', transition: 'color 0.15s' })}>
-            <span style={{ fontSize: 22, lineHeight: 1, filter: 'none' }}>{icon}</span>
+            <span style={{ fontSize: 22, lineHeight: 1, position: 'relative', display: 'inline-block' }}>
+              {icon}
+              {to === '/messages' && unreadMessages > 0 && (
+                <span style={{ position: 'absolute', top: -4, right: -8, background: 'var(--error)', color: '#fff', borderRadius: '50%', fontSize: 10, fontWeight: 800, minWidth: 18, height: 18, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 3px', fontFamily: "'Barlow Condensed', sans-serif" }}>
+                  {unreadMessages > 99 ? '99+' : unreadMessages}
+                </span>
+              )}
+            </span>
             {label}
           </NavLink>
         ))}
