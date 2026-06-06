@@ -10,6 +10,8 @@ import Training from './Training'
 import Messages from './Messages'
 import DocsPage from './Documents'
 import Progress from './Progress'
+import AchievementsSection, { StreakBadge, WeeklyPlan, calculateStreak, checkAndUnlockAchievements } from './Achievements'
+import { Records } from '../lib/db'
 
 const NAV = [
   { id: 'home',      icon: '🏠', label: 'Inicio' },
@@ -118,17 +120,28 @@ export default function AthleteView() {
 // ---- Inicio del deportista ----
 function AthleteHome({ athlete, athleteId }) {
   const [upcoming, setUpcoming] = useState([])
+  const [allSessions, setAllSessions] = useState([])
   const [activeInjury, setActiveInjury] = useState(null)
+  const [streak, setStreak] = useState(0)
 
   useEffect(() => {
     const load = async () => {
-      const [sessions, injuries] = await Promise.all([
+      const [sessions, injuries, records] = await Promise.all([
         Sessions.getByAthlete(athleteId),
-        Injuries.getByAthlete(athleteId)
+        Injuries.getByAthlete(athleteId),
+        Records.getByAthlete(athleteId),
       ])
       const today = new Date().toISOString().slice(0,10)
+      setAllSessions(sessions)
       setUpcoming(sessions.filter(s => s.date >= today).slice(0,3))
       setActiveInjury(injuries.find(i => !i.date_end || i.date_end >= today) || null)
+
+      const s = calculateStreak(sessions)
+      setStreak(s)
+
+      // Comprobar y desbloquear logros
+      const attendedCount = sessions.filter(s => s.athlete_ids?.length > 0).length
+      await checkAndUnlockAchievements(athleteId, attendedCount, records.length, s)
     }
     load()
   }, [athleteId])
@@ -144,23 +157,21 @@ function AthleteHome({ athlete, athleteId }) {
         <div style={{ height: 3, width: 48, background: athlete.color, borderRadius: 2, marginTop: 12 }} />
       </div>
       <div className="page-content">
-        {/* Athlete card */}
-        <div className="card" style={{ padding: 20 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-            <div className="avatar" style={{ width: 56, height: 56, fontSize: 22, background: athlete.color+'30', color: athlete.color }}>
-              {athlete.name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase()}
-            </div>
-            <div>
-              <div style={{ fontWeight: 700, fontSize: 18 }}>{athlete.name}</div>
-              <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>{athlete.sport || 'Deportista'}</div>
-            </div>
+        {/* Racha */}
+        {streak > 0 && <StreakBadge streak={streak} />}
+
+        {/* Plan semanal */}
+        <WeeklyPlan sessions={allSessions} />
+
+        {/* Lesión activa */}
+        {activeInjury && (
+          <div style={{ background: 'var(--error-dim)', border: '1px solid rgba(220,38,38,0.2)', borderRadius: 'var(--radius)', padding: '12px 16px', fontSize: 13 }}>
+            🩹 Lesión activa: <strong>{activeInjury.type}</strong> en {activeInjury.body_part}
           </div>
-          {activeInjury && (
-            <div style={{ marginTop: 14, background: 'var(--error-dim)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 'var(--radius-sm)', padding: '10px 14px', fontSize: 13 }}>
-              🩹 Lesión activa: <strong>{activeInjury.type}</strong> en {activeInjury.body_part}
-            </div>
-          )}
-        </div>
+        )}
+
+        {/* Logros */}
+        <AchievementsSection athleteId={athleteId} />
 
         {/* Próximas sesiones */}
         <div className="section-title">Mis próximas sesiones</div>

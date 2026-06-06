@@ -306,6 +306,37 @@ export const Wellness = {
   }
 }
 
+// ---- REACTIONS ----
+export const Reactions = {
+  getByChat: async (groupId) => {
+    const { data } = await supabase.from('message_reactions').select('*').eq('group_id', groupId)
+    return data || []
+  },
+  toggle: async (messageId, senderId, emoji, groupId) => {
+    const { data: existing } = await supabase.from('message_reactions')
+      .select('id').eq('message_id', messageId).eq('sender_id', senderId).eq('emoji', emoji).single()
+    if (existing) {
+      await supabase.from('message_reactions').delete().eq('id', existing.id)
+    } else {
+      await supabase.from('message_reactions').insert({ message_id: messageId, sender_id: senderId, emoji, group_id: groupId })
+    }
+  }
+}
+
+// ---- ACHIEVEMENTS ----
+export const Achievements = {
+  getByAthlete: async (athleteId) => {
+    const { data } = await supabase.from('achievements').select('*').eq('athlete_id', athleteId).order('unlocked_at')
+    return data || []
+  },
+  unlock: async (athleteId, type, title, description, icon) => {
+    await supabase.from('achievements').upsert(
+      { athlete_id: athleteId, type, title, description, icon },
+      { onConflict: 'athlete_id,type', ignoreDuplicates: true }
+    )
+  }
+}
+
 // ---- RPE ----
 export const RPE = {
   set: async (sessionId, athleteId, fields) => {

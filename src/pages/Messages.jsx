@@ -1,7 +1,9 @@
 import { useState, useEffect, useRef } from 'react'
-import { Messages as DB, Athletes } from '../lib/db'
+import { Messages as DB, Athletes, Reactions } from '../lib/db'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
+
+const REACTION_EMOJIS = ['👍','❤️','🔥','💪','😂','👏']
 
 export default function Messages() {
   const { profile, isCoach } = useAuth()
@@ -10,8 +12,13 @@ export default function Messages() {
   const [coachAvatar, setCoachAvatar] = useState(null)
   const [activeChat, setActiveChat] = useState('general')
   const [messages, setMessages] = useState([])
+  const [reactions, setReactions] = useState({})
+  const [reactionTarget, setReactionTarget] = useState(null)
   const [input, setInput] = useState('')
   const [uploading, setUploading] = useState(false)
+  const [recording, setRecording] = useState(false)
+  const mediaRecorderRef = useRef(null)
+  const audioChunksRef = useRef([])
   const bottomRef = useRef(null)
   const fileRef = useRef(null)
 
@@ -25,6 +32,14 @@ export default function Messages() {
   const loadMessages = async () => {
     const msgs = await DB.getGroup(activeChat)
     setMessages(msgs)
+    const { data: reactionData } = await supabase.from('message_reactions').select('*').in('message_id', msgs.map(m => m.id))
+    const grouped = {}
+    ;(reactionData || []).forEach(r => {
+      if (!grouped[r.message_id]) grouped[r.message_id] = {}
+      if (!grouped[r.message_id][r.emoji]) grouped[r.message_id][r.emoji] = []
+      grouped[r.message_id][r.emoji].push(r.sender_id)
+    })
+    setReactions(grouped)
   }
 
   useEffect(() => {
@@ -60,6 +75,41 @@ export default function Messages() {
   }
 
   const handleKey = (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send() } }
+
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      const mr = new MediaRecorder(stream)
+      audioChunksRef.current = []
+      mr.ondataavailable = e => audioChunksRef.current.push(e.data)
+      mr.onstop = async () => {
+        stream.getTracks().forEach(t => t.stop())
+        const blob = new Blob(audioChunksRef.current, { type: 'audio/webm' })
+        const file = new File([blob], `audio_${Date.now()}.webm`, { type: 'audio/webm' })
+        setUploading(true)
+        try {
+          const { url, type } = await DB.uploadFile(file)
+          await send('🎤 Audio', url, type)
+        } catch (err) { alert('Error al enviar audio: ' + err.message) }
+        setUploading(false)
+      }
+      mr.start()
+      mediaRecorderRef.current = mr
+      setRecording(true)
+    } catch { alert('No se pudo acceder al micrófono') }
+  }
+
+  const stopRecording = () => {
+    mediaRecorderRef.current?.stop()
+    setRecording(false)
+  }
+
+  const toggleReaction = async (messageId, emoji) => {
+    const senderId = myId
+    await Reactions.toggle(messageId, senderId, emoji, activeChat)
+    setReactionTarget(null)
+    await loadMessages()
+  }
 
   // Coach ve todos los chats, deportista solo el general y el suyo con la entrenadora
   const chats = isCoach
@@ -159,19 +209,46 @@ export default function Messages() {
                           : (msg.senderName ? initials(msg.senderName) : '?')}
                       </div>
                     )}
-                    <div style={{ maxWidth: '75%' }}>
+                    <div style={{ maxWidth: '75%', position: 'relative' }}>
                       {!isMe && msg.senderName && (
                         <div style={{ fontSize: 11, color: sender?.color || 'var(--text-muted)', marginBottom: 3, marginLeft: 4, fontWeight: 600 }}>{msg.senderName}</div>
                       )}
-                      <div style={{ background: isMe ? 'var(--accent)' : 'var(--card)', color: isMe ? '#000' : 'var(--text)', borderRadius: isMe ? '16px 16px 4px 16px' : '16px 16px 16px 4px', padding: msg.file_url && msg.file_type?.startsWith('image/') ? 4 : '10px 14px', fontSize: 14, border: isMe ? 'none' : '1px solid var(--border)', wordBreak: 'break-word', overflow: 'hidden' }}>
+                      <div onLongPress={() => setReactionTarget(msg.id)}
+                        onContextMenu={e => { e.preventDefault(); setReactionTarget(msg.id) }}
+                        onClick={() => reactionTarget === msg.id ? setReactionTarget(null) : null}
+                        style={{ background: isMe ? 'var(--accent-gradient)' : 'var(--card)', color: isMe ? '#fff' : 'var(--text)', borderRadius: isMe ? '18px 18px 4px 18px' : '18px 18px 18px 4px', padding: msg.file_url && msg.file_type?.startsWith('image/') ? 4 : '10px 14px', fontSize: 14, border: isMe ? 'none' : '1px solid var(--border-light)', wordBreak: 'break-word', overflow: 'hidden', boxShadow: 'var(--shadow-sm)', cursor: 'pointer' }}>
                         {msg.file_url && msg.file_type?.startsWith('image/') ? (
-                          <img src={msg.file_url} alt="imagen" style={{ maxWidth: 220, maxHeight: 220, borderRadius: 12, display: 'block' }} />
+                          <img src={msg.file_url} alt="imagen" style={{ maxWidth: 220, maxHeight: 220, borderRadius: 14, display: 'block' }} />
+                        ) : msg.file_url && msg.file_type?.startsWith('audio/') ? (
+                          <audio controls src={msg.file_url} style={{ maxWidth: 200, height: 36 }} />
                         ) : msg.file_url ? (
-                          <a href={msg.file_url} target="_blank" rel="noopener noreferrer" style={{ color: isMe ? '#000' : 'var(--accent)', display: 'flex', alignItems: 'center', gap: 8, textDecoration: 'none', fontWeight: 600 }}>
+                          <a href={msg.file_url} target="_blank" rel="noopener noreferrer" style={{ color: isMe ? '#fff' : 'var(--accent)', display: 'flex', alignItems: 'center', gap: 8, textDecoration: 'none', fontWeight: 600 }}>
                             <span style={{ fontSize: 20 }}>📎</span>{msg.text}
                           </a>
                         ) : msg.text}
                       </div>
+                      {/* Reacciones */}
+                      {reactionTarget === msg.id && (
+                        <div style={{ display: 'flex', gap: 4, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 24, padding: '6px 10px', boxShadow: 'var(--shadow-md)', position: 'absolute', zIndex: 10, [isMe ? 'right' : 'left']: 0, bottom: 40 }}>
+                          {REACTION_EMOJIS.map(emoji => (
+                            <button key={emoji} onClick={() => toggleReaction(msg.id, emoji)}
+                              style={{ fontSize: 22, background: 'none', border: 'none', cursor: 'pointer', padding: '2px 4px', borderRadius: 8, transition: 'transform 0.1s' }}>
+                              {emoji}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                      {/* Mostrar reacciones */}
+                      {reactions[msg.id] && Object.keys(reactions[msg.id]).length > 0 && (
+                        <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginTop: 4, justifyContent: isMe ? 'flex-end' : 'flex-start' }}>
+                          {Object.entries(reactions[msg.id]).map(([emoji, senders]) => (
+                            <button key={emoji} onClick={() => toggleReaction(msg.id, emoji)}
+                              style={{ display: 'flex', alignItems: 'center', gap: 3, background: senders.includes(myId) ? 'var(--accent-dim)' : 'var(--card)', border: `1px solid ${senders.includes(myId) ? 'var(--accent)' : 'var(--border)'}`, borderRadius: 12, padding: '2px 8px', fontSize: 13, cursor: 'pointer' }}>
+                              {emoji} <span style={{ fontSize: 11, fontWeight: 600 }}>{senders.length}</span>
+                            </button>
+                          ))}
+                        </div>
+                      )}
                       <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 3, textAlign: isMe ? 'right' : 'left', padding: '0 4px' }}>{formatTime(msg.ts)}</div>
                     </div>
                   </div>
@@ -184,9 +261,16 @@ export default function Messages() {
 
         <div style={{ padding: '10px 12px', background: 'var(--surface)', borderTop: '1px solid var(--border)', display: 'flex', gap: 8, alignItems: 'flex-end', flexShrink: 0 }}>
           <input ref={fileRef} type="file" accept="image/*,.pdf,.doc,.docx" style={{ display: 'none' }} onChange={handleFile} />
-          <button onClick={() => fileRef.current.click()} disabled={uploading}
+          <button onClick={() => fileRef.current.click()} disabled={uploading || recording}
             style={{ width: 42, height: 42, borderRadius: '50%', background: 'var(--card)', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, cursor: 'pointer', flexShrink: 0 }}>
             {uploading ? '⏳' : '📎'}
+          </button>
+          <button
+            onMouseDown={startRecording} onMouseUp={stopRecording}
+            onTouchStart={startRecording} onTouchEnd={stopRecording}
+            disabled={uploading}
+            style={{ width: 42, height: 42, borderRadius: '50%', background: recording ? 'var(--error)' : 'var(--card)', border: `1px solid ${recording ? 'var(--error)' : 'var(--border)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, cursor: 'pointer', flexShrink: 0, transition: 'all 0.15s' }}>
+            {recording ? '⏹' : '🎤'}
           </button>
           <textarea value={input} onChange={e => setInput(e.target.value)} onKeyDown={handleKey}
             placeholder="Escribe un mensaje..." rows={1}
