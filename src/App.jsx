@@ -56,7 +56,11 @@ function useUnreadMessages() {
   const location = useLocation()
 
   const checkUnread = async () => {
-    const lastRead = localStorage.getItem('chat_last_read') || new Date(0).toISOString()
+    let lastRead = localStorage.getItem('chat_last_read')
+    if (!lastRead) {
+      lastRead = new Date().toISOString()
+      localStorage.setItem('chat_last_read', lastRead)
+    }
     const { count } = await supabase.from('messages')
       .select('*', { count: 'exact', head: true })
       .neq('sender', 'coach')

@@ -37,7 +37,11 @@ export default function AthleteView() {
   // Mensajes no leídos
   useEffect(() => {
     const checkUnread = async () => {
-      const lastRead = localStorage.getItem('chat_last_read_athlete') || new Date(0).toISOString()
+      let lastRead = localStorage.getItem('chat_last_read_athlete')
+      if (!lastRead) {
+        lastRead = new Date().toISOString()
+        localStorage.setItem('chat_last_read_athlete', lastRead)
+      }
       const { count } = await supabase.from('messages').select('*', { count: 'exact', head: true })
         .eq('sender', 'coach').gt('created_at', lastRead)
       setUnreadMessages(count || 0)
