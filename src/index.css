@@ -517,21 +517,41 @@ textarea { resize: vertical; min-height: 88px; }
 }
 
 /* ---- Animations ---- */
-.fade-in { animation: fadeInUp 0.25s ease both; }
-.fade-in-1 { animation: fadeInUp 0.3s ease 0.05s both; }
-.fade-in-2 { animation: fadeInUp 0.3s ease 0.1s both; }
-.fade-in-3 { animation: fadeInUp 0.3s ease 0.15s both; }
-.fade-in-4 { animation: fadeInUp 0.3s ease 0.2s both; }
-.fade-in-5 { animation: fadeInUp 0.3s ease 0.25s both; }
+.fade-in { animation: fadeInUp 0.22s cubic-bezier(0.16,1,0.3,1) both; }
+.fade-in-1 { animation: fadeInUp 0.28s cubic-bezier(0.16,1,0.3,1) 0.04s both; }
+.fade-in-2 { animation: fadeInUp 0.28s cubic-bezier(0.16,1,0.3,1) 0.08s both; }
+.fade-in-3 { animation: fadeInUp 0.28s cubic-bezier(0.16,1,0.3,1) 0.12s both; }
+.fade-in-4 { animation: fadeInUp 0.28s cubic-bezier(0.16,1,0.3,1) 0.16s both; }
+.fade-in-5 { animation: fadeInUp 0.28s cubic-bezier(0.16,1,0.3,1) 0.20s both; }
 
 @keyframes fadeInUp {
-  from { opacity: 0; transform: translateY(10px); }
+  from { opacity: 0; transform: translateY(14px); }
   to { opacity: 1; transform: translateY(0); }
 }
 
 @keyframes pulse {
   0%, 100% { transform: scale(1); }
   50% { transform: scale(1.1); box-shadow: 0 0 0 6px rgba(220,38,38,0.2); }
+}
+
+/* ---- Page transition ---- */
+.page { animation: pageIn 0.2s cubic-bezier(0.16,1,0.3,1) both; }
+@keyframes pageIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ---- Card hover ---- */
+.card { transition: box-shadow 0.2s ease, transform 0.15s ease; }
+.card:active { transform: scale(0.99); }
+
+/* ---- List item hover ---- */
+.list-item { transition: background 0.12s ease; }
+
+/* ---- Better gradient avatar ---- */
+.avatar-gradient {
+  background: linear-gradient(135deg, var(--avatar-color, #2563EB) 0%, var(--avatar-color2, #4F46E5) 100%);
+  color: #fff;
 }
 
 /* ---- Glass nav ---- */

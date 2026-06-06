@@ -164,46 +164,39 @@ export default function Messages() {
   const myId = isCoach ? 'coach' : (profile?.athlete_id || 'athlete')
 
   return (
-    <div style={{ display: 'flex', height: '100%', overflow: 'hidden' }}>
-      {/* Sidebar */}
-      <div style={{ width: 76, flexShrink: 0, background: 'var(--surface)', borderRight: '1px solid var(--border)', display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '12px 4px', gap: 4, overflowY: 'auto' }}>
-        {chats.map(c => {
-          const isActive = activeChat === c.id
-          const shortName = c.name.split(' ')[0]
-          return (
-            <button key={c.id} onClick={() => setActiveChat(c.id)}
-              style={{ width: '100%', padding: '8px 4px', borderRadius: 12, cursor: 'pointer', background: isActive ? (c.id === 'general' ? 'var(--accent-dim)' : c.color+'15') : 'transparent', border: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
-              <div style={{
-                width: 44, height: 44, borderRadius: '50%', flexShrink: 0,
-                background: isActive ? (c.id === 'general' ? 'var(--accent)' : c.color) : 'var(--card)',
-                border: isActive ? 'none' : `2px solid ${c.color || 'var(--border)'}`,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: c.icon ? 20 : 13, fontWeight: 800,
-                color: isActive ? '#fff' : (c.color || 'var(--text-muted)'),
-                boxShadow: isActive ? `0 4px 12px ${c.color || 'var(--accent)'}40` : 'none',
-                transition: 'all 0.15s'
-              }}>
-                {c.icon ? c.icon : initials(c.name)}
-              </div>
-              <span style={{ fontSize: 9, fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.3px', color: isActive ? 'var(--accent)' : 'var(--text-muted)', maxWidth: 68, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {shortName}
-              </span>
-            </button>
-          )
-        })}
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
+      {/* Barra horizontal de chats */}
+      <div style={{ background: 'var(--surface)', borderBottom: '1px solid var(--border)', padding: '10px 12px', flexShrink: 0 }}>
+        <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 2 }}>
+          {chats.map(c => {
+            const isActive = activeChat === c.id
+            const athlete = athletes.find(a => a.id === c.id)
+            return (
+              <button key={c.id} onClick={() => setActiveChat(c.id)}
+                style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: 8, padding: '8px 14px', borderRadius: 24, border: 'none', cursor: 'pointer', transition: 'all 0.15s',
+                  background: isActive ? (c.id === 'general' ? 'var(--accent)' : c.color || 'var(--accent)') : 'var(--card)',
+                  boxShadow: isActive ? `0 4px 12px ${c.color || 'var(--accent)'}40` : 'var(--shadow-sm)' }}>
+                <div style={{ width: 28, height: 28, borderRadius: '50%', flexShrink: 0, overflow: 'hidden',
+                  background: isActive ? 'rgba(255,255,255,0.25)' : (c.color ? c.color+'20' : 'var(--border)'),
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: c.icon ? 16 : 11, fontWeight: 800,
+                  color: isActive ? '#fff' : (c.color || 'var(--text-muted)') }}>
+                  {athlete?.avatar_url
+                    ? <img src={athlete.avatar_url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    : c.icon ? c.icon : initials(c.name)}
+                </div>
+                <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700, fontSize: 13, textTransform: 'uppercase', letterSpacing: '0.3px',
+                  color: isActive ? '#fff' : 'var(--text-muted)', whiteSpace: 'nowrap' }}>
+                  {c.name.split(' ')[0]}
+                </span>
+              </button>
+            )
+          })}
+        </div>
       </div>
 
-      {/* Chat */}
+      {/* Chat area */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-        <div style={{ padding: '10px 16px', background: 'var(--surface)', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
-          <div style={{ width: 36, height: 36, borderRadius: '50%', background: activeInfo?.id === 'general' ? 'var(--accent)' : (activeInfo?.color+'30' || 'var(--card)'), display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: activeInfo?.icon ? 18 : 13, fontWeight: 700, color: activeInfo?.id === 'general' ? '#000' : activeInfo?.color }}>
-            {activeInfo?.icon || (activeInfo ? initials(activeInfo.name) : '?')}
-          </div>
-          <div>
-            <div style={{ fontWeight: 700, fontSize: 15 }}>{activeInfo?.name}</div>
-            <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{activeInfo?.subtitle}</div>
-          </div>
-        </div>
 
         {reactionTarget && (
           <div onClick={() => setReactionTarget(null)}

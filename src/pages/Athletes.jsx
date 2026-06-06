@@ -107,12 +107,12 @@ export default function Athletes() {
               <div key={a.id} className="list-item" onClick={() => openDetail(a)}
                 style={{ borderBottom: i < filtered.length - 1 ? undefined : 'none', borderLeft: `3px solid ${a.color}`, paddingLeft: 14 }}>
                 {a.avatar_url
-                  ? <img src={a.avatar_url} alt={a.name} style={{ width: 40, height: 40, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
-                  : <div className="avatar" style={{ background: a.color + '30', color: a.color }}>{initials(a.name)}</div>
+                  ? <img src={a.avatar_url} alt={a.name} style={{ width: 44, height: 44, borderRadius: '50%', objectFit: 'cover', flexShrink: 0, boxShadow: `0 0 0 2px ${a.color}40` }} />
+                  : <div className="avatar" style={{ width: 44, height: 44, fontSize: 17, background: `linear-gradient(135deg, ${a.color}CC, ${a.color}88)`, color: '#fff', boxShadow: `0 4px 12px ${a.color}40` }}>{initials(a.name)}</div>
                 }
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontWeight: 600, fontSize: 14 }}>{a.name}</div>
-                  <div style={{ color: 'var(--text-muted)', fontSize: 12 }}>{a.sport || 'Sin deporte'}</div>
+                  <div style={{ fontWeight: 700, fontSize: 15 }}>{a.name}</div>
+                  <div style={{ color: 'var(--text-muted)', fontSize: 12, marginTop: 1 }}>{a.sport || 'Sin deporte'}</div>
                 </div>
                 <span className={`badge ${statusBadge(a.status)}`}>{statusLabel(a.status)}</span>
               </div>

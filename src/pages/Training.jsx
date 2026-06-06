@@ -281,27 +281,47 @@ export default function Training({ athleteId = null, coachView = false, embedded
     : <div className="page fade-in">{inner}</div>
 }
 
+const TYPE_ICONS_MAP = { run:'🏃', fuerza:'💪', series:'⚡', endurance:'🫁', especifico:'🎯', ergometros:'🚣', cardio:'❤️', rest_day:'😴', strength:'💪', flexibility:'🧘', mixed:'⚡' }
+
 function SessionCard({ session, athletes, onPress, formatDate }) {
-  const typeColor = TYPE_COLOR[session.type] || 'var(--text-muted)'
-  const typeLabel = TYPE_OPTS.find(t=>t.value===session.type)?.label || session.type
+  const typeColor = TYPE_COLOR[session.type] || '#9CA3AF'
+  const typeOpt = TYPE_OPTS.find(t=>t.value===session.type)
+  const typeLabel = typeOpt?.label?.replace(/^[^ ]+ /, '') || session.type
+  const typeIcon = TYPE_ICONS_MAP[session.type] || '📅'
   const isToday = session.date === new Date().toISOString().slice(0,10)
+  const date = new Date(session.date + 'T12:00:00')
+  const days = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb']
+  const months = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic']
 
   return (
-    <div className="card" onClick={onPress} style={{ cursor: 'pointer' }}>
-      <div style={{ padding: '14px 16px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span style={{ fontSize: 12, color: typeColor, fontWeight: 700 }}>{formatDate(session.date)}</span>
-            {isToday && <span className="badge badge-green" style={{ fontSize: 10, padding: '2px 6px' }}>HOY</span>}
+    <div onClick={onPress} style={{ cursor: 'pointer', background: 'var(--card)', borderRadius: 'var(--radius)', boxShadow: 'var(--shadow)', overflow: 'hidden', transition: 'transform 0.15s, box-shadow 0.15s' }}
+      onTouchStart={e => e.currentTarget.style.transform = 'scale(0.985)'}
+      onTouchEnd={e => e.currentTarget.style.transform = ''}>
+      {/* Color strip */}
+      <div style={{ height: 4, background: `linear-gradient(90deg, ${typeColor}, ${typeColor}88)` }} />
+      <div style={{ padding: '14px 16px', display: 'flex', gap: 14, alignItems: 'center' }}>
+        {/* Date box */}
+        <div style={{ width: 48, height: 56, borderRadius: 12, background: isToday ? typeColor : `${typeColor}15`, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flexShrink: 0, border: isToday ? 'none' : `1.5px solid ${typeColor}30` }}>
+          <div style={{ fontSize: 9, fontWeight: 800, color: isToday ? '#fff' : typeColor, fontFamily: "'Barlow Condensed', sans-serif", textTransform: 'uppercase', letterSpacing: '0.5px' }}>{days[date.getDay()]}</div>
+          <div style={{ fontSize: 20, fontWeight: 900, color: isToday ? '#fff' : 'var(--text)', lineHeight: 1.1, fontFamily: "'Barlow Condensed', sans-serif" }}>{date.getDate()}</div>
+          <div style={{ fontSize: 9, color: isToday ? 'rgba(255,255,255,0.8)' : 'var(--text-muted)', fontFamily: "'Barlow Condensed', sans-serif" }}>{months[date.getMonth()]}</div>
+        </div>
+        {/* Info */}
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+            {isToday && <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 10, fontWeight: 800, color: '#fff', background: 'var(--success)', padding: '2px 6px', borderRadius: 5, textTransform: 'uppercase' }}>HOY</span>}
           </div>
-          <span style={{ color: 'var(--text-muted)', fontSize: 12 }}>⏱ {session.duration}min</span>
+          <div style={{ fontWeight: 700, fontSize: 15, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{session.title}</div>
+          <div style={{ display: 'flex', gap: 10, marginTop: 5, alignItems: 'center' }}>
+            <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: typeColor, fontWeight: 700, fontFamily: "'Barlow Condensed', sans-serif" }}>
+              {typeIcon} {typeLabel}
+            </span>
+            <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>⏱ {session.duration}m</span>
+            {session.exercises?.length > 0 && <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>📋 {session.exercises.length}</span>}
+            {session.athlete_ids?.length > 0 && <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>👥 {session.athlete_ids.length}</span>}
+          </div>
         </div>
-        <h4 style={{ marginBottom: 6 }}>{session.title}</h4>
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-          <span className="tag">{typeLabel}</span>
-          {session.exercises?.length > 0 && <span className="tag">📋 {session.exercises.length} ejercicios</span>}
-          {session.athlete_ids?.length > 0 && <span className="tag">👥 {session.athlete_ids.length}</span>}
-        </div>
+        <span style={{ color: 'var(--text-dim)', fontSize: 18 }}>›</span>
       </div>
     </div>
   )
