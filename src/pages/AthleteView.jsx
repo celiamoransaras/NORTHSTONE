@@ -177,61 +177,60 @@ function AthleteHome({ athlete, athleteId }) {
 
   useEffect(() => {
     const load = async () => {
-      const [sessions, injuries, records] = await Promise.all([
-        Sessions.getByAthlete(athleteId),
-        Injuries.getByAthlete(athleteId),
-        Records.getByAthlete(athleteId),
-      ])
-      const today = new Date().toISOString().slice(0,10)
-      setAllSessions(sessions)
-      setUpcoming(sessions.filter(s => s.date >= today).slice(0,3))
-      setActiveInjury(injuries.find(i => !i.date_end || i.date_end >= today) || null)
+      try {
+        const [sessions, injuries, records] = await Promise.all([
+          Sessions.getByAthlete(athleteId),
+          Injuries.getByAthlete(athleteId),
+          Records.getByAthlete(athleteId),
+        ])
+        const today = new Date().toISOString().slice(0,10)
+        setAllSessions(sessions)
+        setUpcoming(sessions.filter(s => s.date >= today).slice(0,3))
+        setActiveInjury(injuries.find(i => !i.date_end || i.date_end >= today) || null)
+        const s = calculateStreak(sessions)
+        setStreak(s)
 
-      const s = calculateStreak(sessions)
-      setStreak(s)
+        // Logros — en segundo plano, no bloquea la carga
+        Promise.all([
+          supabase.from('session_athletes').select('rpe, fatigue_pre').eq('athlete_id', athleteId).not('rpe', 'is', null),
+          supabase.from('goals').select('id').eq('athlete_id', athleteId).eq('completed', true),
+          supabase.from('messages').select('id').eq('sender', athleteId),
+          supabase.from('wellness').select('date').eq('athlete_id', athleteId).order('date', { ascending: false }).limit(7),
+        ]).then(([rpeRes, goalRes, msgRes, wellnessRes]) => {
+          const rpeData = rpeRes.data || []
+          const goalCount = goalRes.data?.length || 0
+          const msgCount = msgRes.data?.length || 0
+          const earlyBird = rpeData.some(r => r.fatigue_pre != null)
+          const wellnessDays = (wellnessRes.data || []).map(w => w.date)
+          const today2 = new Date()
+          let perfectWellness = wellnessDays.length >= 7
+          if (perfectWellness) {
+            for (let i = 0; i < 7; i++) {
+              const d = new Date(today2)
+              d.setDate(today2.getDate() - i)
+              if (!wellnessDays.includes(d.toISOString().slice(0,10))) { perfectWellness = false; break }
+            }
+          }
+          const firstSession = sessions.length > 0 ? new Date(sessions[0].date + 'T12:00:00') : null
+          const daysSince = firstSession ? Math.floor((today2 - firstSession) / (1000*60*60*24)) : 0
+          const TYPE_OPTS = ['run','fuerza','series','endurance','especifico','ergometros','cardio','rest_day']
+          const usedTypes = new Set(sessions.map(s => s.type))
+          const attendedCount = sessions.filter(s => s.attendance?.[athleteId] === true).length
+          checkAndUnlockAchievements(athleteId, attendedCount, records.length, s, {
+            firstGoal: goalCount >= 1, threeGoals: goalCount >= 3, tenGoals: goalCount >= 10,
+            firstRpe: rpeData.length >= 1, tenRpe: rpeData.length >= 10, fiftyRpe: rpeData.length >= 50, hundredRpe: rpeData.length >= 100,
+            firstMsg: msgCount >= 1, chat50: msgCount >= 50,
+            earlyBird, perfectWeek: perfectWellness,
+            month1: daysSince >= 30, month3: daysSince >= 90, month6: daysSince >= 180, year1: daysSince >= 365,
+            allTypes: TYPE_OPTS.every(t => usedTypes.has(t)),
+          }).catch(() => {})
+        }).catch(() => {})
 
-      const { data: rpeData } = await supabase.from('session_athletes')
-        .select('rpe, fatigue_pre').eq('athlete_id', athleteId).not('rpe', 'is', null)
-      const { data: goalData } = await supabase.from('goals')
-        .eq('athlete_id', athleteId).eq('completed', true)
-      const { data: msgData } = await supabase.from('messages')
-        .select('id', { count: 'exact', head: true }).eq('sender', athleteId)
-      const { data: wellnessData } = await supabase.from('wellness')
-        .select('date').eq('athlete_id', athleteId).order('date', { ascending: false }).limit(7)
-
-      const rpeCount = rpeData?.length || 0
-      const goalCount = goalData?.length || 0
-      const msgCount = msgData?.count || 0
-      const earlyBird = (rpeData || []).some(r => r.fatigue_pre != null)
-
-      const wellnessDays = (wellnessData || []).map(w => w.date)
-      const today2 = new Date()
-      let perfectWellness = wellnessDays.length >= 7
-      if (perfectWellness) {
-        for (let i = 0; i < 7; i++) {
-          const d = new Date(today2)
-          d.setDate(today2.getDate() - i)
-          if (!wellnessDays.includes(d.toISOString().slice(0,10))) { perfectWellness = false; break }
-        }
+      } catch (e) {
+        console.error('AthleteHome load error', e)
+      } finally {
+        setLoading(false)
       }
-
-      const firstSession = sessions.length > 0 ? new Date(sessions[0].date + 'T12:00:00') : null
-      const daysSince = firstSession ? Math.floor((today2 - firstSession) / (1000*60*60*24)) : 0
-      const TYPE_OPTS = ['run','fuerza','series','endurance','especifico','ergometros','cardio','rest_day']
-      const usedTypes = new Set(sessions.map(s => s.type))
-      const allTypes = TYPE_OPTS.every(t => usedTypes.has(t))
-      const attendedCount = sessions.filter(s => s.attendance?.[athleteId] === true).length
-
-      await checkAndUnlockAchievements(athleteId, attendedCount, records.length, s, {
-        firstGoal: goalCount >= 1, threeGoals: goalCount >= 3, tenGoals: goalCount >= 10,
-        firstRpe: rpeCount >= 1, tenRpe: rpeCount >= 10, fiftyRpe: rpeCount >= 50, hundredRpe: rpeCount >= 100,
-        firstMsg: msgCount >= 1, chat50: msgCount >= 50,
-        earlyBird, perfectWeek: perfectWellness,
-        month1: daysSince >= 30, month3: daysSince >= 90, month6: daysSince >= 180, year1: daysSince >= 365,
-        allTypes,
-      })
-
-      setLoading(false)
     }
     load()
   }, [athleteId])
