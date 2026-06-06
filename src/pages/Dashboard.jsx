@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Athletes, Sessions, Injuries, Payments } from '../lib/db'
+import { supabase } from '../lib/supabase'
 
 export default function Dashboard() {
   const navigate = useNavigate()
@@ -20,10 +21,16 @@ export default function Dashboard() {
       // Auto-crear pagos del mes si no existen
       if (athletes.length > 0) await Payments.ensureMonth(athletes, month, year)
 
-      const [sessions, injuries, payments] = await Promise.all([
+      const [sessions, injuries, payments, fatigueAlerts] = await Promise.all([
         Sessions.getAll(),
         Injuries.getAll(),
-        Payments.getByMonth(month, year)
+        Payments.getByMonth(month, year),
+        supabase.from('session_athletes')
+          .select('athlete_id, fatigue_pre, sessions(title, date)')
+          .gte('fatigue_pre', 8)
+          .gte('sessions.date', today)
+          .not('sessions', 'is', null)
+          .then(({ data }) => (data || []).filter(d => d.sessions))
       ])
 
       const map = {}
@@ -44,6 +51,7 @@ export default function Dashboard() {
         totalPayments: athletes.length,
         pendingPayments,
         showPaymentReminder: pendingPayments > 0 && isStartOfMonth,
+        fatigueAlerts,
         monthName: ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'][month-1],
       })
       setUpcomingSessions(upcoming)
@@ -82,6 +90,26 @@ export default function Dashboard() {
       </div>
 
       <div className="page-content" style={{ paddingTop: 4 }}>
+        {stats.fatigueAlerts?.length > 0 && (
+          <div className="fade-in-1" style={{ background: 'var(--error-dim)', border: '1px solid rgba(220,38,38,0.25)', borderRadius: 'var(--radius)', padding: '14px 16px' }}>
+            <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 800, fontSize: 15, color: 'var(--error)', textTransform: 'uppercase', marginBottom: 8 }}>
+              ⚠️ Cansancio alto pre-sesión
+            </div>
+            {stats.fatigueAlerts.map((a, i) => {
+              const athlete = athleteMap[a.athlete_id]
+              return (
+                <div key={i} style={{ fontSize: 13, color: 'var(--text)', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <div style={{ width: 8, height: 8, borderRadius: '50%', background: athlete?.color || 'var(--error)', flexShrink: 0 }} />
+                  <strong>{athlete?.name || 'Deportista'}</strong> — {a.sessions?.title} · Cansancio: <strong style={{ color: 'var(--error)' }}>{a.fatigue_pre}/10</strong>
+                </div>
+              )
+            })}
+            <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 8 }}>
+              Valora con ellos si realizar la sesión
+            </div>
+          </div>
+        )}
+
         {stats.showPaymentReminder && (
           <div className="fade-in-1" onClick={() => navigate('/payments')} style={{ background: 'var(--accent-gradient)', borderRadius: 'var(--radius)', padding: '16px 18px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 12, boxShadow: 'var(--accent-glow)' }}>
             <span style={{ fontSize: 26 }}>💳</span>
