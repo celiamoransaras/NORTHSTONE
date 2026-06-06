@@ -141,9 +141,42 @@ function AthleteHome({ athlete, athleteId }) {
       const s = calculateStreak(sessions)
       setStreak(s)
 
-      // Comprobar y desbloquear logros
-      const attendedCount = sessions.filter(s => s.athlete_ids?.length > 0).length
-      await checkAndUnlockAchievements(athleteId, attendedCount, records.length, s)
+      // Comprobar extras para logros
+      const { data: rpeData } = await supabase.from('session_athletes')
+        .select('rpe, fatigue_pre').eq('athlete_id', athleteId).not('rpe', 'is', null)
+      const { data: goalData } = await supabase.from('goals')
+        .eq('athlete_id', athleteId).eq('completed', true)
+      const { data: msgData } = await supabase.from('messages')
+        .select('id', { count: 'exact', head: true }).eq('sender', athleteId)
+      const { data: wellnessData } = await supabase.from('wellness')
+        .select('date').eq('athlete_id', athleteId).order('date', { ascending: false }).limit(7)
+
+      const rpeCount = rpeData?.length || 0
+      const goalCount = goalData?.length || 0
+      const hasMsg = (msgData?.count || 0) > 0
+      const earlyBird = (rpeData || []).some(r => r.fatigue_pre != null)
+
+      // Semana perfecta: 7 días de wellness consecutivos
+      const wellnessDays = (wellnessData || []).map(w => w.date)
+      const today2 = new Date()
+      let perfectWellness = wellnessDays.length >= 7
+      if (perfectWellness) {
+        for (let i = 0; i < 7; i++) {
+          const d = new Date(today2)
+          d.setDate(today2.getDate() - i)
+          if (!wellnessDays.includes(d.toISOString().slice(0,10))) { perfectWellness = false; break }
+        }
+      }
+
+      await checkAndUnlockAchievements(athleteId, sessions.length, records.length, s, {
+        firstGoal: goalCount >= 1,
+        threeGoals: goalCount >= 3,
+        firstRpe: rpeCount >= 1,
+        tenRpe: rpeCount >= 10,
+        firstMsg: hasMsg,
+        earlyBird,
+        perfectWeek: perfectWellness,
+      })
     }
     load()
   }, [athleteId])

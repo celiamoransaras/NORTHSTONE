@@ -3,14 +3,33 @@ import { Achievements, Records } from '../lib/db'
 import { supabase } from '../lib/supabase'
 
 const ACHIEVEMENT_DEFS = [
-  { type: 'first_session',  icon: '🏅', title: 'Primera sesión',    description: '¡Completaste tu primera sesión!' },
-  { type: 'five_sessions',  icon: '💪', title: '5 sesiones',         description: '5 sesiones completadas. ¡Sigue así!' },
-  { type: 'ten_sessions',   icon: '🔟', title: '10 sesiones',        description: '¡10 sesiones completadas!' },
-  { type: 'twenty_sessions',icon: '🚀', title: '20 sesiones',        description: '¡Eres una máquina!' },
-  { type: 'first_record',   icon: '🏆', title: 'Primera marca',      description: '¡Registraste tu primera marca personal!' },
-  { type: 'streak_2',       icon: '🔥', title: 'Racha de 2 semanas', description: '2 semanas consecutivas entrenando' },
-  { type: 'streak_4',       icon: '⚡', title: 'Racha de 4 semanas', description: '¡Un mes sin parar!' },
-  { type: 'streak_8',       icon: '🌟', title: 'Racha de 8 semanas', description: '2 meses de constancia. ¡Increíble!' },
+  // Sesiones
+  { type: 'first_session',   icon: '🏅', title: 'Primera sesión',       description: '¡Completaste tu primera sesión!' },
+  { type: 'five_sessions',   icon: '💪', title: '5 sesiones',            description: '5 sesiones completadas. ¡Sigue así!' },
+  { type: 'ten_sessions',    icon: '🔟', title: '10 sesiones',           description: '¡10 sesiones completadas!' },
+  { type: 'twenty_sessions', icon: '🚀', title: '20 sesiones',           description: '¡Eres una máquina!' },
+  { type: 'fifty_sessions',  icon: '👑', title: '50 sesiones',           description: '¡Leyenda del entrenamiento!' },
+  // Rachas
+  { type: 'streak_2',        icon: '🔥', title: 'Racha 2 semanas',       description: '2 semanas consecutivas entrenando' },
+  { type: 'streak_4',        icon: '⚡', title: 'Racha 4 semanas',       description: '¡Un mes sin parar!' },
+  { type: 'streak_8',        icon: '🌟', title: 'Racha 8 semanas',       description: '2 meses de constancia. ¡Increíble!' },
+  { type: 'streak_12',       icon: '🏆', title: 'Racha 3 meses',         description: '3 meses seguidos. ¡Eres imparable!' },
+  // Marcas
+  { type: 'first_record',    icon: '📊', title: 'Primera marca',         description: '¡Registraste tu primera marca personal!' },
+  { type: 'five_records',    icon: '📈', title: '5 marcas',              description: '5 marcas personales registradas' },
+  { type: 'record_broken',   icon: '💥', title: 'Récord batido',         description: '¡Superaste tu mejor marca!' },
+  // Objetivos
+  { type: 'first_goal',      icon: '🎯', title: 'Primer objetivo',       description: '¡Completaste tu primer objetivo!' },
+  { type: 'three_goals',     icon: '🎪', title: '3 objetivos',           description: '3 objetivos alcanzados. ¡A por más!' },
+  // Valoraciones
+  { type: 'first_rpe',       icon: '⭐', title: 'Primera valoración',    description: '¡Enviaste tu primera valoración de entreno!' },
+  { type: 'ten_rpe',         icon: '🌈', title: '10 valoraciones',       description: '10 sesiones valoradas. ¡Muy comprometida!' },
+  // Comunicación
+  { type: 'first_message',   icon: '💬', title: 'Primera charla',        description: '¡Enviaste tu primer mensaje!' },
+  // Especiales
+  { type: 'early_bird',      icon: '🌅', title: 'Madrugadora',           description: 'Registraste tu cansancio antes de una sesión' },
+  { type: 'wellness_week',   icon: '🧘', title: 'Semana consciente',     description: '7 días seguidos registrando tu estado' },
+  { type: 'perfect_week',    icon: '✨', title: 'Semana perfecta',       description: '¡Asististe a todas las sesiones de la semana!' },
 ]
 
 export function calculateStreak(sessions) {
@@ -32,15 +51,33 @@ export function calculateStreak(sessions) {
   return streak
 }
 
-export async function checkAndUnlockAchievements(athleteId, attendedCount, records, streak) {
-  if (attendedCount >= 1)  await Achievements.unlock(athleteId, 'first_session',   '¡Primera sesión!',     '¡Completaste tu primera sesión!', '🏅')
-  if (attendedCount >= 5)  await Achievements.unlock(athleteId, 'five_sessions',   '5 sesiones',           '5 sesiones completadas. ¡Sigue así!', '💪')
-  if (attendedCount >= 10) await Achievements.unlock(athleteId, 'ten_sessions',    '10 sesiones',          '¡10 sesiones completadas!', '🔟')
-  if (attendedCount >= 20) await Achievements.unlock(athleteId, 'twenty_sessions', '20 sesiones',          '¡Eres una máquina!', '🚀')
-  if (records >= 1)        await Achievements.unlock(athleteId, 'first_record',    'Primera marca',        '¡Registraste tu primera marca personal!', '🏆')
-  if (streak >= 2)         await Achievements.unlock(athleteId, 'streak_2',        'Racha de 2 semanas',   '2 semanas consecutivas entrenando', '🔥')
-  if (streak >= 4)         await Achievements.unlock(athleteId, 'streak_4',        'Racha de 4 semanas',   '¡Un mes sin parar!', '⚡')
-  if (streak >= 8)         await Achievements.unlock(athleteId, 'streak_8',        'Racha de 8 semanas',   '2 meses de constancia. ¡Increíble!', '🌟')
+export async function checkAndUnlockAchievements(athleteId, attendedCount, recordsCount, streak, extras = {}) {
+  const u = (type) => {
+    const def = ACHIEVEMENT_DEFS.find(d => d.type === type)
+    if (def) return Achievements.unlock(athleteId, def.type, def.title, def.description, def.icon)
+  }
+  // Sesiones
+  if (attendedCount >= 1)  await u('first_session')
+  if (attendedCount >= 5)  await u('five_sessions')
+  if (attendedCount >= 10) await u('ten_sessions')
+  if (attendedCount >= 20) await u('twenty_sessions')
+  if (attendedCount >= 50) await u('fifty_sessions')
+  // Rachas
+  if (streak >= 2)  await u('streak_2')
+  if (streak >= 4)  await u('streak_4')
+  if (streak >= 8)  await u('streak_8')
+  if (streak >= 12) await u('streak_12')
+  // Marcas
+  if (recordsCount >= 1) await u('first_record')
+  if (recordsCount >= 5) await u('five_records')
+  // Extras opcionales
+  if (extras.firstGoal)   await u('first_goal')
+  if (extras.threeGoals)  await u('three_goals')
+  if (extras.firstRpe)    await u('first_rpe')
+  if (extras.tenRpe)      await u('ten_rpe')
+  if (extras.firstMsg)    await u('first_message')
+  if (extras.earlyBird)   await u('early_bird')
+  if (extras.perfectWeek) await u('perfect_week')
 }
 
 export function StreakBadge({ streak }) {
