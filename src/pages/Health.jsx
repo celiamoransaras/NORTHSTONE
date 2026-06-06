@@ -47,7 +47,7 @@ export default function Health() {
   const save = async () => {
     if (!form.athlete_id) return
     if (form.date_end && form.date_end < form.date_start) {
-      alert('La fecha de alta no puede ser anterior a la fecha de inicio')
+      toast('La fecha de alta no puede ser anterior a la fecha de inicio', 'error')
       return
     }
     setSaving(true)

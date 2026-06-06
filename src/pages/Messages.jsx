@@ -5,11 +5,13 @@ import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
 import { dismissFatigueAlert } from '../lib/alertState'
 import { sendPushToCoach } from '../lib/pushNotifications'
+import { useToast } from '../contexts/ToastContext'
 
 const REACTION_EMOJIS = ['👍','❤️','🔥','💪','😂','👏']
 
 export default function Messages() {
   const { profile, isCoach } = useAuth()
+  const toast = useToast()
   const location = useLocation()
   const myAthleteId = profile?.athlete_id
   const [athletes, setAthletes] = useState([])
@@ -91,7 +93,7 @@ export default function Messages() {
     try {
       const { url, type } = await DB.uploadFile(file)
       await send('', url, type)
-    } catch (err) { alert('Error al subir: ' + (err.message || err)) }
+    } catch (err) { toast('Error al subir: ' + (err.message || err), 'error') }
     setUploading(false)
     e.target.value = ''
   }
@@ -114,7 +116,7 @@ export default function Messages() {
         try {
           const { url, type } = await DB.uploadFile(file)
           await send('🎤 Audio', url, type)
-        } catch (err) { alert('Error al enviar audio: ' + err.message) }
+        } catch (err) { toast('Error al enviar audio: ' + err.message, 'error') }
         setUploading(false)
       }
       mr.start(100)
@@ -122,7 +124,7 @@ export default function Messages() {
       setRecording(true)
       setRecordingSeconds(0)
       recordingTimerRef.current = setInterval(() => setRecordingSeconds(s => s + 1), 1000)
-    } catch (err) { alert('No se pudo acceder al micrófono: ' + err.message) }
+    } catch (err) { toast('No se pudo acceder al micrófono: ' + err.message, 'error') }
   }
 
   const stopRecording = () => {

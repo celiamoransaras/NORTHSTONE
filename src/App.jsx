@@ -1,7 +1,7 @@
 import { Routes, Route, NavLink, useLocation } from 'react-router-dom'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
 import { ToastProvider } from './contexts/ToastContext'
-import { useState, useEffect, lazy, Suspense } from 'react'
+import { useState, useEffect, lazy, Suspense, Component } from 'react'
 import { supabase } from './lib/supabase'
 import { usePushNotifications } from './hooks/usePushNotifications'
 import Login from './pages/Login'
@@ -14,6 +14,22 @@ const Payments   = lazy(() => import('./pages/Payments'))
 const Messages   = lazy(() => import('./pages/Messages'))
 const AthleteView = lazy(() => import('./pages/AthleteView'))
 const Documents  = lazy(() => import('./pages/Documents'))
+
+class ErrorBoundary extends Component {
+  state = { error: null }
+  static getDerivedStateFromError(error) { return { error } }
+  render() {
+    if (this.state.error) return (
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', padding: 32, textAlign: 'center', gap: 16 }}>
+        <div style={{ fontSize: 48 }}>⚠️</div>
+        <h3 style={{ marginBottom: 0 }}>Algo ha fallado</h3>
+        <p style={{ color: 'var(--text-muted)', fontSize: 14 }}>Recarga la página para continuar</p>
+        <button className="btn btn-primary btn-sm" onClick={() => window.location.reload()}>Recargar</button>
+      </div>
+    )
+    return this.props.children
+  }
+}
 
 function PageLoader() {
   return (
@@ -43,7 +59,7 @@ function useUnreadMessages() {
     const lastRead = localStorage.getItem('chat_last_read') || new Date(0).toISOString()
     const { count } = await supabase.from('messages')
       .select('*', { count: 'exact', head: true })
-      .not('sender', 'in', '(coach,me)')
+      .neq('sender', 'coach')
       .gt('created_at', lastRead)
     setUnread(count || 0)
   }
@@ -116,18 +132,20 @@ function CoachApp() {
       </header>
 
       <main style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-        <Suspense fallback={<PageLoader />}>
-          <Routes>
-            <Route path="/"          element={<Dashboard />} />
-            <Route path="/athletes"  element={<Athletes />} />
-            <Route path="/training"  element={<Training />} />
-            <Route path="/health"    element={<Health />} />
-            <Route path="/payments"  element={<Payments />} />
-            <Route path="/documents" element={<Documents />} />
-            <Route path="/messages"  element={<Messages />} />
-            <Route path="*"          element={<Dashboard />} />
-          </Routes>
-        </Suspense>
+        <ErrorBoundary>
+          <Suspense fallback={<PageLoader />}>
+            <Routes>
+              <Route path="/"          element={<Dashboard />} />
+              <Route path="/athletes"  element={<Athletes />} />
+              <Route path="/training"  element={<Training />} />
+              <Route path="/health"    element={<Health />} />
+              <Route path="/payments"  element={<Payments />} />
+              <Route path="/documents" element={<Documents />} />
+              <Route path="/messages"  element={<Messages />} />
+              <Route path="*"          element={<Dashboard />} />
+            </Routes>
+          </Suspense>
+        </ErrorBoundary>
       </main>
 
       <nav className="glass-nav" style={{ display: 'flex', alignItems: 'stretch', height: 'var(--nav-height)', flexShrink: 0, paddingBottom: 'env(safe-area-inset-bottom)' }}>
@@ -167,9 +185,11 @@ function AppContent() {
   if (!user) return <Login />
   if (isCoach) return <CoachApp />
   return (
-    <Suspense fallback={<PageLoader />}>
-      <AthleteView />
-    </Suspense>
+    <ErrorBoundary>
+      <Suspense fallback={<PageLoader />}>
+        <AthleteView />
+      </Suspense>
+    </ErrorBoundary>
   )
 }
 

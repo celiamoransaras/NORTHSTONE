@@ -38,7 +38,7 @@ export default function AthleteView() {
     const checkUnread = async () => {
       const lastRead = localStorage.getItem('chat_last_read_athlete') || new Date(0).toISOString()
       const { count } = await supabase.from('messages').select('*', { count: 'exact', head: true })
-        .in('sender', ['coach', 'me']).gt('created_at', lastRead)
+        .eq('sender', 'coach').gt('created_at', lastRead)
       setUnreadMessages(count || 0)
     }
     checkUnread()
@@ -60,15 +60,12 @@ export default function AthleteView() {
     if (!athleteId) return
     const fetchUnrated = async () => {
       const today = new Date().toISOString().slice(0, 10)
-      const { data: pastSessions } = await supabase
-        .from('sessions').select('id').lt('date', today)
-      if (!pastSessions?.length) return
-      const ids = pastSessions.map(s => s.id)
-      const { data: rated } = await supabase
-        .from('session_athletes').select('session_id')
-        .eq('athlete_id', athleteId).in('session_id', ids).not('rpe', 'is', null)
-      const ratedIds = new Set((rated || []).map(r => r.session_id))
-      setUnratedCount(ids.filter(id => !ratedIds.has(id)).length)
+      const { data: assigned } = await supabase
+        .from('session_athletes').select('session_id, rpe, sessions!inner(date)')
+        .eq('athlete_id', athleteId)
+        .lt('sessions.date', today)
+      if (!assigned?.length) return
+      setUnratedCount(assigned.filter(r => r.rpe == null).length)
     }
     fetchUnrated()
   }, [athleteId, tab])

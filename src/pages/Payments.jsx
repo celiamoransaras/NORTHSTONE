@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Payments as DB, Athletes } from '../lib/db'
+import { useToast } from '../contexts/ToastContext'
+import { haptic } from '../lib/haptic'
 
 const MONTHS = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
 
@@ -10,9 +12,10 @@ export default function Payments() {
   const now = new Date()
   const [month, setMonth] = useState(now.getMonth() + 1)
   const [year, setYear] = useState(now.getFullYear())
-  const [amount, setAmount] = useState(80)
+  const [amount, setAmount] = useState(() => Number(localStorage.getItem('ns_payment_amount') || 80))
   const [editingAmount, setEditingAmount] = useState(false)
   const [toggling, setToggling] = useState(null)
+  const toast = useToast()
 
   const load = async () => {
     setLoading(true)
@@ -27,10 +30,18 @@ export default function Payments() {
 
   const toggle = async (id, currentStatus) => {
     setToggling(id)
-    await DB.toggle(id, currentStatus)
-    const pays = await DB.getByMonth(month, year)
-    setPayments(pays)
-    setToggling(null)
+    try {
+      await DB.toggle(id, currentStatus)
+      const pays = await DB.getByMonth(month, year)
+      setPayments(pays)
+      haptic('success')
+      toast(currentStatus === 'pending' ? '✓ Pago registrado' : 'Pago marcado como pendiente')
+    } catch {
+      toast('Error al actualizar el pago', 'error')
+      haptic('error')
+    } finally {
+      setToggling(null)
+    }
   }
 
   const paid = payments.filter(p => p.status === 'paid').length
@@ -66,7 +77,7 @@ export default function Payments() {
           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
             <input className="input" type="number" value={amount} style={{ width: 80, padding: '8px 12px' }}
               onChange={e => setAmount(Number(e.target.value))} />
-            <button className="btn btn-primary btn-sm" onClick={() => { setEditingAmount(false); load() }}>OK</button>
+            <button className="btn btn-primary btn-sm" onClick={() => { localStorage.setItem('ns_payment_amount', amount); setEditingAmount(false); load() }}>OK</button>
           </div>
         ) : (
           <button className="btn btn-secondary btn-sm" onClick={() => setEditingAmount(true)}>
