@@ -529,6 +529,11 @@ textarea { resize: vertical; min-height: 88px; }
   to { opacity: 1; transform: translateY(0); }
 }
 
+@keyframes pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.1); box-shadow: 0 0 0 6px rgba(220,38,38,0.2); }
+}
+
 /* ---- Glass nav ---- */
 .glass-nav {
   background: rgba(240,239,237,0.85);

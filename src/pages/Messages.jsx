@@ -102,8 +102,15 @@ export default function Messages() {
   }
 
   const stopRecording = () => {
-    mediaRecorderRef.current?.stop()
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+      mediaRecorderRef.current.stop()
+    }
     setRecording(false)
+  }
+
+  const toggleRecording = () => {
+    if (recording) stopRecording()
+    else startRecording()
   }
 
   const toggleReaction = async (messageId, emoji) => {
@@ -267,12 +274,9 @@ export default function Messages() {
             style={{ width: 42, height: 42, borderRadius: '50%', background: 'var(--card)', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, cursor: 'pointer', flexShrink: 0 }}>
             {uploading ? '⏳' : '📎'}
           </button>
-          <button
-            onMouseDown={startRecording} onMouseUp={stopRecording}
-            onTouchStart={startRecording} onTouchEnd={stopRecording}
-            disabled={uploading}
-            style={{ width: 42, height: 42, borderRadius: '50%', background: recording ? 'var(--error)' : 'var(--card)', border: `1px solid ${recording ? 'var(--error)' : 'var(--border)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, cursor: 'pointer', flexShrink: 0, transition: 'all 0.15s' }}>
-            {recording ? '⏹' : '🎤'}
+          <button onClick={toggleRecording} disabled={uploading}
+            style={{ width: 42, height: 42, borderRadius: '50%', background: recording ? 'var(--error)' : 'var(--card)', border: `1px solid ${recording ? 'var(--error)' : 'var(--border)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, cursor: 'pointer', flexShrink: 0, transition: 'all 0.15s', animation: recording ? 'pulse 1s infinite' : 'none' }}>
+            {uploading ? '⏳' : recording ? '⏹' : '🎤'}
           </button>
           <textarea value={input} onChange={e => setInput(e.target.value)} onKeyDown={handleKey}
             placeholder="Escribe un mensaje..." rows={1}
