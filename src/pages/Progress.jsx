@@ -2,7 +2,144 @@ import { useState, useEffect } from 'react'
 import { Records, Goals, Wellness } from '../lib/db'
 import { supabase } from '../lib/supabase'
 
-// ---- Gráfica de carga semanal (SVG) ----
+// ---- Check-in diario ----
+function WellnessCheckin({ athleteId }) {
+  const [today, setToday] = useState(null)
+  const [saving, setSaving] = useState(false)
+  const [done, setDone] = useState(false)
+
+  useEffect(() => {
+    Wellness.getToday(athleteId).then(d => {
+      if (d) { setToday(d); setDone(true) }
+    })
+  }, [athleteId])
+
+  const set = (key, val) => setToday(t => ({ ...(t || {}), [key]: val }))
+
+  const save = async () => {
+    if (!today?.fatigue || !today?.soreness || !today?.mood) return
+    setSaving(true)
+    await Wellness.upsert({ athlete_id: athleteId, date: new Date().toISOString().slice(0,10), ...today })
+    setSaving(false)
+    setDone(true)
+  }
+
+  const EmojiRow = ({ label, field, emojis, colors }) => (
+    <div style={{ marginBottom: 14 }}>
+      <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700, fontSize: 12, textTransform: 'uppercase', letterSpacing: '1px', color: 'var(--text-muted)', marginBottom: 8 }}>{label}</div>
+      <div style={{ display: 'flex', gap: 8 }}>
+        {[1,2,3,4,5].map((v, i) => (
+          <button key={v} onClick={() => !done && set(field, v)}
+            style={{ flex: 1, padding: '10px 4px', borderRadius: 12, background: today?.[field] === v ? (colors?.[i] || 'var(--accent)') + '20' : 'var(--bg)', border: `2px solid ${today?.[field] === v ? (colors?.[i] || 'var(--accent)') : 'var(--border)'}`, fontSize: 22, cursor: done ? 'default' : 'pointer', transition: 'all 0.12s' }}>
+            {emojis[i]}
+          </button>
+        ))}
+      </div>
+    </div>
+  )
+
+  if (done) {
+    return (
+      <div className="card" style={{ padding: '16px 18px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+          <div>
+            <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 800, fontSize: 16, textTransform: 'uppercase' }}>Estado de hoy</div>
+            <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>Ya has registrado cómo estás</div>
+          </div>
+          <span className="badge badge-green">✓ Registrado</span>
+        </div>
+        <div style={{ display: 'flex', gap: 8 }}>
+          {[
+            { label: 'Cansancio', value: today?.fatigue, emojis: ['😴','😐','🙂','💪','🔥'] },
+            { label: 'Dolor', value: today?.soreness, emojis: ['✅','😊','😐','😬','🤕'] },
+            { label: 'Ánimo', value: today?.mood, emojis: ['😔','😐','🙂','😄','🤩'] },
+          ].map(({ label, value, emojis }) => (
+            <div key={label} className="stat-card" style={{ flex: 1, padding: '12px 8px', textAlign: 'center' }}>
+              <div style={{ fontSize: 24, marginBottom: 4 }}>{value ? emojis[value - 1] : '—'}</div>
+              <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 10, fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)', letterSpacing: '0.5px' }}>{label}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="card" style={{ padding: '16px 18px' }}>
+      <div style={{ marginBottom: 16 }}>
+        <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 800, fontSize: 16, textTransform: 'uppercase' }}>¿Cómo estás hoy?</div>
+        <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 2 }}>Registra tu estado para que tu entrenadora lo vea</div>
+      </div>
+      <EmojiRow label="Cansancio" field="fatigue" emojis={['😴','😐','🙂','💪','🔥']}
+        colors={['#DC2626','#D97706','#059669','#059669','#059669']} />
+      <EmojiRow label="Dolor muscular" field="soreness" emojis={['✅','😊','😐','😬','🤕']}
+        colors={['#059669','#059669','#D97706','#DC2626','#DC2626']} />
+      <EmojiRow label="Ánimo" field="mood" emojis={['😔','😐','🙂','😄','🤩']}
+        colors={['#DC2626','#D97706','#D97706','#059669','#059669']} />
+      <button className="btn btn-primary btn-full" onClick={save}
+        disabled={saving || !today?.fatigue || !today?.soreness || !today?.mood}
+        style={{ marginTop: 4 }}>
+        {saving ? 'Guardando...' : 'Guardar estado de hoy'}
+      </button>
+    </div>
+  )
+}
+
+// ---- Stats en 2x2 ----
+function StatsGrid({ athleteId, sessions }) {
+  const [avgRpe, setAvgRpe] = useState(null)
+  const [streak, setStreak] = useState(0)
+  const now = new Date()
+  const monthStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`
+  const sessionsThisMonth = sessions.filter(s => s.date.startsWith(monthStr)).length
+  const totalHours = Math.round(sessions.reduce((a, s) => a + (s.duration || 0), 0) / 60)
+
+  useEffect(() => {
+    supabase.from('session_athletes').select('rpe').eq('athlete_id', athleteId).not('rpe', 'is', null)
+      .then(({ data }) => {
+        if (data?.length) setAvgRpe((data.reduce((a, r) => a + r.rpe, 0) / data.length).toFixed(1))
+      })
+    // Racha semanal
+    const getWeekKey = (dateStr) => {
+      const d = new Date(dateStr + 'T12:00:00')
+      const jan1 = new Date(d.getFullYear(), 0, 1)
+      const week = Math.ceil((((d - jan1) / 86400000) + jan1.getDay() + 1) / 7)
+      return `${d.getFullYear()}-W${String(week).padStart(2,'0')}`
+    }
+    const weeksWithSessions = new Set(sessions.map(s => getWeekKey(s.date)))
+    let s = 0
+    let check = new Date()
+    while (true) {
+      const key = getWeekKey(check.toISOString().slice(0,10))
+      if (weeksWithSessions.has(key)) { s++; check.setDate(check.getDate() - 7) }
+      else break
+    }
+    setStreak(s)
+  }, [athleteId, sessions])
+
+  const cards = [
+    { value: sessions.length, label: 'Sesiones totales', color: 'var(--accent)', icon: '📅' },
+    { value: sessionsThisMonth, label: 'Este mes', color: '#8B5CF6', icon: '📆' },
+    { value: `${totalHours}h`, label: 'Horas totales', color: 'var(--success)', icon: '⏱' },
+    { value: avgRpe ?? '—', label: 'RPE medio', color: 'var(--error)', icon: '💪' },
+  ]
+
+  return (
+    <div className="grid-2" style={{ gap: 10 }}>
+      {cards.map(({ value, label, color, icon }) => (
+        <div key={label} className="stat-card" style={{ position: 'relative', overflow: 'hidden' }}>
+          <div style={{ position: 'absolute', top: 10, right: 12, fontSize: 20, opacity: 0.12 }}>{icon}</div>
+          <div className="stat-value" style={{ color, fontSize: 36 }}>{value}</div>
+          <div className="stat-label">{label}</div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+// ---- Gráfica carga semanal con colores por tipo ----
+const TYPE_COLORS = { run:'#10B981', fuerza:'#F59E0B', series:'#EF4444', endurance:'#3B82F6', especifico:'#8B5CF6', ergometros:'#14B8A6', cardio:'#EC4899', rest_day:'#9CA3AF', strength:'#F59E0B', flexibility:'#10B981', mixed:'#9CA3AF' }
+
 function LoadChart({ sessions }) {
   const weeks = []
   const now = new Date()
@@ -13,172 +150,122 @@ function LoadChart({ sessions }) {
     weekStart.setDate(d.getDate() - d.getDay() + 1)
     const weekEnd = new Date(weekStart)
     weekEnd.setDate(weekStart.getDate() + 6)
-    const count = sessions.filter(s => {
+    const wSessions = sessions.filter(s => {
       const sd = new Date(s.date + 'T12:00:00')
       return sd >= weekStart && sd <= weekEnd
-    }).length
+    })
+    const count = wSessions.length
+    const mainType = wSessions.length > 0
+      ? Object.entries(wSessions.reduce((a, s) => { a[s.type] = (a[s.type]||0)+1; return a }, {})).sort((a,b)=>b[1]-a[1])[0][0]
+      : null
     const label = `${weekStart.getDate()}/${weekStart.getMonth()+1}`
-    weeks.push({ label, count })
+    const isThisWeek = i === 0
+    weeks.push({ label, count, mainType, isThisWeek })
   }
 
   const max = Math.max(...weeks.map(w => w.count), 1)
-  const W = 280, H = 100, barW = 26, gap = 8
-  const totalW = weeks.length * (barW + gap)
-  const offsetX = (W - totalW) / 2
 
   return (
-    <div className="card" style={{ padding: 16 }}>
-      <div className="section-title" style={{ marginBottom: 12 }}>Carga semanal</div>
-      <svg width="100%" viewBox={`0 0 ${W} ${H + 20}`} style={{ overflow: 'visible' }}>
+    <div className="card" style={{ padding: '16px 18px' }}>
+      <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 800, fontSize: 16, textTransform: 'uppercase', marginBottom: 4 }}>Carga semanal</div>
+      <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 16 }}>Sesiones por semana — últimas 8 semanas</div>
+      <div style={{ display: 'flex', gap: 6, alignItems: 'flex-end', height: 90 }}>
         {weeks.map((w, i) => {
-          const barH = max > 0 ? (w.count / max) * H : 0
-          const x = offsetX + i * (barW + gap)
-          const y = H - barH
+          const h = max > 0 ? Math.max((w.count / max) * 72, w.count > 0 ? 8 : 2) : 2
+          const color = w.count > 0 ? (TYPE_COLORS[w.mainType] || 'var(--accent)') : 'var(--border)'
           return (
-            <g key={i}>
-              <rect x={x} y={y} width={barW} height={barH || 2}
-                rx={4} fill={w.count > 0 ? 'var(--accent)' : 'var(--border)'} opacity={w.count > 0 ? 1 : 0.5} />
+            <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
               {w.count > 0 && (
-                <text x={x + barW/2} y={y - 4} textAnchor="middle" fontSize="11" fontWeight="700" fill="var(--accent)">{w.count}</text>
+                <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 800, fontSize: 12, color }}>{w.count}</div>
               )}
-              <text x={x + barW/2} y={H + 16} textAnchor="middle" fontSize="9" fill="var(--text-muted)">{w.label}</text>
-            </g>
+              <div style={{ width: '100%', height: h, borderRadius: 6, background: color, opacity: w.isThisWeek ? 1 : 0.7, transition: 'height 0.4s ease' }} />
+              <div style={{ fontSize: 9, color: w.isThisWeek ? 'var(--accent)' : 'var(--text-dim)', fontWeight: w.isThisWeek ? 800 : 500, fontFamily: "'Barlow Condensed', sans-serif', whiteSpace: 'nowrap'" }}>{w.isThisWeek ? 'HOY' : w.label}</div>
+            </div>
           )
         })}
-      </svg>
+      </div>
     </div>
   )
 }
 
-// ---- Marcas personales ----
-function RecordsSection({ athleteId, canEdit }) {
-  const [records, setRecords] = useState([])
-  const [sheet, setSheet] = useState(false)
-  const [editing, setEditing] = useState(null)
-  const emptyForm = { name: '', value: '', unit: 'min', date: new Date().toISOString().slice(0,10), notes: '' }
-  const [form, setForm] = useState(emptyForm)
-  const [saving, setSaving] = useState(false)
+// ---- Historial bienestar con área ----
+function WellnessHistory({ athleteId }) {
+  const [data, setData] = useState([])
 
-  const UNITS = ['min', 'seg', 'kg', 'km', 'rep', 'cm', 'w', 'm']
+  useEffect(() => {
+    Wellness.getByAthlete(athleteId, 14).then(d => setData([...d].reverse()))
+  }, [athleteId])
 
-  useEffect(() => { Records.getByAthlete(athleteId).then(setRecords) }, [athleteId])
+  if (!data.length) return null
 
-  const grouped = records.reduce((acc, r) => {
-    if (!acc[r.name]) acc[r.name] = []
-    acc[r.name].push(r)
-    return acc
-  }, {})
+  const W = 300, H = 80
+  const FIELDS = [
+    { key: 'mood',    color: '#2563EB', label: 'Ánimo',      emoji: '😊' },
+    { key: 'fatigue', color: '#EF4444', label: 'Cansancio',  emoji: '😴' },
+  ]
 
-  const openNew = () => { setEditing(null); setForm(emptyForm); setSheet(true) }
-  const openEdit = (r) => { setEditing(r.id); setForm({ name: r.name, value: String(r.value), unit: r.unit, date: r.date, notes: r.notes || '' }); setSheet(true) }
+  const toX = (i) => (i / (Math.max(data.length - 1, 1))) * W
+  const toY = (v) => H - ((v - 1) / 4) * H
 
-  const save = async () => {
-    if (!form.name || !form.value) return
-    setSaving(true)
-    if (editing) {
-      await Records.update(editing, { ...form, value: parseFloat(form.value) })
-    } else {
-      await Records.create({ ...form, value: parseFloat(form.value), athlete_id: athleteId })
-    }
-    const updated = await Records.getByAthlete(athleteId)
-    setRecords(updated)
-    setSaving(false)
-    setSheet(false)
-    setForm(emptyForm)
-    setEditing(null)
+  const pathFor = (field) => {
+    const pts = data.map((d, i) => d[field] ? `${toX(i)},${toY(d[field])}` : null).filter(Boolean)
+    if (!pts.length) return ''
+    return 'M ' + pts.join(' L ')
   }
 
-  const del = async (id) => {
-    await Records.delete(id)
-    setRecords(r => r.filter(x => x.id !== id))
-    setSheet(false)
-  }
+  const latest = data[data.length - 1]
 
   return (
-    <div>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-        <div className="section-title" style={{ margin: 0 }}>🏆 Marcas personales</div>
-        {canEdit && <button className="btn btn-primary btn-sm" onClick={openNew}>+ Nueva</button>}
+    <div className="card" style={{ padding: '16px 18px' }}>
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 12 }}>
+        <div>
+          <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 800, fontSize: 16, textTransform: 'uppercase' }}>Bienestar</div>
+          <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>Últimos 14 días</div>
+        </div>
+        <div style={{ display: 'flex', gap: 10 }}>
+          {FIELDS.map(f => (
+            <div key={f.key} style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 12, color: 'var(--text-muted)' }}>
+              <div style={{ width: 10, height: 3, borderRadius: 2, background: f.color }} />
+              {f.label}
+            </div>
+          ))}
+        </div>
       </div>
 
-      {records.length === 0 ? (
-        <div style={{ color: 'var(--text-muted)', fontSize: 14, padding: '8px 0' }}>Sin marcas registradas aún</div>
-      ) : Object.entries(grouped).map(([name, recs]) => {
-        const best = recs[0]
-        return (
-          <div key={name} className="card" style={{ padding: '14px 16px', marginBottom: 8, cursor: canEdit ? 'pointer' : 'default' }}
-            onClick={() => canEdit && openEdit(best)}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <div>
-                <div style={{ fontWeight: 700, fontSize: 15 }}>{name}</div>
-                <div style={{ color: 'var(--text-muted)', fontSize: 12, marginTop: 2 }}>
-                  {recs.length} registro{recs.length > 1 ? 's' : ''} · {new Date(best.date+'T12:00:00').toLocaleDateString('es-ES')}
-                </div>
-              </div>
-              <div style={{ textAlign: 'right', display: 'flex', alignItems: 'center', gap: 10 }}>
-                <div>
-                  <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 900, fontSize: 24, color: 'var(--accent)' }}>{best.value}</div>
-                  <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{best.unit}</div>
-                </div>
-                {canEdit && <span style={{ color: 'var(--text-muted)', fontSize: 16 }}>✏️</span>}
-              </div>
-            </div>
-            {recs.length > 1 && (
-              <div style={{ display: 'flex', gap: 6, marginTop: 10, flexWrap: 'wrap' }}>
-                {recs.slice(1, 4).map(r => (
-                  <span key={r.id} style={{ fontSize: 12, color: 'var(--text-muted)', background: 'var(--bg)', padding: '2px 8px', borderRadius: 6 }}>
-                    {r.value} {r.unit} · {new Date(r.date+'T12:00:00').toLocaleDateString('es-ES')}
-                  </span>
-                ))}
-              </div>
-            )}
-          </div>
-        )
-      })}
+      <svg width="100%" viewBox={`0 0 ${W} ${H}`} style={{ overflow: 'visible', marginBottom: 8 }}>
+        {[1,2,3,4,5].map(v => (
+          <line key={v} x1={0} x2={W} y1={toY(v)} y2={toY(v)} stroke="var(--border-light)" strokeWidth={0.8} />
+        ))}
+        {FIELDS.map(f => (
+          <path key={f.key} d={pathFor(f.key)} fill="none" stroke={f.color} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" />
+        ))}
+        {data.map((d, i) => FIELDS.map(f => d[f.key] ? (
+          <circle key={f.key+i} cx={toX(i)} cy={toY(d[f.key])} r={i === data.length-1 ? 5 : 3} fill={f.color} stroke="var(--surface)" strokeWidth={i === data.length-1 ? 2 : 0} />
+        ) : null))}
+      </svg>
 
-      {sheet && (
-        <>
-          <div className="overlay" onClick={() => setSheet(false)} />
-          <div className="sheet">
-            <div className="sheet-handle" />
-            <div className="sheet-header">
-              <h3>{editing ? 'Editar marca' : 'Nueva marca'}</h3>
-              <div style={{ display: 'flex', gap: 8 }}>
-                {editing && <button className="btn btn-danger btn-sm" onClick={() => del(editing)}>🗑</button>}
-                <button className="btn btn-ghost btn-sm" onClick={() => setSheet(false)}>✕</button>
+      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+        <span style={{ fontSize: 10, color: 'var(--text-dim)' }}>{data[0] && new Date(data[0].date+'T12:00:00').toLocaleDateString('es-ES', { day:'numeric', month:'short' })}</span>
+        <span style={{ fontSize: 10, color: 'var(--text-dim)' }}>Hoy</span>
+      </div>
+
+      {/* Resumen último día */}
+      {latest && (
+        <div style={{ display: 'flex', gap: 8, marginTop: 14, borderTop: '1px solid var(--border-light)', paddingTop: 12 }}>
+          {FIELDS.map(f => {
+            const val = latest[f.key]
+            const labels = {
+              mood:    ['😔 Bajo','😐 Regular','🙂 Bien','😄 Muy bien','🤩 Excelente'],
+              fatigue: ['😴 Agotada','😬 Cansada','😐 Normal','🙂 Bien','🔥 En forma'],
+            }
+            return val ? (
+              <div key={f.key} style={{ flex: 1, background: 'var(--bg)', borderRadius: 10, padding: '8px 10px', textAlign: 'center' }}>
+                <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700, fontSize: 10, textTransform: 'uppercase', color: f.color, marginBottom: 2 }}>{f.label}</div>
+                <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{labels[f.key][val-1]}</div>
               </div>
-            </div>
-            <div className="sheet-body">
-              <div className="input-group">
-                <label className="input-label">Ejercicio / Prueba *</label>
-                <input className="input" placeholder="ej. 5k, Sentadilla, Peso corporal" value={form.name} onChange={e => setForm(f => ({...f, name: e.target.value}))} />
-              </div>
-              <div style={{ display: 'flex', gap: 10 }}>
-                <div style={{ flex: 1 }} className="input-group">
-                  <label className="input-label">Valor *</label>
-                  <input className="input" type="number" step="0.01" placeholder="25.30" value={form.value} onChange={e => setForm(f => ({...f, value: e.target.value}))} />
-                </div>
-                <div style={{ width: 100 }} className="input-group">
-                  <label className="input-label">Unidad</label>
-                  <select className="input" value={form.unit} onChange={e => setForm(f => ({...f, unit: e.target.value}))}>
-                    {UNITS.map(u => <option key={u}>{u}</option>)}
-                  </select>
-                </div>
-              </div>
-              <div className="input-group">
-                <label className="input-label">Fecha</label>
-                <input className="input" type="date" value={form.date} onChange={e => setForm(f => ({...f, date: e.target.value}))} />
-              </div>
-              <div className="input-group">
-                <label className="input-label">Notas</label>
-                <input className="input" placeholder="Condiciones, observaciones..." value={form.notes} onChange={e => setForm(f => ({...f, notes: e.target.value}))} />
-              </div>
-              <button className="btn btn-primary btn-full" onClick={save} disabled={saving}>
-                {saving ? 'Guardando...' : editing ? 'Guardar cambios' : 'Guardar marca'}
-              </button>
-            </div>
-          </div>
-        </>
+            ) : null
+          })}
+        </div>
       )}
     </div>
   )
@@ -197,16 +284,14 @@ function GoalsSection({ athleteId, canCreate }) {
     if (!form.title) return
     setSaving(true)
     await Goals.create({
-      ...form,
-      athlete_id: athleteId,
+      ...form, athlete_id: athleteId,
       target_value: parseFloat(form.target_value) || null,
       current_value: parseFloat(form.current_value) || null,
       deadline: form.deadline || null,
       description: form.description || null,
       unit: form.unit || null,
     })
-    const updated = await Goals.getByAthlete(athleteId)
-    setGoals(updated)
+    setGoals(await Goals.getByAthlete(athleteId))
     setSaving(false)
     setSheet(false)
     setForm({ title: '', description: '', target_value: '', current_value: '', unit: '', deadline: '' })
@@ -222,68 +307,75 @@ function GoalsSection({ athleteId, canCreate }) {
     setGoals(g => g.filter(x => x.id !== id))
   }
 
-  const progress = (g) => {
-    if (!g.target_value || !g.current_value) return null
-    return Math.min(100, Math.round((g.current_value / g.target_value) * 100))
-  }
-
-  const CircleProgress = ({ pct, color, size = 56 }) => {
-    const r = (size - 8) / 2
-    const circ = 2 * Math.PI * r
-    const dash = (pct / 100) * circ
-    return (
-      <svg width={size} height={size} style={{ transform: 'rotate(-90deg)', flexShrink: 0 }}>
-        <circle cx={size/2} cy={size/2} r={r} fill="none" stroke="var(--border)" strokeWidth={6} />
-        <circle cx={size/2} cy={size/2} r={r} fill="none" stroke={color} strokeWidth={6}
-          strokeDasharray={`${dash} ${circ}`} strokeLinecap="round"
-          style={{ transition: 'stroke-dasharray 0.8s ease' }} />
-        <text x={size/2} y={size/2} textAnchor="middle" dominantBaseline="middle"
-          style={{ transform: 'rotate(90deg)', transformOrigin: `${size/2}px ${size/2}px` }}
-          fontSize="11" fontWeight="800" fill={color} fontFamily="'Barlow Condensed', sans-serif">
-          {pct}%
-        </text>
-      </svg>
-    )
-  }
+  const pct = (g) => g.target_value && g.current_value ? Math.min(100, Math.round((g.current_value / g.target_value) * 100)) : null
 
   return (
     <div>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-        <div className="section-title" style={{ margin: 0 }}>🎯 Objetivos</div>
+        <div className="section-title" style={{ margin: 0 }}>Mis objetivos</div>
         {canCreate && <button className="btn btn-primary btn-sm" onClick={() => setSheet(true)}>+ Nuevo</button>}
       </div>
 
       {goals.length === 0 ? (
-        <div style={{ color: 'var(--text-muted)', fontSize: 14, padding: '8px 0' }}>Sin objetivos definidos aún</div>
-      ) : goals.map(g => {
-        const pct = progress(g)
-        return (
-          <div key={g.id} className="card" style={{ padding: '14px 16px', marginBottom: 8, opacity: g.completed ? 0.6 : 1 }}>
-            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
-              <div style={{ flex: 1 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <div onClick={() => toggle(g)} style={{ width: 22, height: 22, borderRadius: '50%', border: `2px solid ${g.completed ? 'var(--success)' : 'var(--border)'}`, background: g.completed ? 'var(--success)' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0 }}>
-                    {g.completed && <span style={{ color: '#fff', fontSize: 12 }}>✓</span>}
+        <div className="card" style={{ padding: '24px 20px', textAlign: 'center' }}>
+          <div style={{ fontSize: 36, marginBottom: 8, opacity: 0.35 }}>🎯</div>
+          <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 800, fontSize: 16, textTransform: 'uppercase', color: 'var(--text-dim)', marginBottom: 6 }}>Sin objetivos aún</div>
+          <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>Tu entrenadora irá añadiendo objetivos para ti</div>
+        </div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {goals.map(g => {
+            const p = pct(g)
+            const daysLeft = g.deadline ? Math.ceil((new Date(g.deadline+'T12:00:00') - new Date()) / (1000*60*60*24)) : null
+            const isOverdue = daysLeft !== null && daysLeft < 0 && !g.completed
+            return (
+              <div key={g.id} className="card" style={{ padding: '16px 18px', opacity: g.completed ? 0.65 : 1 }}>
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+                  {/* Check */}
+                  <div onClick={() => toggle(g)}
+                    style={{ width: 24, height: 24, borderRadius: '50%', border: `2px solid ${g.completed ? 'var(--success)' : 'var(--border)'}`, background: g.completed ? 'var(--success)' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0, marginTop: 2 }}>
+                    {g.completed && <span style={{ color: '#fff', fontSize: 12, fontWeight: 900 }}>✓</span>}
                   </div>
-                  <span style={{ fontWeight: 700, fontSize: 15, textDecoration: g.completed ? 'line-through' : 'none' }}>{g.title}</span>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontWeight: 700, fontSize: 15, textDecoration: g.completed ? 'line-through' : 'none', marginBottom: g.description ? 3 : 0 }}>{g.title}</div>
+                    {g.description && <div style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 8 }}>{g.description}</div>}
+
+                    {/* Barra de progreso */}
+                    {p !== null && (
+                      <div style={{ marginBottom: 8 }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5 }}>
+                          <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>{g.current_value} {g.unit} de {g.target_value} {g.unit}</span>
+                          <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 800, fontSize: 13, color: p >= 100 ? 'var(--success)' : 'var(--accent)' }}>{p}%</span>
+                        </div>
+                        <div style={{ height: 6, background: 'var(--bg)', borderRadius: 3, overflow: 'hidden' }}>
+                          <div style={{ height: '100%', width: `${p}%`, background: p >= 100 ? 'var(--success)' : 'var(--accent-gradient)', borderRadius: 3, transition: 'width 0.6s ease' }} />
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Fecha límite */}
+                    {g.deadline && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                        <span style={{ fontSize: 12, color: isOverdue ? 'var(--error)' : 'var(--text-muted)' }}>
+                          📅 {new Date(g.deadline+'T12:00:00').toLocaleDateString('es-ES')}
+                          {!g.completed && daysLeft !== null && (
+                            <span style={{ marginLeft: 6, fontWeight: 600, color: isOverdue ? 'var(--error)' : daysLeft <= 7 ? 'var(--warning)' : 'var(--text-muted)' }}>
+                              {isOverdue ? `· Vencido hace ${Math.abs(daysLeft)} días` : daysLeft === 0 ? '· ¡Hoy!' : `· ${daysLeft} días`}
+                            </span>
+                          )}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                  {canCreate && (
+                    <button onClick={() => del(g.id)} style={{ color: 'var(--text-dim)', cursor: 'pointer', padding: 4, flexShrink: 0 }}>✕</button>
+                  )}
                 </div>
-                {g.description && <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 4, marginLeft: 30 }}>{g.description}</div>}
-                {pct !== null && (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 10 }}>
-                    <CircleProgress pct={pct} color={pct >= 100 ? 'var(--success)' : 'var(--accent)'} />
-                    <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>
-                      <div>{g.current_value} <span style={{ color: 'var(--text-dim)' }}>/ {g.target_value} {g.unit}</span></div>
-                      {g.deadline && <div style={{ fontSize: 12, marginTop: 2 }}>📅 {new Date(g.deadline+'T12:00:00').toLocaleDateString('es-ES')}</div>}
-                    </div>
-                  </div>
-                )}
-                {g.deadline && <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 6 }}>📅 Fecha límite: {new Date(g.deadline+'T12:00:00').toLocaleDateString('es-ES')}</div>}
               </div>
-              {canCreate && <button onClick={() => del(g.id)} style={{ color: 'var(--text-dim)', background: 'none', border: 'none', cursor: 'pointer', fontSize: 16, padding: 4 }}>✕</button>}
-            </div>
-          </div>
-        )
-      })}
+            )
+          })}
+        </div>
+      )}
 
       {sheet && (
         <>
@@ -332,163 +424,166 @@ function GoalsSection({ athleteId, canCreate }) {
   )
 }
 
-// ---- Wellness check-in ----
-function WellnessCheckin({ athleteId }) {
-  const [today, setToday] = useState(null)
+// ---- Marcas personales ----
+function RecordsSection({ athleteId, canEdit }) {
+  const [records, setRecords] = useState([])
+  const [sheet, setSheet] = useState(false)
+  const [editing, setEditing] = useState(null)
+  const emptyForm = { name: '', value: '', unit: 'min', date: new Date().toISOString().slice(0,10), notes: '' }
+  const [form, setForm] = useState(emptyForm)
   const [saving, setSaving] = useState(false)
-  const [done, setDone] = useState(false)
 
-  useEffect(() => {
-    Wellness.getToday(athleteId).then(d => {
-      if (d) { setToday(d); setDone(true) }
-    })
-  }, [athleteId])
+  const UNITS = ['min', 'seg', 'kg', 'km', 'rep', 'cm', 'w', 'm']
 
-  const set = (key, val) => setToday(t => ({ ...t, [key]: val }))
+  useEffect(() => { Records.getByAthlete(athleteId).then(setRecords) }, [athleteId])
+
+  const grouped = records.reduce((acc, r) => {
+    if (!acc[r.name]) acc[r.name] = []
+    acc[r.name].push(r)
+    return acc
+  }, {})
+
+  const openNew  = () => { setEditing(null); setForm(emptyForm); setSheet(true) }
+  const openEdit = (r) => { setEditing(r.id); setForm({ name: r.name, value: String(r.value), unit: r.unit, date: r.date, notes: r.notes || '' }); setSheet(true) }
 
   const save = async () => {
-    if (!today?.fatigue || !today?.soreness || !today?.mood) return
+    if (!form.name || !form.value) return
     setSaving(true)
-    await Wellness.upsert({ athlete_id: athleteId, date: new Date().toISOString().slice(0,10), ...today })
+    if (editing) await Records.update(editing, { ...form, value: parseFloat(form.value) })
+    else await Records.create({ ...form, value: parseFloat(form.value), athlete_id: athleteId })
+    setRecords(await Records.getByAthlete(athleteId))
     setSaving(false)
-    setDone(true)
+    setSheet(false)
+    setEditing(null)
   }
 
-  const OPTS = [1, 2, 3, 4, 5]
-  const EmojiRow = ({ label, field, emojis }) => (
-    <div style={{ marginBottom: 16 }}>
-      <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-muted)', marginBottom: 8 }}>{label}</div>
-      <div style={{ display: 'flex', gap: 8 }}>
-        {OPTS.map((v, i) => (
-          <button key={v} onClick={() => !done && set(field, v)}
-            style={{ flex: 1, padding: '10px 4px', borderRadius: 10, background: today?.[field] === v ? 'var(--accent)' : 'var(--bg)', border: `2px solid ${today?.[field] === v ? 'var(--accent)' : 'var(--border)'}`, fontSize: 20, cursor: done ? 'default' : 'pointer', transition: 'all 0.15s' }}>
-            {emojis[i]}
-          </button>
-        ))}
-      </div>
-    </div>
-  )
+  const del = async (id) => {
+    await Records.delete(id)
+    setRecords(r => r.filter(x => x.id !== id))
+    setSheet(false)
+  }
 
   return (
-    <div className="card" style={{ padding: 16, marginBottom: 4 }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
-        <div className="section-title" style={{ margin: 0 }}>😴 Estado de hoy</div>
-        {done && <span className="badge badge-green">✓ Registrado</span>}
+    <div>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+        <div className="section-title" style={{ margin: 0 }}>Marcas personales</div>
+        {canEdit && <button className="btn btn-primary btn-sm" onClick={openNew}>+ Nueva</button>}
       </div>
-      <EmojiRow label="Cansancio" field="fatigue" emojis={['😴','😐','🙂','💪','🔥']} />
-      <EmojiRow label="Dolor muscular" field="soreness" emojis={['✅','😊','😐','😬','🤕']} />
-      <EmojiRow label="Ánimo" field="mood" emojis={['😔','😐','🙂','😄','🤩']} />
-      {!done && (
-        <button className="btn btn-primary btn-full" onClick={save} disabled={saving || !today?.fatigue}>
-          {saving ? 'Guardando...' : 'Registrar estado'}
-        </button>
-      )}
-      {done && today?.notes && <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 8, fontStyle: 'italic' }}>{today.notes}</div>}
-    </div>
-  )
-}
 
-// ---- Stats rápidas ----
-function StatsHeader({ athleteId, sessions }) {
-  const [avgRpe, setAvgRpe] = useState(null)
-  const now = new Date()
-  const monthStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`
-  const sessionsThisMonth = sessions.filter(s => s.date.startsWith(monthStr))
-  const totalMinutes = sessions.reduce((acc, s) => acc + (s.duration || 0), 0)
-  const hours = Math.floor(totalMinutes / 60)
-  const mins = totalMinutes % 60
-
-  useEffect(() => {
-    supabase.from('session_athletes').select('rpe').eq('athlete_id', athleteId).not('rpe', 'is', null)
-      .then(({ data }) => {
-        if (data?.length) setAvgRpe((data.reduce((a, r) => a + r.rpe, 0) / data.length).toFixed(1))
-      })
-  }, [athleteId])
-
-  return (
-    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
-      {[
-        { value: sessionsThisMonth.length, label: 'Este mes', color: 'var(--accent)' },
-        { value: hours > 0 ? `${hours}h` : `${mins}m`, label: 'Tiempo total', color: 'var(--success)' },
-        { value: avgRpe ?? '—', label: 'RPE medio', color: 'var(--error)' },
-      ].map(({ value, label, color }) => (
-        <div key={label} className="card" style={{ padding: '14px 10px', textAlign: 'center' }}>
-          <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 900, fontSize: 28, color, letterSpacing: '-1px', lineHeight: 1 }}>{value}</div>
-          <div style={{ fontSize: 10, fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)', marginTop: 4, letterSpacing: '0.5px' }}>{label}</div>
+      {records.length === 0 ? (
+        <div className="card" style={{ padding: '24px 20px', textAlign: 'center' }}>
+          <div style={{ fontSize: 36, marginBottom: 8, opacity: 0.35 }}>🏆</div>
+          <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 800, fontSize: 16, textTransform: 'uppercase', color: 'var(--text-dim)', marginBottom: 6 }}>Sin marcas aún</div>
+          {canEdit && <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>Empieza a registrar tus tiempos y récords</div>}
         </div>
-      ))}
-    </div>
-  )
-}
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {Object.entries(grouped).map(([name, recs]) => {
+            const best = recs[0]
+            const prev = recs[1]
+            const improved = prev && parseFloat(best.value) !== parseFloat(prev.value)
+            const better = prev && parseFloat(best.value) < parseFloat(prev.value)
+            return (
+              <div key={name} className="card" style={{ padding: '16px 18px', cursor: canEdit ? 'pointer' : 'default' }}
+                onClick={() => canEdit && openEdit(best)}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 2 }}>{name}</div>
+                    <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+                      {new Date(best.date+'T12:00:00').toLocaleDateString('es-ES')}
+                      {recs.length > 1 && ` · ${recs.length} registros`}
+                    </div>
+                    {improved && (
+                      <div style={{ fontSize: 12, color: better ? 'var(--success)' : 'var(--error)', marginTop: 4, fontWeight: 600 }}>
+                        {better ? '↑ Mejora' : '↓'} vs anterior: {prev.value} {prev.unit}
+                      </div>
+                    )}
+                  </div>
+                  <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                    <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 900, fontSize: 30, color: 'var(--accent)', lineHeight: 1 }}>{best.value}</div>
+                    <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>{best.unit}</div>
+                  </div>
+                  {canEdit && <span style={{ color: 'var(--text-dim)', fontSize: 14 }}>✏️</span>}
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      )}
 
-// ---- Historial bienestar (14 días) ----
-function WellnessHistory({ athleteId }) {
-  const [data, setData] = useState([])
-
-  useEffect(() => {
-    Wellness.getByAthlete(athleteId, 14).then(d => setData([...d].reverse()))
-  }, [athleteId])
-
-  if (!data.length) return null
-
-  const W = 300, H = 60
-  const FIELDS = [
-    { key: 'mood', color: '#2563EB', label: 'Ánimo' },
-    { key: 'fatigue', color: '#EF4444', label: 'Cansancio' },
-  ]
-
-  const toX = (i) => (i / (data.length - 1)) * W
-  const toY = (v) => H - ((v - 1) / 4) * H
-
-  const pathFor = (field) => data.map((d, i) => {
-    const x = toX(i), y = d[field] ? toY(d[field]) : null
-    if (y === null) return null
-    return `${i === 0 ? 'M' : 'L'} ${x} ${y}`
-  }).filter(Boolean).join(' ')
-
-  return (
-    <div className="card" style={{ padding: 16 }}>
-      <div className="section-title" style={{ marginBottom: 12 }}>Historial de bienestar (14 días)</div>
-      <div style={{ display: 'flex', gap: 12, marginBottom: 8 }}>
-        {FIELDS.map(f => (
-          <div key={f.key} style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 12, color: 'var(--text-muted)' }}>
-            <div style={{ width: 12, height: 3, borderRadius: 2, background: f.color }} />
-            {f.label}
+      {sheet && (
+        <>
+          <div className="overlay" onClick={() => setSheet(false)} />
+          <div className="sheet">
+            <div className="sheet-handle" />
+            <div className="sheet-header">
+              <h3>{editing ? 'Editar marca' : 'Nueva marca'}</h3>
+              <div style={{ display: 'flex', gap: 8 }}>
+                {editing && <button className="btn btn-danger btn-sm" onClick={() => del(editing)}>🗑</button>}
+                <button className="btn btn-ghost btn-sm" onClick={() => setSheet(false)}>✕</button>
+              </div>
+            </div>
+            <div className="sheet-body">
+              <div className="input-group">
+                <label className="input-label">Ejercicio / Prueba *</label>
+                <input className="input" placeholder="ej. 5k, Sentadilla, Peso muerto" value={form.name} onChange={e => setForm(f => ({...f, name: e.target.value}))} />
+              </div>
+              <div style={{ display: 'flex', gap: 10 }}>
+                <div style={{ flex: 1 }} className="input-group">
+                  <label className="input-label">Valor *</label>
+                  <input className="input" type="number" step="0.01" placeholder="25.30" value={form.value} onChange={e => setForm(f => ({...f, value: e.target.value}))} />
+                </div>
+                <div style={{ width: 100 }} className="input-group">
+                  <label className="input-label">Unidad</label>
+                  <select className="input" value={form.unit} onChange={e => setForm(f => ({...f, unit: e.target.value}))}>
+                    {UNITS.map(u => <option key={u}>{u}</option>)}
+                  </select>
+                </div>
+              </div>
+              <div className="input-group">
+                <label className="input-label">Fecha</label>
+                <input className="input" type="date" value={form.date} onChange={e => setForm(f => ({...f, date: e.target.value}))} />
+              </div>
+              <div className="input-group">
+                <label className="input-label">Notas</label>
+                <input className="input" placeholder="Condiciones, observaciones..." value={form.notes} onChange={e => setForm(f => ({...f, notes: e.target.value}))} />
+              </div>
+              <button className="btn btn-primary btn-full" onClick={save} disabled={saving}>
+                {saving ? 'Guardando...' : editing ? 'Guardar cambios' : 'Guardar marca'}
+              </button>
+            </div>
           </div>
-        ))}
-      </div>
-      <svg width="100%" viewBox={`0 0 ${W} ${H}`} style={{ overflow: 'visible' }}>
-        {/* Grid lines */}
-        {[1,2,3,4,5].map(v => (
-          <line key={v} x1={0} x2={W} y1={toY(v)} y2={toY(v)} stroke="var(--border)" strokeWidth={0.5} />
-        ))}
-        {FIELDS.map(f => (
-          <path key={f.key} d={pathFor(f.key)} fill="none" stroke={f.color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-        ))}
-        {/* Dots */}
-        {data.map((d, i) => FIELDS.map(f => d[f.key] ? (
-          <circle key={f.key+i} cx={toX(i)} cy={toY(d[f.key])} r={3} fill={f.color} />
-        ) : null))}
-      </svg>
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6 }}>
-        <span style={{ fontSize: 10, color: 'var(--text-dim)' }}>{data[0] && new Date(data[0].date+'T12:00:00').toLocaleDateString('es-ES', { day:'numeric', month:'short' })}</span>
-        <span style={{ fontSize: 10, color: 'var(--text-dim)' }}>Hoy</span>
-      </div>
+        </>
+      )}
     </div>
   )
 }
 
-// ---- Página principal de Progreso ----
+// ---- Página principal ----
 export default function Progress({ athleteId, sessions = [], isCoach = false }) {
   return (
     <div className="page fade-in">
       {!isCoach && <div className="page-header"><h2>Mi Progreso</h2></div>}
       <div className="page-content">
-        {!isCoach && <StatsHeader athleteId={athleteId} sessions={sessions} />}
-        {!isCoach && <WellnessHistory athleteId={athleteId} />}
+
+        {/* Check-in diario — solo para el deportista */}
+        {!isCoach && <WellnessCheckin athleteId={athleteId} />}
+
+        {/* Stats 2x2 */}
+        {!isCoach && <StatsGrid athleteId={athleteId} sessions={sessions} />}
+
+        {/* Carga semanal */}
         <LoadChart sessions={sessions} />
+
+        {/* Historial bienestar */}
+        {!isCoach && <WellnessHistory athleteId={athleteId} />}
+
+        {/* Objetivos */}
         <GoalsSection athleteId={athleteId} canCreate={isCoach} />
+
+        {/* Marcas */}
         <RecordsSection athleteId={athleteId} canEdit={!isCoach} />
+
       </div>
     </div>
   )
