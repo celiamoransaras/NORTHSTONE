@@ -79,13 +79,15 @@ export default function Messages() {
   const startRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-      const mr = new MediaRecorder(stream)
+      const mimeType = ['audio/webm', 'audio/mp4', 'audio/ogg', ''].find(t => !t || MediaRecorder.isTypeSupported(t)) || ''
+      const ext = mimeType ? mimeType.split('/')[1].split(';')[0] : 'mp4'
+      const mr = mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream)
       audioChunksRef.current = []
-      mr.ondataavailable = e => audioChunksRef.current.push(e.data)
+      mr.ondataavailable = e => { if (e.data.size > 0) audioChunksRef.current.push(e.data) }
       mr.onstop = async () => {
         stream.getTracks().forEach(t => t.stop())
-        const blob = new Blob(audioChunksRef.current, { type: 'audio/webm' })
-        const file = new File([blob], `audio_${Date.now()}.webm`, { type: 'audio/webm' })
+        const blob = new Blob(audioChunksRef.current, { type: mimeType || 'audio/mp4' })
+        const file = new File([blob], `audio_${Date.now()}.${ext}`, { type: mimeType || 'audio/mp4' })
         setUploading(true)
         try {
           const { url, type } = await DB.uploadFile(file)
@@ -93,10 +95,10 @@ export default function Messages() {
         } catch (err) { alert('Error al enviar audio: ' + err.message) }
         setUploading(false)
       }
-      mr.start()
+      mr.start(100)
       mediaRecorderRef.current = mr
       setRecording(true)
-    } catch { alert('No se pudo acceder al micrófono') }
+    } catch (err) { alert('No se pudo acceder al micrófono: ' + err.message) }
   }
 
   const stopRecording = () => {
