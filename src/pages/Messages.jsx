@@ -4,7 +4,7 @@ import { Messages as DB, Athletes, Reactions } from '../lib/db'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
 import { dismissFatigueAlert } from '../lib/alertState'
-import { sendPushToCoach } from '../lib/pushNotifications'
+import { sendPushToCoach, sendPushToAthletes } from '../lib/pushNotifications'
 import { useToast } from '../contexts/ToastContext'
 
 const REACTION_EMOJIS = ['👍','❤️','🔥','💪','😂','👏']
@@ -73,12 +73,19 @@ export default function Messages() {
     try {
       await DB.send(activeChat, text || (fileType?.startsWith('image/') ? '📷 Imagen' : '📎 Archivo'), myId, senderName, fileUrl, fileType)
       await loadMessages()
-      // Notificar al coach si es un deportista quien escribe
       if (!isCoach) {
+        // Deportista → notificar al coach
         sendPushToCoach({
           title: `💬 ${senderName}`,
           body: text || (fileType?.startsWith('image/') ? '📷 Imagen' : '📎 Archivo'),
           url: '/messages',
+        })
+      } else if (activeChat && activeChat !== 'general') {
+        // Coach → notificar al deportista
+        sendPushToAthletes([activeChat], {
+          title: '💬 Celia (Entrenadora)',
+          body: text || (fileType?.startsWith('image/') ? '📷 Imagen' : '📎 Archivo'),
+          url: '/',
         })
       }
     } catch {

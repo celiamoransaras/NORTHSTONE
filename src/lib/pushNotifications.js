@@ -21,39 +21,31 @@ async function getOrCreateSubscription() {
 }
 
 export async function subscribeToPush(athleteId) {
-  console.log('[Push] subscribeToPush athleteId:', athleteId)
   const sub = await getOrCreateSubscription()
-  console.log('[Push] athlete subscription:', sub)
   if (!sub) return null
   const subJson = sub.toJSON()
   await supabase.from('push_subscriptions').delete().eq('endpoint', subJson.endpoint)
-  const { data, error } = await supabase.from('push_subscriptions').insert({
+  await supabase.from('push_subscriptions').insert({
     athlete_id: athleteId,
     endpoint: subJson.endpoint,
     p256dh: subJson.keys.p256dh,
     auth: subJson.keys.auth,
   })
-  console.log('[Push] athlete insert result:', { data, error: error?.message, code: error?.code })
   return sub
 }
 
 export async function subscribeCoachToPush(userId) {
-  console.log('[Push] subscribeCoachToPush userId:', userId)
   const sub = await getOrCreateSubscription()
-  console.log('[Push] subscription:', sub)
   if (!sub) return null
   const subJson = sub.toJSON()
-  console.log('[Push] subJson:', subJson)
-  // Borrar suscripción anterior del coach si existe, luego insertar
   await supabase.from('push_subscriptions').delete().eq('endpoint', subJson.endpoint)
-  const { data, error } = await supabase.from('push_subscriptions').insert({
+  await supabase.from('push_subscriptions').insert({
     user_id: userId,
     athlete_id: null,
     endpoint: subJson.endpoint,
     p256dh: subJson.keys.p256dh,
     auth: subJson.keys.auth,
   })
-  console.log('[Push] insert result:', { data, error: error?.message, details: error?.details, code: error?.code })
   return sub
 }
 
