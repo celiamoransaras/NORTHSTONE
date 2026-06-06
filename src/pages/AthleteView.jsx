@@ -673,10 +673,30 @@ function AthleteTrainingWithRPE({ athleteId }) {
                       <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>{s.duration} min{s.exercises?.length > 0 ? ` · 📋 ${s.exercises.length} ejercicios` : ''}</div>
                     </div>
                   </div>
-                  <button onClick={e => { e.stopPropagation(); setPreSheet(s); setFatiguePre(0) }}
-                    style={{ marginTop: 12, width: '100%', padding: '8px 12px', borderRadius: 10, background: 'var(--accent-dim)', color: 'var(--accent)', border: '1px solid var(--accent)', fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700, fontSize: 13, textTransform: 'uppercase', letterSpacing: '0.5px', cursor: 'pointer' }}>
-                    😴 ¿Cómo llegas hoy?
-                  </button>
+                  <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+                    <button onClick={async e => {
+                      e.stopPropagation()
+                      const attended = attendanceMap[s.id] || false
+                      setAttendanceMap(m => ({...m, [s.id]: !attended}))
+                      try {
+                        await Sessions.toggleAttendance(s.id, athleteId, attended)
+                      } catch {
+                        setAttendanceMap(m => ({...m, [s.id]: attended}))
+                      }
+                    }}
+                      style={{ flex: 1, padding: '8px 12px', borderRadius: 10,
+                        background: attendanceMap[s.id] ? 'var(--success-dim)' : 'var(--bg)',
+                        border: `1px solid ${attendanceMap[s.id] ? 'var(--success)' : 'var(--border)'}`,
+                        color: attendanceMap[s.id] ? 'var(--success)' : 'var(--text-muted)',
+                        fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700, fontSize: 12,
+                        textTransform: 'uppercase', letterSpacing: '0.5px', cursor: 'pointer' }}>
+                      {attendanceMap[s.id] ? '✓ Realizada' : '¿Ya la realizaste?'}
+                    </button>
+                    <button onClick={e => { e.stopPropagation(); setPreSheet(s); setFatiguePre(0) }}
+                      style={{ flex: 1, padding: '8px 12px', borderRadius: 10, background: 'var(--accent-dim)', color: 'var(--accent)', border: '1px solid var(--accent)', fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700, fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.5px', cursor: 'pointer' }}>
+                      😴 ¿Cómo llegas?
+                    </button>
+                  </div>
                 </div>
               )
             })}
