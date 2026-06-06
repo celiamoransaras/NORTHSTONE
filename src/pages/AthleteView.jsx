@@ -323,11 +323,13 @@ function AthleteTrainingWithRPE({ athleteId }) {
   const past = sessions.filter(s => s.date < today).reverse()
   const upcoming = sessions.filter(s => s.date >= today)
 
+  const canSave = rpe > 0 || fatiguePre > 0 || fatiguePost > 0 || moodPost > 0
+
   const saveRpe = async () => {
-    if (!rpe) return
+    if (!canSave) return
     setSaving(true)
     await RPE.set(rpeSheet.id, athleteId, {
-      rpe,
+      rpe: rpe || null,
       fatigue_pre: fatiguePre || null,
       fatigue_post: fatiguePost || null,
       mood_post: moodPost || null,
@@ -477,7 +479,7 @@ function AthleteTrainingWithRPE({ athleteId }) {
               <ScaleRow label="😊 Ánimo al salir" value={moodPost} onChange={setMoodPost}
                 colors={['','var(--error)','var(--error)','var(--warning)','var(--warning)','var(--warning)','var(--success)','var(--success)','var(--success)','var(--success)','var(--success)']} />
 
-              <button className="btn btn-primary btn-full" onClick={saveRpe} disabled={!rpe || saving} style={{ marginTop: 8 }}>
+              <button className="btn btn-primary btn-full" onClick={saveRpe} disabled={!canSave || saving} style={{ marginTop: 8 }}>
                 {saving ? 'Guardando...' : 'Guardar valoración'}
               </button>
             </div>
