@@ -42,7 +42,7 @@ export default function Messages() {
     if (!text && !fileUrl) return
     setInput('')
     const senderName = isCoach ? 'Celia (Entrenadora)' : profile?.athletes?.name || 'Deportista'
-    const senderId = isCoach ? 'me' : (profile?.athlete_id || 'athlete')
+    const senderId = isCoach ? 'coach' : (profile?.athlete_id || 'athlete')
     await DB.send(activeChat, text || (fileType?.startsWith('image/') ? '📷 Imagen' : '📎 Archivo'), senderId, senderName, fileUrl, fileType)
     await loadMessages()
   }
@@ -92,7 +92,7 @@ export default function Messages() {
     return d.toLocaleDateString('es-ES', { day: 'numeric', month: 'long' })
   }
 
-  const myId = isCoach ? 'me' : (profile?.athlete_id || 'athlete')
+  const myId = isCoach ? 'coach' : (profile?.athlete_id || 'athlete')
 
   return (
     <div style={{ display: 'flex', height: '100%', overflow: 'hidden' }}>
@@ -135,9 +135,9 @@ export default function Messages() {
                 <span style={{ fontSize: 11, color: 'var(--text-muted)', background: 'var(--surface)', padding: '3px 10px', borderRadius: 10 }}>{formatDate(msgs[0].ts)}</span>
               </div>
               {msgs.map(msg => {
-                const isMe = msg.sender === myId || msg.sender === 'me'
+                const isMe = msg.sender === myId
                 const sender = !isMe ? athletes.find(a => a.id === msg.sender) : null
-                const isCoachMsg = msg.sender === 'me' || (!isMe && !sender)
+                const isCoachMsg = msg.sender === 'coach' || msg.sender === 'me'
                 const avatarUrl = isCoachMsg ? coachAvatar : sender?.avatar_url
                 return (
                   <div key={msg.id} style={{ display: 'flex', flexDirection: isMe ? 'row-reverse' : 'row', gap: 8, marginBottom: 10, alignItems: 'flex-end' }}>
