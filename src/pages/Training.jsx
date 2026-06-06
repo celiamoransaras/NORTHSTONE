@@ -161,32 +161,32 @@ export default function Training({ athleteId = null, coachView = false, embedded
                     {detailSession.athlete_ids.map(id => {
                       const a = athletes.find(x=>x.id===id)
                       const attended = detailSession.attendance?.[id] || false
-                      return a ? (
-                        <div key={id} onClick={async () => {
-                          await Sessions.toggleAttendance(detailSession.id, id, attended)
-                          setDetailSession(s => ({ ...s, attendance: { ...s.attendance, [id]: !attended } }))
-                        }} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px', background: attended ? 'var(--success-dim)' : 'var(--card)', borderRadius: 'var(--radius-sm)', cursor: 'pointer', border: `1px solid ${attended ? 'var(--success)' : 'var(--border)'}` }}>
-                          <div style={{ width: 22, height: 22, borderRadius: '50%', background: attended ? 'var(--success)' : 'var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                            {attended && <span style={{ color: '#fff', fontSize: 12 }}>✓</span>}
+                      if (!a) return null
+                      const r = detailSession.ratings?.[id]
+                      return (
+                        <div key={id}>
+                          <div onClick={async () => {
+                            await Sessions.toggleAttendance(detailSession.id, id, attended)
+                            setDetailSession(s => ({ ...s, attendance: { ...s.attendance, [id]: !attended } }))
+                          }} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px', background: attended ? 'var(--success-dim)' : 'var(--card)', borderRadius: 'var(--radius-sm)', cursor: 'pointer', border: `1px solid ${attended ? 'var(--success)' : 'var(--border)'}` }}>
+                            <div style={{ width: 22, height: 22, borderRadius: '50%', background: attended ? 'var(--success)' : 'var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                              {attended && <span style={{ color: '#fff', fontSize: 12 }}>✓</span>}
+                            </div>
+                            <div style={{ width: 8, height: 8, borderRadius: '50%', background: a.color, flexShrink: 0 }} />
+                            <span style={{ fontSize: 14, fontWeight: 500, flex: 1 }}>{a.name}</span>
+                            <span style={{ fontSize: 12, color: attended ? 'var(--success)' : 'var(--text-muted)' }}>{attended ? 'Asistió' : 'No asistió'}</span>
                           </div>
-                          <div style={{ width: 8, height: 8, borderRadius: '50%', background: a.color, flexShrink: 0 }} />
-                          <span style={{ fontSize: 14, fontWeight: 500, flex: 1 }}>{a.name}</span>
-                          <span style={{ fontSize: 12, color: attended ? 'var(--success)' : 'var(--text-muted)' }}>{attended ? 'Asistió' : 'No asistió'}</span>
-                        </div>
-                        {(() => {
-                          const r = detailSession.ratings?.[id]
-                          if (!r || (!r.rpe && !r.fatigue_pre && !r.fatigue_post && !r.mood_post)) return null
-                          return (
-                            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 6, marginLeft: 34 }}>
+                          {r && (r.rpe || r.fatigue_pre || r.fatigue_post || r.mood_post) && (
+                            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 6, marginLeft: 12 }}>
                               {r.fatigue_pre != null && <span style={{ fontSize: 11, background: 'var(--bg)', padding: '2px 8px', borderRadius: 6, color: 'var(--text-muted)' }}>😴 Pre: <strong>{r.fatigue_pre}</strong></span>}
                               {r.rpe != null && <span style={{ fontSize: 11, background: 'var(--bg)', padding: '2px 8px', borderRadius: 6, color: 'var(--text-muted)' }}>💪 RPE: <strong>{r.rpe}</strong></span>}
                               {r.fatigue_post != null && <span style={{ fontSize: 11, background: 'var(--bg)', padding: '2px 8px', borderRadius: 6, color: 'var(--text-muted)' }}>🥵 Post: <strong>{r.fatigue_post}</strong></span>}
                               {r.mood_post != null && <span style={{ fontSize: 11, background: 'var(--bg)', padding: '2px 8px', borderRadius: 6, color: 'var(--text-muted)' }}>😊 Ánimo: <strong>{r.mood_post}</strong></span>}
-                              {r.fatigue_pre >= 8 && <span style={{ fontSize: 11, background: 'var(--error-dim)', color: 'var(--error)', padding: '2px 8px', borderRadius: 6 }}>⚠️ Cansancio alto pre-sesión</span>}
+                              {r.fatigue_pre >= 8 && <span style={{ fontSize: 11, background: 'var(--error-dim)', color: 'var(--error)', padding: '2px 8px', borderRadius: 6 }}>⚠️ Cansancio alto</span>}
                             </div>
-                          )
-                        })()}
-                      ) : null
+                          )}
+                        </div>
+                      )
                     })}
                   </div>
                 </>
