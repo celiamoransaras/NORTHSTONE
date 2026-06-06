@@ -1,17 +1,16 @@
-/**
- * Vista que ve un deportista cuando inicia sesión.
- * Solo muestra sus datos: sesiones, lesiones y pagos propios.
- */
 import { useState, useEffect, useRef } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { Sessions, Injuries, Payments, Storage, RPE } from '../lib/db'
 import { supabase } from '../lib/supabase'
-import Training from './Training'
 import Messages from './Messages'
 import DocsPage from './Documents'
 import Progress from './Progress'
-import AchievementsSection, { AchievementsHomeSection, StreakBadge, WeeklyPlan, calculateStreak, checkAndUnlockAchievements } from './Achievements'
+import { AchievementsHomeSection, StreakBadge, WeeklyPlan, calculateStreak, checkAndUnlockAchievements } from './Achievements'
 import { Records } from '../lib/db'
+
+const TYPE_ICONS = { run:'🏃', fuerza:'💪', series:'⚡', endurance:'🫁', especifico:'🎯', ergometros:'🚣', cardio:'❤️', rest_day:'😴', strength:'💪', flexibility:'🧘', mixed:'⚡' }
+const TYPE_COLORS = { run:'#10B981', fuerza:'#F59E0B', series:'#EF4444', endurance:'#3B82F6', especifico:'#8B5CF6', ergometros:'#14B8A6', cardio:'#EC4899', rest_day:'#9CA3AF', strength:'#F59E0B', flexibility:'#10B981', mixed:'#9CA3AF' }
+const TYPE_LABELS = { run:'Run', fuerza:'Fuerza', series:'Series', endurance:'Endurance', especifico:'Específico', ergometros:'Ergómetros', cardio:'Cardio', rest_day:'Rest Day', strength:'Fuerza', flexibility:'Flexibilidad', mixed:'Mixta' }
 
 const NAV = [
   { id: 'home',      icon: '🏠', label: 'Inicio' },
@@ -233,24 +232,7 @@ function AthleteHome({ athlete, athleteId }) {
           <div style={{ color: 'var(--text-muted)', fontSize: 14, padding: '8px 0' }}>No tienes sesiones próximas</div>
         ) : (
           <div className="card">
-            {upcoming.map((s, i) => {
-              const d = new Date(s.date+'T12:00:00')
-              const days = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb']
-              const months = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic']
-              return (
-                <div key={s.id} className="list-item" style={{ borderBottom: i < upcoming.length-1 ? undefined : 'none', cursor: 'default' }}>
-                  <div style={{ width: 52, height: 52, borderRadius: 'var(--radius-sm)', background: 'var(--border)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                    <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--accent)' }}>{days[d.getDay()]}</div>
-                    <div style={{ fontSize: 16, fontWeight: 700 }}>{d.getDate()}</div>
-                    <div style={{ fontSize: 10, color: 'var(--text-muted)' }}>{months[d.getMonth()]}</div>
-                  </div>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontWeight: 600, fontSize: 14 }}>{s.title}</div>
-                    <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>{s.duration} min</div>
-                  </div>
-                </div>
-              )
-            })}
+            {upcoming.map((s, i) => <AthleteSessionRow key={s.id} session={s} last={i === upcoming.length - 1} />)}
           </div>
         )}
       </div>
@@ -304,24 +286,33 @@ function AthleteHealth({ athleteId }) {
         <div className="section-title">Lesiones</div>
         {injuries.length === 0 ? (
           <div className="empty-state" style={{ padding: '24px 0' }}><div className="icon">🏃</div><h3>¡Sin lesiones!</h3></div>
-        ) : injuries.map(inj => {
-          const sev = SEVERITY_COLOR[inj.severity] || 'var(--text-muted)'
-          const isActive = !inj.date_end || inj.date_end >= today
-          return (
-            <div key={inj.id} className="card" style={{ padding: 16 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
-                <span style={{ fontWeight: 600 }}>{inj.type} · {inj.body_part}</span>
-                <span className="badge" style={{ background: sev+'20', color: sev }}>{SEVERITY_LABEL[inj.severity]}</span>
-              </div>
-              <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>
-                {new Date(inj.date_start+'T12:00:00').toLocaleDateString('es-ES')}
-                {inj.date_end ? ` → ${new Date(inj.date_end+'T12:00:00').toLocaleDateString('es-ES')}` : ' → Activa'}
-                {isActive && <span className="badge badge-red" style={{ marginLeft: 8, fontSize: 11 }}>Activa</span>}
-              </div>
-              {inj.notes && <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 6, fontStyle: 'italic' }}>{inj.notes}</div>}
-            </div>
-          )
-        })}
+        ) : (
+          <div className="card">
+            {injuries.map((inj, i) => {
+              const sev = SEVERITY_COLOR[inj.severity] || 'var(--text-muted)'
+              const isActive = !inj.date_end || inj.date_end >= today
+              return (
+                <div key={inj.id} className="list-item" style={{ borderBottom: i < injuries.length-1 ? undefined : 'none', cursor: 'default', alignItems: 'flex-start', paddingTop: 14, paddingBottom: 14 }}>
+                  <div style={{ width: 44, height: 44, borderRadius: 12, background: sev+'15', border: `1.5px solid ${sev}30`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, flexShrink: 0, marginTop: 2 }}>
+                    🩹
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3 }}>
+                      <span style={{ fontWeight: 700, fontSize: 14 }}>{inj.type} · {inj.body_part}</span>
+                      {isActive && <span className="badge badge-red" style={{ fontSize: 10 }}>Activa</span>}
+                    </div>
+                    <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 4 }}>
+                      {new Date(inj.date_start+'T12:00:00').toLocaleDateString('es-ES')}
+                      {inj.date_end ? ` → ${new Date(inj.date_end+'T12:00:00').toLocaleDateString('es-ES')}` : ' → Hoy'}
+                    </div>
+                    <span className="badge" style={{ background: sev+'15', color: sev }}>{SEVERITY_LABEL[inj.severity]}</span>
+                    {inj.notes && <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 6, fontStyle: 'italic' }}>{inj.notes}</div>}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        )}
 
         {/* Documentos médicos */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 8 }}>
@@ -361,24 +352,53 @@ function AthletePayments({ athleteId }) {
 
   const pending = payments.filter(p => p.status === 'pending')
 
+  const paid = payments.filter(p => p.status === 'paid')
+
   return (
     <div className="page fade-in">
       <div className="page-header"><h2>Mis Pagos</h2></div>
       <div className="page-content">
-        {pending.length > 0 && (
-          <div style={{ background: 'var(--error-dim)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 'var(--radius)', padding: '14px 16px', marginBottom: 4 }}>
-            <div style={{ fontWeight: 600 }}>⚠️ Tienes {pending.length} pago{pending.length>1?'s':''} pendiente{pending.length>1?'s':''}</div>
-            <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 4 }}>Contacta con tu entrenadora para regularizarlo</div>
+
+        {/* Stat summary */}
+        {payments.length > 0 && (
+          <div className="grid-2">
+            <div className="stat-card">
+              <div style={{ position: 'absolute', top: 12, right: 14, fontSize: 22, opacity: 0.15 }}>✓</div>
+              <div className="stat-value" style={{ color: 'var(--success)' }}>{paid.length}</div>
+              <div className="stat-label">Pagados</div>
+            </div>
+            <div className="stat-card">
+              <div style={{ position: 'absolute', top: 12, right: 14, fontSize: 22, opacity: 0.15 }}>⏳</div>
+              <div className="stat-value" style={{ color: pending.length > 0 ? 'var(--error)' : 'var(--text-dim)' }}>{pending.length}</div>
+              <div className="stat-label">Pendientes</div>
+            </div>
           </div>
         )}
+
+        {/* Alerta pendientes */}
+        {pending.length > 0 && (
+          <div style={{ background: 'var(--error-dim)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 'var(--radius)', padding: '14px 18px', display: 'flex', alignItems: 'center', gap: 12 }}>
+            <span style={{ fontSize: 22 }}>⚠️</span>
+            <div>
+              <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 800, fontSize: 15, textTransform: 'uppercase', color: 'var(--error)' }}>
+                {pending.length} pago{pending.length>1?'s':''} pendiente{pending.length>1?'s':''}
+              </div>
+              <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 2 }}>Contacta con tu entrenadora para regularizarlo</div>
+            </div>
+          </div>
+        )}
+
         {payments.length === 0 ? (
           <div className="empty-state"><div className="icon">💳</div><h3>Sin registros</h3></div>
         ) : (
           <div className="card">
             {payments.map((p, i) => (
               <div key={p.id} className="list-item" style={{ borderBottom: i < payments.length-1 ? undefined : 'none', cursor: 'default' }}>
+                <div style={{ width: 44, height: 44, borderRadius: 12, background: p.status === 'paid' ? 'var(--success-dim)' : 'var(--error-dim)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, flexShrink: 0 }}>
+                  {p.status === 'paid' ? '✓' : '⏳'}
+                </div>
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontWeight: 600, fontSize: 14 }}>{MONTHS[p.month]} {p.year}</div>
+                  <div style={{ fontWeight: 700, fontSize: 14 }}>{MONTHS[p.month]} {p.year}</div>
                   <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{p.amount}€</div>
                 </div>
                 {p.status === 'paid'
@@ -477,40 +497,60 @@ function AthleteTrainingWithRPE({ athleteId }) {
       <div className="page-content">
         {upcoming.length > 0 && <>
           <div className="section-title">Próximos</div>
-          {upcoming.map(s => (
-            <div key={s.id} className="card" style={{ padding: '14px 16px' }}>
-              <div style={{ cursor: 'pointer' }} onClick={() => setDetailSession(s)}>
-                <div style={{ fontSize: 12, color: 'var(--accent)', fontWeight: 700 }}>{formatDate(s.date)}</div>
-                <div style={{ fontWeight: 700, fontSize: 15, marginTop: 4 }}>{s.title}</div>
-                <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 2 }}>{s.duration} min {s.exercises?.length > 0 && `· 📋 ${s.exercises.length} ejercicios`}</div>
+          {upcoming.map(s => {
+            const color = TYPE_COLORS[s.type] || 'var(--accent)'
+            const icon = TYPE_ICONS[s.type] || '📅'
+            const isToday = s.date === new Date().toISOString().slice(0,10)
+            return (
+              <div key={s.id} className="card" style={{ padding: '14px 16px', cursor: 'pointer' }} onClick={() => setDetailSession(s)}>
+                <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+                  <div style={{ width: 44, height: 44, borderRadius: 12, background: isToday ? 'var(--accent)' : `${color}15`, border: isToday ? 'none' : `1.5px solid ${color}30`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, flexShrink: 0 }}>
+                    {icon}
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
+                      <div style={{ fontSize: 12, color: isToday ? 'var(--accent)' : color, fontWeight: 800, fontFamily: "'Barlow Condensed', sans-serif", textTransform: 'uppercase' }}>{formatDate(s.date)}</div>
+                      {isToday && <span className="badge badge-green" style={{ fontSize: 10 }}>HOY</span>}
+                    </div>
+                    <div style={{ fontWeight: 700, fontSize: 15 }}>{s.title}</div>
+                    <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>{s.duration} min{s.exercises?.length > 0 ? ` · 📋 ${s.exercises.length} ejercicios` : ''}</div>
+                  </div>
+                </div>
+                <button onClick={e => { e.stopPropagation(); setPreSheet(s); setFatiguePre(0) }}
+                  style={{ marginTop: 12, width: '100%', padding: '8px 12px', borderRadius: 10, background: 'var(--accent-dim)', color: 'var(--accent)', border: '1px solid var(--accent)', fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700, fontSize: 13, textTransform: 'uppercase', letterSpacing: '0.5px', cursor: 'pointer' }}>
+                  😴 ¿Cómo llegas hoy?
+                </button>
               </div>
-              <button onClick={() => { setPreSheet(s); setFatiguePre(0) }}
-                style={{ marginTop: 10, width: '100%', padding: '8px 12px', borderRadius: 10, background: 'var(--accent-dim)', color: 'var(--accent)', border: '1px solid var(--accent)', fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700, fontSize: 13, textTransform: 'uppercase', letterSpacing: '0.5px', cursor: 'pointer' }}>
-                😴 ¿Cómo llegas hoy?
-              </button>
-            </div>
-          ))}
+            )
+          })}
         </>}
 
         {past.length > 0 && <>
           <div className="section-title" style={{ marginTop: 8 }}>Historial</div>
-          {past.map(s => (
-            <div key={s.id} className="card" style={{ padding: '14px 16px', cursor: 'pointer' }}
-              onClick={() => setDetailSession(s)}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                <div>
-                  <div style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 600 }}>{formatDate(s.date)}</div>
-                  <div style={{ fontWeight: 700, fontSize: 15, marginTop: 2 }}>{s.title}</div>
-                  {s.exercises?.length > 0 && <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>📋 {s.exercises.length} ejercicios</div>}
+          {past.map(s => {
+            const color = TYPE_COLORS[s.type] || 'var(--accent)'
+            const icon = TYPE_ICONS[s.type] || '📅'
+            return (
+              <div key={s.id} className="card" style={{ padding: '14px 16px', cursor: 'pointer' }}
+                onClick={() => setDetailSession(s)}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <div style={{ width: 44, height: 44, borderRadius: 12, background: `${color}15`, border: `1.5px solid ${color}30`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, flexShrink: 0 }}>
+                    {icon}
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 600, fontFamily: "'Barlow Condensed', sans-serif", textTransform: 'uppercase' }}>{formatDate(s.date)}</div>
+                    <div style={{ fontWeight: 700, fontSize: 15 }}>{s.title}</div>
+                    {s.exercises?.length > 0 && <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 1 }}>📋 {s.exercises.length} ejercicios</div>}
+                  </div>
+                  <button onClick={e => { e.stopPropagation(); setRpeSheet(s); setRpe(0) }}
+                    className="btn btn-sm"
+                    style={{ background: 'var(--accent-dim)', color: 'var(--accent)', borderRadius: 8, fontSize: 12, flexShrink: 0 }}>
+                    ⭐ Valorar
+                  </button>
                 </div>
-                <button onClick={e => { e.stopPropagation(); setRpeSheet(s); setRpe(0) }}
-                  className="btn btn-sm"
-                  style={{ background: 'var(--accent-dim)', color: 'var(--accent)', borderRadius: 8, fontSize: 12 }}>
-                  ⭐ Valorar
-                </button>
               </div>
-            </div>
-          ))}
+            )
+          })}
         </>}
 
         {sessions.length === 0 && (
@@ -651,6 +691,33 @@ function PreSessionSheet({ session, fatiguePre, setFatiguePre, onSave, onClose, 
         </div>
       </div>
     </>
+  )
+}
+
+function AthleteSessionRow({ session, last }) {
+  const date = new Date(session.date + 'T12:00:00')
+  const days = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb']
+  const months = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic']
+  const isToday = session.date === new Date().toISOString().slice(0,10)
+  const color = TYPE_COLORS[session.type] || 'var(--accent)'
+  const icon = TYPE_ICONS[session.type] || '📅'
+
+  return (
+    <div className="list-item" style={{ borderBottom: last ? 'none' : undefined, cursor: 'default' }}>
+      <div style={{ width: 52, height: 52, borderRadius: 14, background: isToday ? 'var(--accent)' : `${color}15`, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flexShrink: 0, border: isToday ? 'none' : `1.5px solid ${color}30` }}>
+        <div style={{ fontSize: 10, fontWeight: 800, color: isToday ? '#fff' : color, fontFamily: "'Barlow Condensed', sans-serif", textTransform: 'uppercase' }}>{days[date.getDay()]}</div>
+        <div style={{ fontSize: 18, fontWeight: 900, color: isToday ? '#fff' : 'var(--text)', lineHeight: 1, fontFamily: "'Barlow Condensed', sans-serif" }}>{date.getDate()}</div>
+        <div style={{ fontSize: 9, color: isToday ? 'rgba(255,255,255,0.8)' : 'var(--text-muted)', fontFamily: "'Barlow Condensed', sans-serif" }}>{months[date.getMonth()]}</div>
+      </div>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontWeight: 700, fontSize: 14, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{session.title}</div>
+        <div style={{ color: 'var(--text-muted)', fontSize: 12, marginTop: 2 }}>{session.duration} min</div>
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4, flexShrink: 0 }}>
+        {isToday && <span className="badge badge-green" style={{ fontSize: 10 }}>HOY</span>}
+        <span style={{ fontSize: 18 }}>{icon}</span>
+      </div>
+    </div>
   )
 }
 
