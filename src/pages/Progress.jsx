@@ -5,11 +5,6 @@ import WellnessHistory from '../components/progress/WellnessHistory'
 import GoalsSection from '../components/progress/GoalsSection'
 import RecordsSection from '../components/progress/RecordsSection'
 
-// Re-exports para compatibilidad con Athletes.jsx
-export { default as LoadChart } from '../components/progress/LoadChart'
-export { default as GoalsSection } from '../components/progress/GoalsSection'
-export { default as RecordsSection } from '../components/progress/RecordsSection'
-
 export default function Progress({ athleteId, sessions = [], isCoach = false }) {
   return (
     <div className="page fade-in">

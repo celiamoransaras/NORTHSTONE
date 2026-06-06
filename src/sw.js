@@ -1,8 +1,15 @@
-import { cleanupOutdatedCaches, precacheAndRoute } from 'workbox-precaching'
+import { cleanupOutdatedCaches, precacheAndRoute, createHandlerBoundToURL } from 'workbox-precaching'
+import { NavigationRoute, registerRoute } from 'workbox-routing'
 
-// Precache assets generados por Vite
-precacheAndRoute(self.__WB_MANIFEST)
 cleanupOutdatedCaches()
+precacheAndRoute(self.__WB_MANIFEST)
+
+// SPA: cualquier navegación sirve index.html
+registerRoute(new NavigationRoute(createHandlerBoundToURL('/index.html')))
+
+// Tomar control inmediatamente al actualizar
+self.skipWaiting()
+self.addEventListener('activate', () => self.clients.claim())
 
 // ---- Push notifications ----
 self.addEventListener('push', (event) => {
