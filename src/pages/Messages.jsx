@@ -17,6 +17,8 @@ export default function Messages() {
   const [input, setInput] = useState('')
   const [uploading, setUploading] = useState(false)
   const [recording, setRecording] = useState(false)
+  const [recordingSeconds, setRecordingSeconds] = useState(0)
+  const recordingTimerRef = useRef(null)
   const mediaRecorderRef = useRef(null)
   const audioChunksRef = useRef([])
   const bottomRef = useRef(null)
@@ -98,14 +100,18 @@ export default function Messages() {
       mr.start(100)
       mediaRecorderRef.current = mr
       setRecording(true)
+      setRecordingSeconds(0)
+      recordingTimerRef.current = setInterval(() => setRecordingSeconds(s => s + 1), 1000)
     } catch (err) { alert('No se pudo acceder al micrófono: ' + err.message) }
   }
 
   const stopRecording = () => {
+    clearInterval(recordingTimerRef.current)
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
       mediaRecorderRef.current.stop()
     }
     setRecording(false)
+    setRecordingSeconds(0)
   }
 
   const toggleRecording = () => {
@@ -277,18 +283,39 @@ export default function Messages() {
 
         <div style={{ padding: '10px 12px', background: 'var(--surface)', borderTop: '1px solid var(--border)', display: 'flex', gap: 8, alignItems: 'flex-end', flexShrink: 0 }}>
           <input ref={fileRef} type="file" accept="image/*,.pdf,.doc,.docx" style={{ display: 'none' }} onChange={handleFile} />
-          <button onClick={() => fileRef.current.click()} disabled={uploading || recording}
-            style={{ width: 42, height: 42, borderRadius: '50%', background: 'var(--card)', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, cursor: 'pointer', flexShrink: 0 }}>
-            {uploading ? '⏳' : '📎'}
-          </button>
-          <button onClick={toggleRecording} disabled={uploading}
-            style={{ width: 42, height: 42, borderRadius: '50%', background: recording ? 'var(--error)' : 'var(--card)', border: `1px solid ${recording ? 'var(--error)' : 'var(--border)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, cursor: 'pointer', flexShrink: 0, transition: 'all 0.15s', animation: recording ? 'pulse 1s infinite' : 'none' }}>
-            {uploading ? '⏳' : recording ? '⏹' : '🎤'}
-          </button>
-          <textarea value={input} onChange={e => setInput(e.target.value)} onKeyDown={handleKey}
-            placeholder="Escribe un mensaje..." rows={1}
-            style={{ flex: 1, resize: 'none', minHeight: 40, maxHeight: 120, padding: '10px 14px', borderRadius: 20, fontSize: 15, background: 'var(--card)', border: '1px solid var(--border)', color: 'var(--text)', outline: 'none', lineHeight: 1.4, fontFamily: 'inherit' }} />
-          <button onClick={() => send()} style={{ width: 42, height: 42, borderRadius: '50%', background: input.trim() ? 'var(--accent)' : 'var(--border)', color: input.trim() ? '#000' : 'var(--text-muted)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, cursor: 'pointer', border: 'none', transition: 'all 0.15s', flexShrink: 0 }}>↑</button>
+
+          {recording ? (
+            /* Barra de grabación */
+            <>
+              <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 10, padding: '10px 16px', background: 'var(--error-dim)', borderRadius: 20, border: '1px solid var(--error)', minHeight: 42 }}>
+                <span style={{ width: 10, height: 10, borderRadius: '50%', background: 'var(--error)', animation: 'pulse 1s infinite', flexShrink: 0 }} />
+                <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--error)', fontFamily: "'Barlow Condensed', sans-serif" }}>
+                  🎤 {String(Math.floor(recordingSeconds/60)).padStart(2,'0')}:{String(recordingSeconds%60).padStart(2,'0')}
+                </span>
+                <span style={{ fontSize: 12, color: 'var(--error)', opacity: 0.7 }}>Toca ⏹ para enviar</span>
+              </div>
+              <button onClick={toggleRecording}
+                style={{ width: 42, height: 42, borderRadius: '50%', background: 'var(--error)', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, cursor: 'pointer', flexShrink: 0 }}>
+                ⏹
+              </button>
+            </>
+          ) : (
+            /* Barra normal */
+            <>
+              <button onClick={() => fileRef.current.click()} disabled={uploading}
+                style={{ width: 42, height: 42, borderRadius: '50%', background: 'var(--card)', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, cursor: 'pointer', flexShrink: 0 }}>
+                {uploading ? '⏳' : '📎'}
+              </button>
+              <button onClick={toggleRecording} disabled={uploading}
+                style={{ width: 42, height: 42, borderRadius: '50%', background: 'var(--card)', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, cursor: 'pointer', flexShrink: 0 }}>
+                🎤
+              </button>
+              <textarea value={input} onChange={e => setInput(e.target.value)} onKeyDown={handleKey}
+                placeholder="Escribe un mensaje..." rows={1}
+                style={{ flex: 1, resize: 'none', minHeight: 40, maxHeight: 120, padding: '10px 14px', borderRadius: 20, fontSize: 15, background: 'var(--card)', border: '1px solid var(--border)', color: 'var(--text)', outline: 'none', lineHeight: 1.4, fontFamily: 'inherit' }} />
+              <button onClick={() => send()} style={{ width: 42, height: 42, borderRadius: '50%', background: input.trim() ? 'var(--accent-gradient)' : 'var(--border)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, cursor: 'pointer', border: 'none', transition: 'all 0.15s', flexShrink: 0 }}>↑</button>
+            </>
+          )}
         </div>
       </div>
     </div>
