@@ -36,12 +36,13 @@ export const Sessions = {
   getAll: async () => {
     const { data } = await supabase
       .from('sessions')
-      .select('*, exercises(*), session_athletes(athlete_id, attended)')
+      .select('*, exercises(*), session_athletes(athlete_id, attended, rpe, fatigue_pre, fatigue_post, mood_post)')
       .order('date')
     return (data || []).map(s => ({
       ...s,
       athlete_ids: (s.session_athletes || []).map(sa => sa.athlete_id),
-      attendance: (s.session_athletes || []).reduce((acc, sa) => ({ ...acc, [sa.athlete_id]: sa.attended }), {})
+      attendance: (s.session_athletes || []).reduce((acc, sa) => ({ ...acc, [sa.athlete_id]: sa.attended }), {}),
+      ratings: (s.session_athletes || []).reduce((acc, sa) => ({ ...acc, [sa.athlete_id]: { rpe: sa.rpe, fatigue_pre: sa.fatigue_pre, fatigue_post: sa.fatigue_post, mood_post: sa.mood_post } }), {})
     }))
   },
   getByAthlete: async (athleteId) => {

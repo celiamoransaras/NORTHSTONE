@@ -173,6 +173,19 @@ export default function Training({ athleteId = null, coachView = false, embedded
                           <span style={{ fontSize: 14, fontWeight: 500, flex: 1 }}>{a.name}</span>
                           <span style={{ fontSize: 12, color: attended ? 'var(--success)' : 'var(--text-muted)' }}>{attended ? 'Asistió' : 'No asistió'}</span>
                         </div>
+                        {(() => {
+                          const r = detailSession.ratings?.[id]
+                          if (!r || (!r.rpe && !r.fatigue_pre && !r.fatigue_post && !r.mood_post)) return null
+                          return (
+                            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 6, marginLeft: 34 }}>
+                              {r.fatigue_pre != null && <span style={{ fontSize: 11, background: 'var(--bg)', padding: '2px 8px', borderRadius: 6, color: 'var(--text-muted)' }}>😴 Pre: <strong>{r.fatigue_pre}</strong></span>}
+                              {r.rpe != null && <span style={{ fontSize: 11, background: 'var(--bg)', padding: '2px 8px', borderRadius: 6, color: 'var(--text-muted)' }}>💪 RPE: <strong>{r.rpe}</strong></span>}
+                              {r.fatigue_post != null && <span style={{ fontSize: 11, background: 'var(--bg)', padding: '2px 8px', borderRadius: 6, color: 'var(--text-muted)' }}>🥵 Post: <strong>{r.fatigue_post}</strong></span>}
+                              {r.mood_post != null && <span style={{ fontSize: 11, background: 'var(--bg)', padding: '2px 8px', borderRadius: 6, color: 'var(--text-muted)' }}>😊 Ánimo: <strong>{r.mood_post}</strong></span>}
+                              {r.fatigue_pre >= 8 && <span style={{ fontSize: 11, background: 'var(--error-dim)', color: 'var(--error)', padding: '2px 8px', borderRadius: 6 }}>⚠️ Cansancio alto pre-sesión</span>}
+                            </div>
+                          )
+                        })()}
                       ) : null
                     })}
                   </div>
