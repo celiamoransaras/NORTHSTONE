@@ -310,11 +310,13 @@ function AthleteProgressTab({ athleteId }) {
 function AthleteTrainingWithRPE({ athleteId }) {
   const [sessions, setSessions] = useState([])
   const [rpeSheet, setRpeSheet] = useState(null)
+  const [preSheet, setPreSheet] = useState(null)
   const [detailSession, setDetailSession] = useState(null)
   const [rpe, setRpe] = useState(0)
   const [fatiguePre, setFatiguePre] = useState(0)
   const [fatiguePost, setFatiguePost] = useState(0)
   const [moodPost, setMoodPost] = useState(0)
+  const [savingPre, setSavingPre] = useState(false)
   const [saving, setSaving] = useState(false)
 
   useEffect(() => { Sessions.getByAthlete(athleteId).then(setSessions) }, [athleteId])
@@ -323,32 +325,46 @@ function AthleteTrainingWithRPE({ athleteId }) {
   const past = sessions.filter(s => s.date < today).reverse()
   const upcoming = sessions.filter(s => s.date >= today)
 
-  const canSave = rpe > 0 || fatiguePre > 0 || fatiguePost > 0 || moodPost > 0
+  const canSave = rpe > 0 || fatiguePost > 0 || moodPost > 0
 
   useEffect(() => {
     if (!rpeSheet) return
     RPE.get(rpeSheet.id, athleteId).then(data => {
       if (data) {
         setRpe(data.rpe || 0)
-        setFatiguePre(data.fatigue_pre || 0)
         setFatiguePost(data.fatigue_post || 0)
         setMoodPost(data.mood_post || 0)
       }
     })
   }, [rpeSheet])
 
+  useEffect(() => {
+    if (!preSheet) return
+    RPE.get(preSheet.id, athleteId).then(data => {
+      if (data) setFatiguePre(data.fatigue_pre || 0)
+    })
+  }, [preSheet])
+
   const saveRpe = async () => {
     if (!canSave) return
     setSaving(true)
     await RPE.set(rpeSheet.id, athleteId, {
       rpe: rpe || null,
-      fatigue_pre: fatiguePre || null,
       fatigue_post: fatiguePost || null,
       mood_post: moodPost || null,
     })
     setSaving(false)
     setRpeSheet(null)
-    setRpe(0); setFatiguePre(0); setFatiguePost(0); setMoodPost(0)
+    setRpe(0); setFatiguePost(0); setMoodPost(0)
+  }
+
+  const savePreFatigue = async () => {
+    if (!fatiguePre) return
+    setSavingPre(true)
+    await RPE.set(preSheet.id, athleteId, { fatigue_pre: fatiguePre })
+    setSavingPre(false)
+    setPreSheet(null)
+    setFatiguePre(0)
   }
 
   const formatDate = (d) => {
@@ -368,11 +384,16 @@ function AthleteTrainingWithRPE({ athleteId }) {
         {upcoming.length > 0 && <>
           <div className="section-title">Próximos</div>
           {upcoming.map(s => (
-            <div key={s.id} className="card" style={{ padding: '14px 16px', cursor: 'pointer' }}
-              onClick={() => setDetailSession(s)}>
-              <div style={{ fontSize: 12, color: 'var(--accent)', fontWeight: 700 }}>{formatDate(s.date)}</div>
-              <div style={{ fontWeight: 700, fontSize: 15, marginTop: 4 }}>{s.title}</div>
-              <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>{s.duration} min {s.exercises?.length > 0 && `· 📋 ${s.exercises.length} ejercicios`}</div>
+            <div key={s.id} className="card" style={{ padding: '14px 16px' }}>
+              <div style={{ cursor: 'pointer' }} onClick={() => setDetailSession(s)}>
+                <div style={{ fontSize: 12, color: 'var(--accent)', fontWeight: 700 }}>{formatDate(s.date)}</div>
+                <div style={{ fontWeight: 700, fontSize: 15, marginTop: 4 }}>{s.title}</div>
+                <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 2 }}>{s.duration} min {s.exercises?.length > 0 && `· 📋 ${s.exercises.length} ejercicios`}</div>
+              </div>
+              <button onClick={() => { setPreSheet(s); setFatiguePre(0) }}
+                style={{ marginTop: 10, width: '100%', padding: '8px 12px', borderRadius: 10, background: 'var(--accent-dim)', color: 'var(--accent)', border: '1px solid var(--accent)', fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700, fontSize: 13, textTransform: 'uppercase', letterSpacing: '0.5px', cursor: 'pointer' }}>
+                😴 ¿Cómo llegas hoy?
+              </button>
             </div>
           ))}
         </>}
@@ -454,6 +475,18 @@ function AthleteTrainingWithRPE({ athleteId }) {
         </>
       )}
 
+      {preSheet && (
+        <PreSessionSheet
+          session={preSheet}
+          fatiguePre={fatiguePre}
+          setFatiguePre={setFatiguePre}
+          onSave={savePreFatigue}
+          onClose={() => { setPreSheet(null); setFatiguePre(0) }}
+          saving={savingPre}
+          formatDate={formatDate}
+        />
+      )}
+
       {rpeSheet && (
         <>
           <div className="overlay" onClick={() => setRpeSheet(null)} />
@@ -469,16 +502,6 @@ function AthleteTrainingWithRPE({ athleteId }) {
                 <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 800, fontSize: 18, textTransform: 'uppercase' }}>{rpeSheet.title}</div>
                 <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 2 }}>{formatDate(rpeSheet.date)}</div>
               </div>
-
-              {/* Cansancio pre-sesión */}
-              <ScaleRow label="😴 Cansancio al empezar" value={fatiguePre} onChange={setFatiguePre}
-                colors={['','var(--success)','var(--success)','var(--success)','var(--success)','var(--warning)','var(--warning)','var(--warning)','var(--error)','var(--error)','var(--error)']} />
-
-              {fatiguePre >= 8 && (
-                <div style={{ background: 'var(--error-dim)', border: '1px solid rgba(220,38,38,0.3)', borderRadius: 'var(--radius-sm)', padding: '12px 14px', marginBottom: 16, fontSize: 13 }}>
-                  ⚠️ <strong>Tu cansancio pre-sesión es superior a 7,5.</strong> Valora con tu entrenadora si realizar la sesión.
-                </div>
-              )}
 
               {/* RPE */}
               <ScaleRow label="💪 Esfuerzo percibido (RPE)" value={rpe} onChange={setRpe}
@@ -500,6 +523,40 @@ function AthleteTrainingWithRPE({ athleteId }) {
         </>
       )}
     </div>
+  )
+}
+
+function PreSessionSheet({ session, fatiguePre, setFatiguePre, onSave, onClose, saving, formatDate }) {
+  return (
+    <>
+      <div className="overlay" onClick={onClose} />
+      <div className="sheet">
+        <div className="sheet-handle" />
+        <div className="sheet-header">
+          <h3>¿Cómo llegas?</h3>
+          <button className="btn btn-ghost btn-sm" onClick={onClose}>✕</button>
+        </div>
+        <div className="sheet-body">
+          <div style={{ textAlign: 'center', marginBottom: 20, padding: '12px 16px', background: 'var(--bg)', borderRadius: 'var(--radius-sm)' }}>
+            <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 800, fontSize: 18, textTransform: 'uppercase' }}>{session.title}</div>
+            <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 2 }}>{formatDate(session.date)}</div>
+          </div>
+
+          <ScaleRow label="😴 Cansancio pre-sesión" value={fatiguePre} onChange={setFatiguePre}
+            colors={['','var(--success)','var(--success)','var(--success)','var(--success)','var(--warning)','var(--warning)','var(--warning)','var(--error)','var(--error)','var(--error)']} />
+
+          {fatiguePre >= 8 && (
+            <div style={{ background: 'var(--error-dim)', border: '1px solid rgba(220,38,38,0.3)', borderRadius: 'var(--radius-sm)', padding: '12px 14px', marginBottom: 16, fontSize: 13 }}>
+              ⚠️ <strong>Tu cansancio pre-sesión es superior a 7,5.</strong> Valora con tu entrenadora si realizar la sesión.
+            </div>
+          )}
+
+          <button className="btn btn-primary btn-full" onClick={onSave} disabled={!fatiguePre || saving} style={{ marginTop: 8 }}>
+            {saving ? 'Guardando...' : 'Guardar'}
+          </button>
+        </div>
+      </div>
+    </>
   )
 }
 
