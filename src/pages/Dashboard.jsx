@@ -3,7 +3,10 @@ import { useNavigate } from 'react-router-dom'
 import { Athletes, Sessions, Injuries, Payments } from '../lib/db'
 import { supabase } from '../lib/supabase'
 import { getDismissed, dismissFatigueAlert, isFatigueDismissed, subscribeAlerts } from '../lib/alertState'
-import { TYPE_ICONS, TYPE_COLORS, TYPE_LABELS, initials } from '../lib/utils'
+
+const TYPE_ICONS = { run:'🏃', fuerza:'💪', series:'⚡', endurance:'🫁', especifico:'🎯', ergometros:'🚣', cardio:'❤️', rest_day:'😴', strength:'💪', flexibility:'🧘', mixed:'⚡' }
+const TYPE_COLORS = { run:'#10B981', fuerza:'#F59E0B', series:'#EF4444', endurance:'#3B82F6', especifico:'#8B5CF6', ergometros:'#14B8A6', cardio:'#EC4899', rest_day:'#9CA3AF', strength:'#F59E0B', cardio_:'#3B82F6', flexibility:'#10B981', mixed:'#9CA3AF' }
+const TYPE_LABELS = { run:'Run', fuerza:'Fuerza', series:'Series', endurance:'Endurance', especifico:'Específico', ergometros:'Ergómetros', cardio:'Cardio', rest_day:'Rest Day', strength:'Fuerza', flexibility:'Flexibilidad', mixed:'Mixta' }
 
 export default function Dashboard() {
   const navigate = useNavigate()
@@ -127,7 +130,7 @@ export default function Dashboard() {
                   {athlete?.avatar_url
                     ? <img src={athlete.avatar_url} style={{ width: 36, height: 36, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
                     : <div style={{ width: 36, height: 36, borderRadius: '50%', background: athlete?.color+'20', color: athlete?.color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 13, flexShrink: 0, fontFamily: "'Barlow Condensed', sans-serif" }}>
-                        {initials(athlete?.name)}
+                        {athlete?.name?.split(' ').map(w=>w[0]).join('').slice(0,2) || '?'}
                       </div>
                   }
                   <div style={{ flex: 1 }}>
@@ -194,7 +197,7 @@ export default function Dashboard() {
                     {athlete?.avatar_url
                       ? <img src={athlete.avatar_url} style={{ width: 40, height: 40, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
                       : <div className="avatar" style={{ background: athlete?.color+'20', color: athlete?.color }}>
-                          {initials(athlete?.name)}
+                          {athlete?.name?.split(' ').map(w=>w[0]).join('').slice(0,2) || '?'}
                         </div>
                     }
                     <div style={{ flex: 1 }}>
@@ -316,7 +319,7 @@ function TeamStatsSheet({ onClose }) {
                     {a.avatar_url
                       ? <img src={a.avatar_url} style={{ width: 36, height: 36, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
                       : <div style={{ width: 36, height: 36, borderRadius: '50%', background: a.color+'20', color: a.color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 13, flexShrink: 0, fontFamily: "'Barlow Condensed', sans-serif" }}>
-                          {initials(a.name)}
+                          {a.name?.split(' ').map(w=>w[0]).join('').slice(0,2)}
                         </div>
                     }
                     <div style={{ flex: 1, minWidth: 0 }}>

@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react'
 import { Payments as DB, Athletes } from '../lib/db'
 import { useToast } from '../contexts/ToastContext'
 import { haptic } from '../lib/haptic'
-import { initials } from '../lib/utils'
 
 const MONTHS = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
 
@@ -54,6 +53,7 @@ export default function Payments() {
   const prevMonth = () => { if (month === 1) { setMonth(12); setYear(y => y-1) } else setMonth(m => m-1) }
   const nextMonth = () => { if (month === 12) { setMonth(1); setYear(y => y+1) } else setMonth(m => m+1) }
   const getAthlete = (id) => athletes.find(a => a.id === id)
+  const initials = (name) => name?.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase() || '?'
 
   if (loading) return (
     <div className="page">

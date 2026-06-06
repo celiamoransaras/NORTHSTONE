@@ -6,7 +6,6 @@ import { supabase } from '../lib/supabase'
 import { dismissFatigueAlert } from '../lib/alertState'
 import { sendPushToCoach } from '../lib/pushNotifications'
 import { useToast } from '../contexts/ToastContext'
-import { initials } from '../lib/utils'
 
 const REACTION_EMOJIS = ['👍','❤️','🔥','💪','😂','👏']
 
@@ -161,6 +160,7 @@ export default function Messages() {
 
   const activeInfo = chats.find(c => c.id === activeChat)
   const formatTime = (ts) => new Date(ts).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })
+  const initials = (name) => name.split(' ').map(w => w[0]).join('').slice(0,2).toUpperCase()
 
   const grouped = messages.reduce((acc, msg) => {
     const date = new Date(msg.ts).toDateString()

@@ -4,7 +4,6 @@ import ConfirmSheet from '../components/ConfirmSheet'
 import { useToast } from '../contexts/ToastContext'
 import { haptic } from '../lib/haptic'
 import { sendPushToAthletes } from '../lib/pushNotifications'
-import { TYPE_COLORS as TYPE_COLOR, TYPE_ICONS, TYPE_LABELS } from '../lib/utils'
 
 const TYPE_OPTS = [
   { value: 'run',        label: '🏃 Run' },
@@ -16,6 +15,12 @@ const TYPE_OPTS = [
   { value: 'cardio',     label: '❤️ Cardio' },
   { value: 'rest_day',   label: '😴 Rest Day' },
 ]
+const TYPE_COLOR = {
+  run: '#10B981', fuerza: '#F59E0B', series: '#EF4444',
+  endurance: '#3B82F6', especifico: '#8B5CF6',
+  ergometros: '#14B8A6', cardio: '#EC4899', rest_day: '#707070',
+  strength: '#F59E0B', flexibility: '#10B981', mixed: '#707070'
+}
 const emptyForm = { title: '', date: new Date().toISOString().slice(0,10), type: 'run', duration: 60, notes: '', exercises: [], athlete_ids: [] }
 const emptyExercise = { name: '', sets: 3, reps: '10', notes: '', youtube_url: '' }
 
