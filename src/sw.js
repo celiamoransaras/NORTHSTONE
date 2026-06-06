@@ -1,15 +1,11 @@
-import { cleanupOutdatedCaches, precacheAndRoute, createHandlerBoundToURL } from 'workbox-precaching'
-import { NavigationRoute, registerRoute } from 'workbox-routing'
+import { cleanupOutdatedCaches, precacheAndRoute } from 'workbox-precaching'
 
 cleanupOutdatedCaches()
 precacheAndRoute(self.__WB_MANIFEST)
 
-// SPA: cualquier navegación sirve index.html
-registerRoute(new NavigationRoute(createHandlerBoundToURL('/index.html')))
-
-// Tomar control inmediatamente al actualizar
-self.skipWaiting()
-self.addEventListener('activate', () => self.clients.claim())
+// Tomar control inmediatamente al actualizar (sin esperar a cerrar tabs)
+self.addEventListener('install', () => self.skipWaiting())
+self.addEventListener('activate', (e) => e.waitUntil(self.clients.claim()))
 
 // ---- Push notifications ----
 self.addEventListener('push', (event) => {
