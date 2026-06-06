@@ -21,17 +21,19 @@ async function getOrCreateSubscription() {
 }
 
 export async function subscribeToPush(athleteId) {
+  console.log('[Push] subscribeToPush athleteId:', athleteId)
   const sub = await getOrCreateSubscription()
+  console.log('[Push] athlete subscription:', sub)
   if (!sub) return null
   const subJson = sub.toJSON()
   await supabase.from('push_subscriptions').delete().eq('endpoint', subJson.endpoint)
-  const { error } = await supabase.from('push_subscriptions').insert({
+  const { data, error } = await supabase.from('push_subscriptions').insert({
     athlete_id: athleteId,
     endpoint: subJson.endpoint,
     p256dh: subJson.keys.p256dh,
     auth: subJson.keys.auth,
   })
-  if (error) console.warn('[Push] athlete insert error:', error.message)
+  console.log('[Push] athlete insert result:', { data, error: error?.message, code: error?.code })
   return sub
 }
 
