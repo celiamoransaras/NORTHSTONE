@@ -4,6 +4,10 @@ import { Athletes, Sessions, Injuries, Payments } from '../lib/db'
 import { supabase } from '../lib/supabase'
 import { getDismissed, dismissFatigueAlert, subscribeAlerts } from '../lib/alertState'
 
+const TYPE_ICONS = { run:'🏃', fuerza:'💪', series:'⚡', endurance:'🫁', especifico:'🎯', ergometros:'🚣', cardio:'❤️', rest_day:'😴', strength:'💪', flexibility:'🧘', mixed:'⚡' }
+const TYPE_COLORS = { run:'#10B981', fuerza:'#F59E0B', series:'#EF4444', endurance:'#3B82F6', especifico:'#8B5CF6', ergometros:'#14B8A6', cardio:'#EC4899', rest_day:'#9CA3AF', strength:'#F59E0B', cardio_:'#3B82F6', flexibility:'#10B981', mixed:'#9CA3AF' }
+const TYPE_LABELS = { run:'Run', fuerza:'Fuerza', series:'Series', endurance:'Endurance', especifico:'Específico', ergometros:'Ergómetros', cardio:'Cardio', rest_day:'Rest Day', strength:'Fuerza', flexibility:'Flexibilidad', mixed:'Mixta' }
+
 export default function Dashboard() {
   const navigate = useNavigate()
   const [stats, setStats] = useState(null)
@@ -29,7 +33,6 @@ export default function Dashboard() {
       const today = now.toISOString().slice(0, 10)
 
       const athletes = await Athletes.getAll()
-      // Auto-crear pagos del mes si no existen
       if (athletes.length > 0) await Payments.ensureMonth(athletes, month, year)
 
       const [sessions, injuries, payments, fatigueAlerts] = await Promise.all([
@@ -39,9 +42,7 @@ export default function Dashboard() {
         supabase.from('session_athletes')
           .select('athlete_id, fatigue_pre, sessions(title, date)')
           .gte('fatigue_pre', 8)
-          .gte('sessions.date', today)
-          .not('sessions', 'is', null)
-          .then(({ data }) => (data || []).filter(d => d.sessions))
+          .then(({ data }) => (data || []).filter(d => d.sessions && d.sessions.date >= today))
       ])
 
       const map = {}
@@ -52,7 +53,6 @@ export default function Dashboard() {
       const activeInjuries = injuries.filter(i => !i.date_end || i.date_end >= today)
       const paidCount = payments.filter(p => p.status === 'paid').length
       const pendingPayments = payments.filter(p => p.status === 'pending').length
-      const isStartOfMonth = now.getDate() <= 7
 
       setStats({
         active: athletes.filter(a => a.status === 'active').length,
@@ -61,7 +61,6 @@ export default function Dashboard() {
         paidCount,
         totalPayments: athletes.length,
         pendingPayments,
-        showPaymentReminder: pendingPayments > 0 && isStartOfMonth,
         fatigueAlerts,
         monthName: ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'][month-1],
       })
@@ -74,11 +73,14 @@ export default function Dashboard() {
   if (!stats) return (
     <div className="page">
       <div style={{ padding: '32px 20px 0' }}>
-        <div className="skeleton" style={{ height: 16, width: 120, marginBottom: 10 }} />
-        <div className="skeleton" style={{ height: 40, width: 220, marginBottom: 24 }} />
-        <div className="grid-2" style={{ gap: 12 }}>
-          {[1,2,3,4].map(i => <div key={i} className="skeleton" style={{ height: 90, borderRadius: 18 }} />)}
+        <div className="skeleton" style={{ height: 14, width: 140, marginBottom: 12 }} />
+        <div className="skeleton" style={{ height: 44, width: 240, marginBottom: 6 }} />
+        <div className="skeleton" style={{ height: 3, width: 48, marginBottom: 28 }} />
+        <div className="grid-2" style={{ gap: 12, marginBottom: 20 }}>
+          {[1,2,3,4].map(i => <div key={i} className="skeleton" style={{ height: 88, borderRadius: 18 }} />)}
         </div>
+        <div className="skeleton" style={{ height: 12, width: 120, marginBottom: 12 }} />
+        <div className="skeleton" style={{ height: 160, borderRadius: 18 }} />
       </div>
     </div>
   )
@@ -88,92 +90,115 @@ export default function Dashboard() {
   const greeting = h < 7 ? 'Buenas noches' : h < 13 ? 'Buenos días' : h < 20 ? 'Buenas tardes' : 'Buenas noches'
   const dayNames = ['domingo','lunes','martes','miércoles','jueves','viernes','sábado']
   const monthNames = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre']
+  const visibleFatigueAlerts = stats.fatigueAlerts?.filter(a => !dismissedAlerts.has(a.athlete_id)) || []
 
   return (
     <div className="page fade-in">
       {/* Hero */}
-      <div style={{ padding: '28px 20px 20px', background: 'linear-gradient(160deg, #1e3a8a08 0%, transparent 60%)' }}>
-        <div style={{ fontSize: 13, color: 'var(--text-muted)', fontWeight: 500, marginBottom: 4 }}>
+      <div style={{ padding: '28px 20px 20px', background: 'linear-gradient(160deg, rgba(37,99,235,0.05) 0%, transparent 60%)' }}>
+        <div style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 6 }}>
           {dayNames[today.getDay()]}, {today.getDate()} {monthNames[today.getMonth()]}
         </div>
-        <h1 style={{ fontSize: 36, lineHeight: 1.05, marginBottom: 2 }}>{greeting},<br />Celia 👋</h1>
-        <div style={{ height: 3, width: 48, background: 'var(--accent-gradient)', borderRadius: 2, marginTop: 12 }} />
+        <h1 style={{ fontSize: 38, lineHeight: 1.0, marginBottom: 0 }}>{greeting},<br />Celia 👋</h1>
+        <div style={{ height: 3, width: 48, background: 'var(--accent-gradient)', borderRadius: 2, marginTop: 14 }} />
       </div>
 
       <div className="page-content" style={{ paddingTop: 4 }}>
-        {stats.fatigueAlerts?.filter(a => !dismissedAlerts.has(a.athlete_id)).length > 0 && (
-          <div className="fade-in-1" style={{ background: 'var(--error-dim)', border: '1px solid rgba(220,38,38,0.25)', borderRadius: 'var(--radius)', padding: '14px 16px' }}>
-            <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 800, fontSize: 15, color: 'var(--error)', textTransform: 'uppercase', marginBottom: 8 }}>
-              ⚠️ Cansancio alto pre-sesión
+
+        {/* Alerta cansancio */}
+        {visibleFatigueAlerts.length > 0 && (
+          <div className="fade-in-1" style={{ borderRadius: 'var(--radius)', overflow: 'hidden', boxShadow: '0 4px 20px rgba(220,38,38,0.12)' }}>
+            <div style={{ background: 'var(--error)', padding: '10px 16px', display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ fontSize: 16 }}>⚠️</span>
+              <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 800, fontSize: 14, color: '#fff', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                Cansancio alto pre-sesión
+              </span>
             </div>
-            {stats.fatigueAlerts.filter(a => !dismissedAlerts.has(a.athlete_id)).map((a, i) => {
+            {visibleFatigueAlerts.map((a, i) => {
               const athlete = athleteMap[a.athlete_id]
               return (
                 <div key={i} onClick={() => {
                   dismissAlert(a.athlete_id)
                   navigate('/messages', { state: { chatId: a.athlete_id, fatigueAlert: { name: athlete?.name, fatigue: a.fatigue_pre, session: a.sessions?.title, athleteId: a.athlete_id } } })
-                }} style={{ fontSize: 13, color: 'var(--text)', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', background: 'rgba(220,38,38,0.08)', borderRadius: 10, cursor: 'pointer', transition: 'background 0.15s' }}>
-                  <div style={{ width: 10, height: 10, borderRadius: '50%', background: athlete?.color || 'var(--error)', flexShrink: 0 }} />
+                }} style={{ background: 'var(--card)', padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer', borderBottom: i < visibleFatigueAlerts.length-1 ? '1px solid var(--border)' : 'none' }}>
+                  {athlete?.avatar_url
+                    ? <img src={athlete.avatar_url} style={{ width: 36, height: 36, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
+                    : <div style={{ width: 36, height: 36, borderRadius: '50%', background: athlete?.color+'20', color: athlete?.color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 13, flexShrink: 0, fontFamily: "'Barlow Condensed', sans-serif" }}>
+                        {athlete?.name?.split(' ').map(w=>w[0]).join('').slice(0,2) || '?'}
+                      </div>
+                  }
                   <div style={{ flex: 1 }}>
-                    <strong>{athlete?.name || 'Deportista'}</strong> — {a.sessions?.title}
-                    <span style={{ color: 'var(--error)', marginLeft: 6 }}>Cansancio: <strong>{a.fatigue_pre}/10</strong></span>
+                    <div style={{ fontWeight: 700, fontSize: 14 }}>{athlete?.name || 'Deportista'}</div>
+                    <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{a.sessions?.title}</div>
                   </div>
-                  <span style={{ fontSize: 16, color: 'var(--accent)' }}>💬 →</span>
+                  <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                    <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 900, fontSize: 22, color: 'var(--error)', lineHeight: 1 }}>{a.fatigue_pre}<span style={{ fontSize: 12 }}>/10</span></div>
+                    <div style={{ fontSize: 11, color: 'var(--accent)', fontWeight: 600 }}>Hablar →</div>
+                  </div>
                 </div>
               )
             })}
-            <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>
-              Toca para abrir el chat y valorar con ellas
-            </div>
           </div>
         )}
 
-        {stats.showPaymentReminder && (
-          <div className="fade-in-1" onClick={() => navigate('/payments')} style={{ background: 'var(--accent-gradient)', borderRadius: 'var(--radius)', padding: '16px 18px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 12, boxShadow: 'var(--accent-glow)' }}>
-            <span style={{ fontSize: 26 }}>💳</span>
+        {/* Pagos pendientes — solo inicio de mes */}
+        {stats.pendingPayments > 0 && today.getDate() <= 7 && (
+          <div className="fade-in-1" onClick={() => navigate('/payments')} style={{ background: 'var(--accent-gradient)', borderRadius: 'var(--radius)', padding: '14px 18px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 12, boxShadow: 'var(--accent-glow)' }}>
+            <span style={{ fontSize: 24 }}>💳</span>
             <div style={{ flex: 1 }}>
-              <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 800, fontSize: 16, color: '#fff', textTransform: 'uppercase' }}>
-                Pagos pendientes — {stats.monthName}
+              <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 800, fontSize: 15, color: '#fff', textTransform: 'uppercase' }}>
+                {stats.pendingPayments} pago{stats.pendingPayments > 1 ? 's' : ''} pendiente{stats.pendingPayments > 1 ? 's' : ''} — {stats.monthName}
               </div>
-              <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.8)', marginTop: 2 }}>
-                {stats.pendingPayments} deportista{stats.pendingPayments > 1 ? 's' : ''} sin pagar
-              </div>
+              <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.8)', marginTop: 2 }}>Toca para gestionar</div>
             </div>
-            <span style={{ color: 'rgba(255,255,255,0.8)', fontSize: 20 }}>→</span>
+            <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: 22 }}>→</span>
           </div>
         )}
 
-        <div className="section-title fade-in-1">Resumen del equipo</div>
+        {/* Stats */}
+        <div className="section-title fade-in-1">Resumen</div>
         <div className="grid-2 fade-in-2">
-          <StatCard value={stats.active} label="Activos" color="var(--success)" />
-          <StatCard value={stats.injured} label="Lesionados" color="var(--error)" />
-          <StatCard value={stats.sessionsThisMonth} label="Sesiones" color="var(--accent)" />
-          <StatCard value={`${stats.paidCount}/${stats.totalPayments}`} label="Pagos al día" color="var(--info)" />
+          <StatCard value={stats.active} label="Activos" color="var(--success)" icon="👥" onClick={() => navigate('/athletes')} />
+          <StatCard value={stats.injured} label="Lesionados" color="var(--error)" icon="🩹" onClick={() => navigate('/health')} />
+          <StatCard value={stats.sessionsThisMonth} label="Sesiones" color="var(--accent)" icon="📅" onClick={() => navigate('/training')} />
+          <StatCard value={`${stats.paidCount}/${stats.totalPayments}`} label="Pagos al día" color="#059669" icon="💳" onClick={() => navigate('/payments')} />
         </div>
 
-        <div className="section-title" style={{ marginTop: 8 }}>Próximas sesiones</div>
-        {upcomingSessions.length === 0 ? (
-          <div style={{ color: 'var(--text-muted)', fontSize: 14, padding: '12px 0' }}>No hay sesiones programadas</div>
-        ) : (
-          <div className="card">
-            {upcomingSessions.map((s, i) => <SessionRow key={s.id} session={s} last={i === upcomingSessions.length - 1} onClick={() => navigate('/training')} />)}
-          </div>
+        {/* Próximas sesiones */}
+        {upcomingSessions.length > 0 && (
+          <>
+            <div className="section-title" style={{ marginTop: 4 }}>Próximas sesiones</div>
+            <div className="card fade-in-3">
+              {upcomingSessions.map((s, i) => (
+                <SessionRow key={s.id} session={s} last={i === upcomingSessions.length - 1} onClick={() => navigate('/training')} />
+              ))}
+            </div>
+          </>
         )}
 
+        {/* Lesiones activas */}
         {recentInjuries.length > 0 && (
           <>
-            <div className="section-title" style={{ marginTop: 8 }}>Lesiones activas</div>
-            <div className="card">
-              {recentInjuries.map(inj => {
+            <div className="section-title" style={{ marginTop: 4 }}>Lesiones activas</div>
+            <div className="card fade-in-4">
+              {recentInjuries.map((inj, i) => {
                 const athlete = athleteMap[inj.athlete_id]
+                const SEV = { mild: { color: 'var(--success)', label: 'Leve' }, moderate: { color: 'var(--warning)', label: 'Moderada' }, severe: { color: 'var(--error)', label: 'Grave' } }
+                const sev = SEV[inj.severity] || SEV.mild
                 return (
-                  <div key={inj.id} className="list-item" onClick={() => navigate('/health')}>
-                    <div className="avatar" style={{ background: 'var(--error-dim)', color: 'var(--error)', fontSize: 16 }}>🩹</div>
+                  <div key={inj.id} className="list-item" onClick={() => navigate('/health')}
+                    style={{ borderBottom: i < recentInjuries.length-1 ? undefined : 'none' }}>
+                    {athlete?.avatar_url
+                      ? <img src={athlete.avatar_url} style={{ width: 40, height: 40, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
+                      : <div className="avatar" style={{ background: athlete?.color+'20', color: athlete?.color }}>
+                          {athlete?.name?.split(' ').map(w=>w[0]).join('').slice(0,2) || '?'}
+                        </div>
+                    }
                     <div style={{ flex: 1 }}>
-                      <div style={{ fontWeight: 600, fontSize: 14 }}>{athlete?.name || 'Deportista'}</div>
-                      <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>{inj.type} · {inj.body_part}</div>
+                      <div style={{ fontWeight: 700, fontSize: 14 }}>{athlete?.name || 'Deportista'}</div>
+                      <div style={{ color: 'var(--text-muted)', fontSize: 12 }}>{inj.type} · {inj.body_part}</div>
                     </div>
-                    <span className="badge badge-red">Activa</span>
+                    <span className="badge" style={{ background: sev.color+'15', color: sev.color }}>{sev.label}</span>
                   </div>
                 )
               })}
@@ -181,31 +206,24 @@ export default function Dashboard() {
           </>
         )}
 
-        {stats.pendingPayments > 0 && (
-          <>
-            <div className="section-title" style={{ marginTop: 8 }}>Alertas</div>
-            <div onClick={() => navigate('/payments')} style={{
-              background: 'var(--accent-dim)', border: '1px solid rgba(245,158,11,0.3)',
-              borderRadius: 'var(--radius)', padding: '14px 16px',
-              display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer'
-            }}>
-              <span style={{ fontSize: 24 }}>💳</span>
-              <div>
-                <div style={{ fontWeight: 600, fontSize: 14 }}>{stats.pendingPayments} pago{stats.pendingPayments > 1 ? 's' : ''} pendiente{stats.pendingPayments > 1 ? 's' : ''}</div>
-                <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>Toca para gestionar</div>
-              </div>
-              <span style={{ marginLeft: 'auto', color: 'var(--text-muted)' }}>›</span>
-            </div>
-          </>
+        {/* Empty state si no hay nada próximo */}
+        {upcomingSessions.length === 0 && recentInjuries.length === 0 && visibleFatigueAlerts.length === 0 && (
+          <div style={{ textAlign: 'center', padding: '32px 0', color: 'var(--text-muted)' }}>
+            <div style={{ fontSize: 48, marginBottom: 12, opacity: 0.4 }}>🌟</div>
+            <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 800, fontSize: 18, textTransform: 'uppercase', color: 'var(--text-dim)' }}>Todo en orden</div>
+            <div style={{ fontSize: 14, marginTop: 6 }}>Sin sesiones ni alertas pendientes</div>
+          </div>
         )}
+
       </div>
     </div>
   )
 }
 
-function StatCard({ value, label, color }) {
+function StatCard({ value, label, color, icon, onClick }) {
   return (
-    <div className="stat-card">
+    <div className="stat-card" onClick={onClick} style={{ cursor: onClick ? 'pointer' : 'default', position: 'relative', overflow: 'hidden' }}>
+      <div style={{ position: 'absolute', top: 12, right: 14, fontSize: 22, opacity: 0.15 }}>{icon}</div>
       <div className="stat-value" style={{ color }}>{value}</div>
       <div className="stat-label">{label}</div>
     </div>
@@ -213,30 +231,29 @@ function StatCard({ value, label, color }) {
 }
 
 function SessionRow({ session, last, onClick }) {
-  const typeColors = { strength: 'var(--accent)', cardio: 'var(--info)', flexibility: 'var(--success)', mixed: 'var(--text-muted)' }
-  const typeLabels = { strength: 'Fuerza', cardio: 'Cardio', flexibility: 'Flexibilidad', mixed: 'Mixta' }
   const date = new Date(session.date + 'T12:00:00')
-  const dayNames = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb']
-  const monthNames = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic']
+  const days = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb']
+  const months = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic']
+  const isToday = session.date === new Date().toISOString().slice(0,10)
+  const color = TYPE_COLORS[session.type] || 'var(--accent)'
+  const icon = TYPE_ICONS[session.type] || '📅'
+  const label = TYPE_LABELS[session.type] || session.type
 
   return (
     <div className="list-item" onClick={onClick} style={{ borderBottom: last ? 'none' : undefined }}>
-      <div style={{
-        width: 52, height: 52, borderRadius: 'var(--radius-sm)',
-        background: 'var(--border)', display: 'flex', flexDirection: 'column',
-        alignItems: 'center', justifyContent: 'center', flexShrink: 0
-      }}>
-        <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--accent)' }}>{dayNames[date.getDay()]}</div>
-        <div style={{ fontSize: 16, fontWeight: 700 }}>{date.getDate()}</div>
-        <div style={{ fontSize: 10, color: 'var(--text-muted)' }}>{monthNames[date.getMonth()]}</div>
+      <div style={{ width: 52, height: 52, borderRadius: 14, background: isToday ? 'var(--accent)' : `${color}15`, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flexShrink: 0, border: isToday ? 'none' : `1.5px solid ${color}30` }}>
+        <div style={{ fontSize: 10, fontWeight: 800, color: isToday ? '#fff' : color, fontFamily: "'Barlow Condensed', sans-serif", textTransform: 'uppercase' }}>{days[date.getDay()]}</div>
+        <div style={{ fontSize: 18, fontWeight: 900, color: isToday ? '#fff' : 'var(--text)', lineHeight: 1, fontFamily: "'Barlow Condensed', sans-serif" }}>{date.getDate()}</div>
+        <div style={{ fontSize: 9, color: isToday ? 'rgba(255,255,255,0.8)' : 'var(--text-muted)', fontFamily: "'Barlow Condensed', sans-serif" }}>{months[date.getMonth()]}</div>
       </div>
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontWeight: 600, fontSize: 14, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{session.title}</div>
-        <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>{session.duration} min · {session.athlete_ids?.length || 0} deportistas</div>
+        <div style={{ fontWeight: 700, fontSize: 14, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{session.title}</div>
+        <div style={{ color: 'var(--text-muted)', fontSize: 12, marginTop: 2 }}>{session.duration} min · {session.athlete_ids?.length || 0} deportistas</div>
       </div>
-      <span className="badge" style={{ background: `${typeColors[session.type]}20`, color: typeColors[session.type] }}>
-        {typeLabels[session.type] || session.type}
-      </span>
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4, flexShrink: 0 }}>
+        {isToday && <span className="badge badge-green" style={{ fontSize: 10 }}>HOY</span>}
+        <span style={{ fontSize: 18 }}>{icon}</span>
+      </div>
     </div>
   )
 }
