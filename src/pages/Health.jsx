@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Injuries, Athletes } from '../lib/db'
+import { supabase } from '../lib/supabase'
 
 const BODY_PARTS = ['Tobillo','Rodilla','Cadera','Espalda baja','Espalda alta','Hombro','Codo','Muñeca','Cuello','Muslo','Gemelo','Pie','Mano','Cabeza']
 const TYPES = ['Esguince','Contractura','Rotura fibrilar','Tendinitis','Fractura','Contusión','Sobrecarga','Luxación','Otro']
@@ -37,13 +38,29 @@ export default function Health() {
   const save = async () => {
     if (!form.athlete_id) return
     setSaving(true)
-    if (editing) await Injuries.update(editing, form)
-    else await Injuries.create(form)
+    // Limpiar campos vacíos → null
+    const clean = { ...form, date_end: form.date_end || null, notes: form.notes || null }
+    if (editing) {
+      await Injuries.update(editing, clean)
+    } else {
+      await Injuries.create(clean)
+      // Marcar atleta como lesionado si la lesión está activa
+      const today = new Date().toISOString().slice(0,10)
+      const isActive = !clean.date_end || clean.date_end >= today
+      if (isActive) await supabase.from('athletes').update({ status: 'injured' }).eq('id', form.athlete_id)
+    }
     await load(); setSaving(false); setSheet(null)
   }
 
   const discharge = async (id) => {
+    const inj = injuries.find(i => i.id === id)
     await Injuries.update(id, { date_end: new Date().toISOString().slice(0,10) })
+    // Volver a 'active' si no tiene otras lesiones activas
+    if (inj?.athlete_id) {
+      const today = new Date().toISOString().slice(0,10)
+      const otherActive = injuries.filter(i => i.id !== id && i.athlete_id === inj.athlete_id && (!i.date_end || i.date_end >= today))
+      if (!otherActive.length) await supabase.from('athletes').update({ status: 'active' }).eq('id', inj.athlete_id)
+    }
     await load()
   }
 
