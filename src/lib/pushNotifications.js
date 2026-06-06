@@ -40,14 +40,16 @@ export async function subscribeCoachToPush(userId) {
   if (!sub) return null
   const subJson = sub.toJSON()
   console.log('[Push] subJson:', subJson)
-  const { data, error } = await supabase.from('push_subscriptions').upsert({
+  // Borrar suscripción anterior del coach si existe, luego insertar
+  await supabase.from('push_subscriptions').delete().eq('endpoint', subJson.endpoint)
+  const { data, error } = await supabase.from('push_subscriptions').insert({
     user_id: userId,
     athlete_id: null,
     endpoint: subJson.endpoint,
     p256dh: subJson.keys.p256dh,
     auth: subJson.keys.auth,
-  }, { onConflict: 'endpoint' })
-  console.log('[Push] upsert result:', { data, error })
+  })
+  console.log('[Push] insert result:', { data, error })
   return sub
 }
 
