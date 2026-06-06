@@ -7,6 +7,7 @@ import DocsPage from './Documents'
 import Progress from './Progress'
 import { AchievementsHomeSection, StreakBadge, WeeklyPlan, calculateStreak, checkAndUnlockAchievements } from './Achievements'
 import { Records } from '../lib/db'
+import { usePushNotifications } from '../hooks/usePushNotifications'
 
 const TYPE_ICONS  = { run:'🏃', fuerza:'💪', series:'⚡', endurance:'🫁', especifico:'🎯', ergometros:'🚣', cardio:'❤️', rest_day:'😴', strength:'💪', flexibility:'🧘', mixed:'⚡' }
 const TYPE_COLORS = { run:'#10B981', fuerza:'#F59E0B', series:'#EF4444', endurance:'#3B82F6', especifico:'#8B5CF6', ergometros:'#14B8A6', cardio:'#EC4899', rest_day:'#9CA3AF', strength:'#F59E0B', flexibility:'#10B981', mixed:'#9CA3AF' }
@@ -30,6 +31,7 @@ export default function AthleteView() {
   const [unreadMessages, setUnreadMessages] = useState(0)
   const [unratedCount, setUnratedCount] = useState(0)
   const [profileOpen, setProfileOpen] = useState(false)
+  const { subscribed: pushSubscribed, loading: pushLoading, supported: pushSupported, enable: enablePush, disable: disablePush } = usePushNotifications(athleteId)
 
   // Mensajes no leídos
   useEffect(() => {
@@ -148,6 +150,16 @@ export default function AthleteView() {
                   <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 2 }}>Deportista · Northstone</div>
                 </div>
               </div>
+              {pushSupported && (
+                <button
+                  className="btn btn-secondary btn-full"
+                  onClick={pushSubscribed ? disablePush : enablePush}
+                  disabled={pushLoading}
+                  style={{ marginBottom: 12 }}
+                >
+                  {pushLoading ? 'Un momento...' : pushSubscribed ? '🔕 Desactivar notificaciones' : '🔔 Activar notificaciones'}
+                </button>
+              )}
               <button className="btn btn-secondary btn-full" onClick={signOut} style={{ color: 'var(--error)', borderColor: 'rgba(220,38,38,0.3)' }}>
                 Cerrar sesión
               </button>

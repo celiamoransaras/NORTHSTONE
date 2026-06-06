@@ -3,6 +3,7 @@ import { Sessions, Athletes } from '../lib/db'
 import ConfirmSheet from '../components/ConfirmSheet'
 import { useToast } from '../contexts/ToastContext'
 import { haptic } from '../lib/haptic'
+import { sendPushToAthletes } from '../lib/pushNotifications'
 
 const TYPE_OPTS = [
   { value: 'run',        label: '🏃 Run' },
@@ -84,8 +85,20 @@ export default function Training({ athleteId = null, coachView = false, embedded
       if (athleteId && !safeForm.athlete_ids.includes(athleteId)) {
         safeForm.athlete_ids = [...safeForm.athlete_ids, athleteId]
       }
-      if (editing) await Sessions.update(editing, safeForm)
-      else await Sessions.create(safeForm)
+      if (editing) {
+        await Sessions.update(editing, safeForm)
+      } else {
+        await Sessions.create(safeForm)
+        // Notificar a los deportistas convocados
+        if (safeForm.athlete_ids?.length) {
+          const dateLabel = new Date(safeForm.date + 'T12:00:00').toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })
+          sendPushToAthletes(safeForm.athlete_ids, {
+            title: '📅 Nueva sesión asignada',
+            body: `${safeForm.title} · ${dateLabel}`,
+            url: '/',
+          })
+        }
+      }
       await load()
       setSheet(null)
       haptic('success')
