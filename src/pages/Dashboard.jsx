@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Athletes, Sessions, Injuries, Payments } from '../lib/db'
 import { supabase } from '../lib/supabase'
+import { getDismissed, dismissFatigueAlert, subscribeAlerts } from '../lib/alertState'
 
 export default function Dashboard() {
   const navigate = useNavigate()
@@ -9,16 +10,15 @@ export default function Dashboard() {
   const [upcomingSessions, setUpcomingSessions] = useState([])
   const [recentInjuries, setRecentInjuries] = useState([])
   const [athleteMap, setAthleteMap] = useState({})
-  const today = new Date().toISOString().slice(0,10)
-  const STORAGE_KEY = `dismissed_fatigue_${today}`
-  const [dismissedAlerts, setDismissedAlerts] = useState(
-    () => JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]')
-  )
+  const [dismissedAlerts, setDismissedAlerts] = useState(() => getDismissed())
+
+  useEffect(() => {
+    return subscribeAlerts(() => setDismissedAlerts(new Set(getDismissed())))
+  }, [])
 
   const dismissAlert = (athleteId) => {
-    const updated = [...new Set([...dismissedAlerts, athleteId])]
-    setDismissedAlerts(updated)
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(updated))
+    dismissFatigueAlert(athleteId)
+    setDismissedAlerts(new Set(getDismissed()))
   }
 
   useEffect(() => {
@@ -101,12 +101,12 @@ export default function Dashboard() {
       </div>
 
       <div className="page-content" style={{ paddingTop: 4 }}>
-        {stats.fatigueAlerts?.filter(a => !dismissedAlerts.includes(a.athlete_id)).length > 0 && (
+        {stats.fatigueAlerts?.filter(a => !dismissedAlerts.has(a.athlete_id)).length > 0 && (
           <div className="fade-in-1" style={{ background: 'var(--error-dim)', border: '1px solid rgba(220,38,38,0.25)', borderRadius: 'var(--radius)', padding: '14px 16px' }}>
             <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 800, fontSize: 15, color: 'var(--error)', textTransform: 'uppercase', marginBottom: 8 }}>
               ⚠️ Cansancio alto pre-sesión
             </div>
-            {stats.fatigueAlerts.filter(a => !dismissedAlerts.includes(a.athlete_id)).map((a, i) => {
+            {stats.fatigueAlerts.filter(a => !dismissedAlerts.has(a.athlete_id)).map((a, i) => {
               const athlete = athleteMap[a.athlete_id]
               return (
                 <div key={i} onClick={() => {

@@ -3,6 +3,7 @@ import { useLocation } from 'react-router-dom'
 import { Messages as DB, Athletes, Reactions } from '../lib/db'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
+import { dismissFatigueAlert } from '../lib/alertState'
 
 const REACTION_EMOJIS = ['👍','❤️','🔥','💪','😂','👏']
 
@@ -215,12 +216,8 @@ export default function Messages() {
               <strong>{fatigueAlert.name}</strong> reportó cansancio <strong style={{ color: 'var(--error)' }}>{fatigueAlert.fatigue}/10</strong> antes de <em>{fatigueAlert.session}</em>
             </div>
             <button onClick={() => {
+              if (fatigueAlert?.athleteId) dismissFatigueAlert(fatigueAlert.athleteId)
               setFatigueAlert(null)
-              if (fatigueAlert.athleteId) {
-                const key = `dismissed_fatigue_${new Date().toISOString().slice(0,10)}`
-                const current = JSON.parse(localStorage.getItem(key) || '[]')
-                localStorage.setItem(key, JSON.stringify([...new Set([...current, fatigueAlert.athleteId])]))
-              }
             }} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: 18, cursor: 'pointer', padding: 4 }}>✕</button>
           </div>
         )}
