@@ -3,6 +3,34 @@ import { Athletes as DB, Sessions, Storage } from '../lib/db'
 import Training from './Training'
 import { GoalsSection, RecordsSection, LoadChart } from './Progress'
 
+function getWeekRange() {
+  const now = new Date()
+  const mon = new Date(now)
+  mon.setDate(now.getDate() - ((now.getDay() + 6) % 7))
+  const sun = new Date(mon)
+  sun.setDate(mon.getDate() + 6)
+  return [mon.toISOString().slice(0,10), sun.toISOString().slice(0,10)]
+}
+
+function useWeeklyStats(athletes) {
+  const [stats, setStats] = useState({})
+  useEffect(() => {
+    if (!athletes.length) return
+    Sessions.getAll().then(sessions => {
+      const [weekStart, weekEnd] = getWeekRange()
+      const weekSessions = sessions.filter(s => s.date >= weekStart && s.date <= weekEnd)
+      const map = {}
+      athletes.forEach(a => {
+        const assigned = weekSessions.filter(s => s.athlete_ids?.includes(a.id))
+        const done = assigned.filter(s => s.attendance?.[a.id] === true)
+        map[a.id] = { assigned: assigned.length, done: done.length }
+      })
+      setStats(map)
+    })
+  }, [athletes])
+  return stats
+}
+
 const COLORS = ['#F59E0B','#10B981','#3B82F6','#EC4899','#8B5CF6','#EF4444','#14B8A6','#F97316']
 const STATUS_OPTS = [{ value: 'active', label: 'Activo' }, { value: 'injured', label: 'Lesionado' }, { value: 'inactive', label: 'Baja' }]
 const emptyForm = { name: '', email: '', phone: '', dob: '', sport: 'Híbrido', color: COLORS[0], status: 'active', notes: '' }
@@ -25,6 +53,7 @@ export default function Athletes() {
     setLoading(false)
   }
   useEffect(() => { load() }, [])
+  const weeklyStats = useWeeklyStats(athletes)
 
   const filtered = athletes.filter(a =>
     a.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -114,7 +143,15 @@ export default function Athletes() {
                   <div style={{ fontWeight: 700, fontSize: 15 }}>{a.name}</div>
                   <div style={{ color: 'var(--text-muted)', fontSize: 12, marginTop: 1 }}>{a.sport || 'Sin deporte'}</div>
                 </div>
-                <span className={`badge ${statusBadge(a.status)}`}>{statusLabel(a.status)}</span>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
+                  <span className={`badge ${statusBadge(a.status)}`}>{statusLabel(a.status)}</span>
+                  {weeklyStats[a.id]?.assigned > 0 && (
+                    <span style={{ fontSize: 11, fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700,
+                      color: weeklyStats[a.id].done === weeklyStats[a.id].assigned ? 'var(--success)' : weeklyStats[a.id].done > 0 ? 'var(--warning)' : 'var(--text-muted)' }}>
+                      📅 {weeklyStats[a.id].done}/{weeklyStats[a.id].assigned} esta semana
+                    </span>
+                  )}
+                </div>
               </div>
             ))}
           </div>
@@ -150,6 +187,7 @@ export default function Athletes() {
                       <span className={`badge ${statusBadge(sheet.status)}`}>{statusLabel(sheet.status)}</span>
                     </div>
                   </div>
+                  <WeeklyAdherence athleteId={sheet.id} color={sheet.color} />
                   <InfoRow icon="✉️" label="Email" val={sheet.email || '—'} />
                   <InfoRow icon="📱" label="Teléfono" val={sheet.phone || '—'} />
                   <InfoRow icon="🎂" label="Fecha de nacimiento" val={sheet.dob ? new Date(sheet.dob+'T12:00:00').toLocaleDateString('es-ES') : '—'} />
@@ -274,6 +312,54 @@ function InfoRow({ icon, label, val }) {
       <div>
         <div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.4px' }}>{label}</div>
         <div style={{ fontSize: 15, marginTop: 2 }}>{val}</div>
+      </div>
+    </div>
+  )
+}
+
+function WeeklyAdherence({ athleteId, color }) {
+  const [data, setData] = useState(null)
+
+  useEffect(() => {
+    const [weekStart, weekEnd] = getWeekRange()
+    Sessions.getAll().then(sessions => {
+      const week = sessions.filter(s => s.date >= weekStart && s.date <= weekEnd && s.athlete_ids?.includes(athleteId))
+      const done = week.filter(s => s.attendance?.[athleteId] === true)
+      setData({ week, done })
+    })
+  }, [athleteId])
+
+  if (!data || data.week.length === 0) return null
+
+  const pct = data.week.length ? Math.round((data.done.length / data.week.length) * 100) : 0
+  const barColor = pct === 100 ? 'var(--success)' : pct >= 50 ? 'var(--warning)' : 'var(--error)'
+
+  return (
+    <div className="card" style={{ padding: '14px 16px', marginBottom: 16 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+        <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 800, fontSize: 13, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+          📅 Adherencia esta semana
+        </div>
+        <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 900, fontSize: 20, color: barColor }}>
+          {data.done.length}/{data.week.length}
+        </div>
+      </div>
+      <div style={{ height: 6, background: 'var(--bg)', borderRadius: 3, marginBottom: 10 }}>
+        <div style={{ height: '100%', width: `${pct}%`, background: barColor, borderRadius: 3, transition: 'width 0.4s ease' }} />
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+        {data.week.map(s => {
+          const done = s.attendance?.[athleteId] === true
+          return (
+            <div key={s.id} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <div style={{ width: 20, height: 20, borderRadius: '50%', background: done ? 'var(--success)' : 'var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                {done && <span style={{ color: '#fff', fontSize: 11 }}>✓</span>}
+              </div>
+              <div style={{ fontSize: 13, flex: 1 }}>{s.title}</div>
+              <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{new Date(s.date+'T12:00:00').toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric' })}</div>
+            </div>
+          )
+        })}
       </div>
     </div>
   )
