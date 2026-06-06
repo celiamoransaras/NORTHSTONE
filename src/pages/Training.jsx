@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Sessions, Athletes } from '../lib/db'
+import ConfirmSheet from '../components/ConfirmSheet'
 
 const TYPE_OPTS = [
   { value: 'run',        label: '🏃 Run' },
@@ -34,6 +35,7 @@ export default function Training({ athleteId = null, coachView = false, embedded
   const [editing, setEditing] = useState(null)
   const [detailSession, setDetailSession] = useState(null)
   const [saving, setSaving] = useState(false)
+  const [confirmDelete, setConfirmDelete] = useState(null)
   const [tab, setTab] = useState('upcoming')
   const [templates, setTemplates] = useState(() => {
     try { return JSON.parse(localStorage.getItem('ns_session_templates') || '[]') } catch { return [] }
@@ -78,7 +80,7 @@ export default function Training({ athleteId = null, coachView = false, embedded
     await load(); setSaving(false); setSheet(null)
   }
 
-  const remove = async (id) => { await Sessions.delete(id); await load(); setSheet(null) }
+  const remove = async (id) => { await Sessions.delete(id); await load(); setSheet(null); setConfirmDelete(null) }
 
   const saveAsTemplate = () => {
     if (!form.title.trim()) return
@@ -215,11 +217,20 @@ export default function Training({ athleteId = null, coachView = false, embedded
               )}
 
               {(!athleteId || coachView) && (
-                <><div className="divider" /><button className="btn btn-danger btn-full" onClick={() => remove(detailSession.id)}>🗑 Eliminar sesión</button></>
+                <><div className="divider" /><button className="btn btn-danger btn-full" onClick={() => setConfirmDelete(detailSession.id)}>🗑 Eliminar sesión</button></>
               )}
             </div>
           </div>
         </>
+      )}
+
+      {confirmDelete && (
+        <ConfirmSheet
+          title="Eliminar sesión"
+          message="Esta acción no se puede deshacer. Se eliminará la sesión y todos sus datos."
+          onConfirm={() => remove(confirmDelete)}
+          onCancel={() => setConfirmDelete(null)}
+        />
       )}
 
       {/* Form */}

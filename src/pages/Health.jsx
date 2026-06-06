@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Injuries, Athletes } from '../lib/db'
 import { supabase } from '../lib/supabase'
+import ConfirmSheet from '../components/ConfirmSheet'
 
 const BODY_PARTS = ['Tobillo','Rodilla','Cadera','Espalda baja','Espalda alta','Hombro','Codo','Muñeca','Cuello','Muslo','Gemelo','Pie','Mano','Cabeza']
 const TYPES = ['Esguince','Contractura','Rotura fibrilar','Tendinitis','Fractura','Contusión','Sobrecarga','Luxación','Otro']
@@ -22,6 +23,7 @@ export default function Health() {
   const [form, setForm] = useState(emptyForm)
   const [editing, setEditing] = useState(null)
   const [saving, setSaving] = useState(false)
+  const [confirmDelete, setConfirmDelete] = useState(null)
 
   const load = async () => {
     const [inj, ath] = await Promise.all([Injuries.getAll(), Athletes.getAll()])
@@ -68,7 +70,7 @@ export default function Health() {
   }
 
   const remove = async (id) => {
-    await Injuries.delete(id); await load(); setSheet(null)
+    await Injuries.delete(id); await load(); setSheet(null); setConfirmDelete(null)
   }
 
   const getAthlete = (id) => athletes.find(a => a.id === id)
@@ -180,6 +182,15 @@ export default function Health() {
         })}
       </div>
 
+      {confirmDelete && (
+        <ConfirmSheet
+          title="Eliminar lesión"
+          message="Se eliminará el registro de esta lesión permanentemente."
+          onConfirm={() => remove(confirmDelete)}
+          onCancel={() => setConfirmDelete(null)}
+        />
+      )}
+
       {/* Form sheet */}
       {sheet === 'form' && (
         <>
@@ -189,7 +200,7 @@ export default function Health() {
             <div className="sheet-header">
               <h3>{editing ? 'Editar lesión' : 'Nueva lesión'}</h3>
               <div style={{ display: 'flex', gap: 8 }}>
-                {editing && <button className="btn btn-danger btn-sm" onClick={() => remove(editing)}>🗑</button>}
+                {editing && <button className="btn btn-danger btn-sm" onClick={() => setConfirmDelete(editing)}>🗑</button>}
                 <button className="btn btn-ghost btn-sm" onClick={() => setSheet(null)}>✕</button>
               </div>
             </div>

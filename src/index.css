@@ -299,8 +299,9 @@ textarea { resize: vertical; min-height: 88px; }
   border-radius: 28px 28px 0 0;
   box-shadow: 0 -12px 48px rgba(0,0,0,0.12);
   z-index: 101;
-  max-height: 92vh;
+  max-height: min(92dvh, 92vh);
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
   animation: slideUp 0.32s cubic-bezier(0.32, 0.72, 0, 1);
 }
 
@@ -330,7 +331,7 @@ textarea { resize: vertical; min-height: 88px; }
 
 .sheet-body {
   padding: 20px;
-  padding-bottom: 40px;
+  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 32px);
 }
 
 /* ---- Stat card ---- */

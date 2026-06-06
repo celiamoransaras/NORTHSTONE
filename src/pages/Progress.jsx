@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Records, Goals, Wellness } from '../lib/db'
 import { supabase } from '../lib/supabase'
+import ConfirmSheet from '../components/ConfirmSheet'
 
 // ---- Check-in diario ----
 function WellnessCheckin({ athleteId }) {
@@ -280,6 +281,7 @@ function WellnessHistory({ athleteId }) {
 function GoalsSection({ athleteId, canCreate }) {
   const [goals, setGoals] = useState([])
   const [sheet, setSheet] = useState(false)
+  const [confirmDelete, setConfirmDelete] = useState(null)
   const [form, setForm] = useState({ title: '', description: '', target_value: '', current_value: '', unit: '', deadline: '' })
   const [saving, setSaving] = useState(false)
 
@@ -310,6 +312,7 @@ function GoalsSection({ athleteId, canCreate }) {
   const del = async (id) => {
     await Goals.delete(id)
     setGoals(g => g.filter(x => x.id !== id))
+    setConfirmDelete(null)
   }
 
   const pct = (g) => g.target_value && g.current_value ? Math.min(100, Math.round((g.current_value / g.target_value) * 100)) : null
@@ -373,13 +376,22 @@ function GoalsSection({ athleteId, canCreate }) {
                     )}
                   </div>
                   {canCreate && (
-                    <button onClick={() => del(g.id)} style={{ color: 'var(--text-dim)', cursor: 'pointer', padding: 4, flexShrink: 0 }}>✕</button>
+                    <button onClick={() => setConfirmDelete(g.id)} style={{ color: 'var(--text-dim)', cursor: 'pointer', padding: 4, flexShrink: 0 }}>✕</button>
                   )}
                 </div>
               </div>
             )
           })}
         </div>
+      )}
+
+      {confirmDelete && (
+        <ConfirmSheet
+          title="Eliminar objetivo"
+          message="Se eliminará este objetivo permanentemente."
+          onConfirm={() => del(confirmDelete)}
+          onCancel={() => setConfirmDelete(null)}
+        />
       )}
 
       {sheet && (
@@ -525,7 +537,8 @@ function RecordsSection({ athleteId, canEdit }) {
   const [records, setRecords] = useState([])
   const [sheet, setSheet] = useState(false)
   const [editing, setEditing] = useState(null)
-  const [chartGroup, setChartGroup] = useState(null) // {name, recs, unit}
+  const [chartGroup, setChartGroup] = useState(null)
+  const [confirmDelete, setConfirmDelete] = useState(null) // {name, recs, unit}
   const emptyForm = { name: '', value: '', unit: 'min', date: new Date().toISOString().slice(0,10), notes: '' }
   const [form, setForm] = useState(emptyForm)
   const [saving, setSaving] = useState(false)
@@ -561,6 +574,7 @@ function RecordsSection({ athleteId, canEdit }) {
     await Records.delete(id)
     setRecords(r => r.filter(x => x.id !== id))
     setSheet(false)
+    setConfirmDelete(null)
   }
 
   return (
@@ -699,6 +713,15 @@ function RecordsSection({ athleteId, canEdit }) {
         </>
       )}
 
+      {confirmDelete && (
+        <ConfirmSheet
+          title="Eliminar marca"
+          message="Se eliminará este registro permanentemente."
+          onConfirm={() => del(confirmDelete)}
+          onCancel={() => setConfirmDelete(null)}
+        />
+      )}
+
       {sheet && (
         <>
           <div className="overlay" onClick={() => setSheet(false)} />
@@ -707,7 +730,7 @@ function RecordsSection({ athleteId, canEdit }) {
             <div className="sheet-header">
               <h3>{editing ? 'Editar marca' : 'Nueva marca'}</h3>
               <div style={{ display: 'flex', gap: 8 }}>
-                {editing && <button className="btn btn-danger btn-sm" onClick={() => del(editing)}>🗑</button>}
+                {editing && <button className="btn btn-danger btn-sm" onClick={() => setConfirmDelete(editing)}>🗑</button>}
                 <button className="btn btn-ghost btn-sm" onClick={() => setSheet(false)}>✕</button>
               </div>
             </div>
