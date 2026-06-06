@@ -424,11 +424,103 @@ function GoalsSection({ athleteId, canCreate }) {
   )
 }
 
+// ---- Gráfica de evolución de una marca ----
+function RecordChart({ recs, unit }) {
+  // ordenadas de más antigua a más reciente
+  const data = [...recs].sort((a, b) => a.date.localeCompare(b.date))
+  if (data.length < 2) return (
+    <div style={{ textAlign: 'center', padding: '24px 0', color: 'var(--text-muted)', fontSize: 13 }}>
+      Necesitas al menos 2 registros para ver la evolución
+    </div>
+  )
+
+  const W = 300, H = 110
+  const values = data.map(d => parseFloat(d.value))
+  const minV = Math.min(...values)
+  const maxV = Math.max(...values)
+  const range = maxV - minV || 1
+  const padV = range * 0.15
+
+  const toX = (i) => 16 + (i / (data.length - 1)) * (W - 32)
+  const toY = (v) => H - 8 - ((v - (minV - padV)) / (range + padV * 2)) * (H - 20)
+
+  const pts = data.map((d, i) => `${toX(i)},${toY(parseFloat(d.value))}`).join(' ')
+  const pathD = 'M ' + pts.split(' ').join(' L ')
+
+  // área bajo la curva
+  const areaD = `M ${toX(0)},${H} L ${pts.split(' ').join(' L ')} L ${toX(data.length-1)},${H} Z`
+
+  const fmtDate = (dateStr) => {
+    const d = new Date(dateStr + 'T12:00:00')
+    return `${d.getDate()}/${d.getMonth()+1}`
+  }
+
+  return (
+    <div style={{ overflowX: 'auto' }}>
+      <svg width="100%" viewBox={`0 0 ${W} ${H + 20}`} style={{ overflow: 'visible', minWidth: 260 }}>
+        {/* Grid lines */}
+        {[0, 0.5, 1].map(f => {
+          const y = toY(minV - padV + f * (range + padV * 2))
+          const v = (minV - padV + f * (range + padV * 2)).toFixed(1)
+          return (
+            <g key={f}>
+              <line x1={0} x2={W} y1={y} y2={y} stroke="var(--border-light)" strokeWidth={0.8} strokeDasharray="4 4" />
+              <text x={2} y={y - 3} fontSize={9} fill="var(--text-dim)" fontFamily="'Barlow Condensed', sans-serif">{v}</text>
+            </g>
+          )
+        })}
+        {/* Área */}
+        <path d={areaD} fill="var(--accent)" opacity={0.07} />
+        {/* Línea */}
+        <path d={pathD} fill="none" stroke="var(--accent)" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" />
+        {/* Puntos */}
+        {data.map((d, i) => {
+          const x = toX(i)
+          const y = toY(parseFloat(d.value))
+          const isLast = i === data.length - 1
+          const isBest = parseFloat(d.value) === Math.min(...values)
+          return (
+            <g key={i}>
+              <circle cx={x} cy={y} r={isLast ? 6 : 4}
+                fill={isBest ? 'var(--success)' : isLast ? 'var(--accent)' : 'var(--surface)'}
+                stroke={isBest ? 'var(--success)' : 'var(--accent)'}
+                strokeWidth={2} />
+              {isLast && (
+                <text x={x} y={y - 10} textAnchor="middle" fontSize={11} fontWeight="800"
+                  fill="var(--accent)" fontFamily="'Barlow Condensed', sans-serif">
+                  {d.value} {unit}
+                </text>
+              )}
+              {isBest && !isLast && (
+                <text x={x} y={y - 10} textAnchor="middle" fontSize={10} fontWeight="800"
+                  fill="var(--success)" fontFamily="'Barlow Condensed', sans-serif">
+                  ★
+                </text>
+              )}
+            </g>
+          )
+        })}
+        {/* Fechas eje X */}
+        {data.map((d, i) => {
+          const show = data.length <= 6 || i === 0 || i === data.length - 1 || i % Math.ceil(data.length / 5) === 0
+          return show ? (
+            <text key={i} x={toX(i)} y={H + 16} textAnchor="middle" fontSize={9}
+              fill="var(--text-dim)" fontFamily="'Barlow Condensed', sans-serif">
+              {fmtDate(d.date)}
+            </text>
+          ) : null
+        })}
+      </svg>
+    </div>
+  )
+}
+
 // ---- Marcas personales ----
 function RecordsSection({ athleteId, canEdit }) {
   const [records, setRecords] = useState([])
   const [sheet, setSheet] = useState(false)
   const [editing, setEditing] = useState(null)
+  const [chartGroup, setChartGroup] = useState(null) // {name, recs, unit}
   const emptyForm = { name: '', value: '', unit: 'min', date: new Date().toISOString().slice(0,10), notes: '' }
   const [form, setForm] = useState(emptyForm)
   const [saving, setSaving] = useState(false)
@@ -479,13 +571,14 @@ function RecordsSection({ athleteId, canEdit }) {
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {Object.entries(grouped).map(([name, recs]) => {
+            const chronological = [...recs].sort((a, b) => a.date.localeCompare(b.date))
             const best = recs[0]
             const prev = recs[1]
             const improved = prev && parseFloat(best.value) !== parseFloat(prev.value)
             const better = prev && parseFloat(best.value) < parseFloat(prev.value)
             return (
-              <div key={name} className="card" style={{ padding: '16px 18px', cursor: canEdit ? 'pointer' : 'default' }}
-                onClick={() => canEdit && openEdit(best)}>
+              <div key={name} className="card" style={{ padding: '16px 18px', cursor: 'pointer' }}
+                onClick={() => setChartGroup({ name, recs: chronological, unit: best.unit })}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 2 }}>{name}</div>
@@ -503,12 +596,99 @@ function RecordsSection({ athleteId, canEdit }) {
                     <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 900, fontSize: 30, color: 'var(--accent)', lineHeight: 1 }}>{best.value}</div>
                     <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>{best.unit}</div>
                   </div>
-                  {canEdit && <span style={{ color: 'var(--text-dim)', fontSize: 14 }}>✏️</span>}
+                  {canEdit && (
+                    <button onClick={e => { e.stopPropagation(); openEdit(best) }}
+                      style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 8, padding: '6px 10px', cursor: 'pointer', color: 'var(--text-muted)', fontSize: 13, flexShrink: 0 }}>
+                      ✏️
+                    </button>
+                  )}
+                  <span style={{ color: 'var(--text-dim)', fontSize: 16, flexShrink: 0 }}>›</span>
                 </div>
+                {/* Mini preview histórico */}
+                {chronological.length > 1 && (
+                  <div style={{ marginTop: 10, display: 'flex', gap: 6, alignItems: 'flex-end', height: 28 }}>
+                    {chronological.map((r, i) => {
+                      const vals = chronological.map(x => parseFloat(x.value))
+                      const mn = Math.min(...vals), mx = Math.max(...vals)
+                      const h = mn === mx ? 14 : 8 + ((parseFloat(r.value) - mn) / (mx - mn)) * 16
+                      const isLast = i === chronological.length - 1
+                      return (
+                        <div key={r.id} style={{ flex: 1, height: h, borderRadius: 3, background: isLast ? 'var(--accent)' : 'var(--border)', transition: 'height 0.3s' }} />
+                      )
+                    })}
+                  </div>
+                )}
               </div>
             )
           })}
         </div>
+      )}
+
+      {/* Sheet gráfica evolución */}
+      {chartGroup && (
+        <>
+          <div className="overlay" onClick={() => setChartGroup(null)} />
+          <div className="sheet">
+            <div className="sheet-handle" />
+            <div className="sheet-header">
+              <div>
+                <h3>{chartGroup.name}</h3>
+                <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>{chartGroup.recs.length} registros · en {chartGroup.unit}</div>
+              </div>
+              <button className="btn btn-ghost btn-sm" onClick={() => setChartGroup(null)}>✕</button>
+            </div>
+            <div className="sheet-body">
+              {/* Stats rápidas */}
+              <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
+                {[
+                  { label: 'Mejor', value: Math.min(...chartGroup.recs.map(r => parseFloat(r.value))), color: 'var(--success)' },
+                  { label: 'Último', value: parseFloat(chartGroup.recs[chartGroup.recs.length-1].value), color: 'var(--accent)' },
+                  { label: 'Registros', value: chartGroup.recs.length, color: 'var(--text-muted)' },
+                ].map(({ label, value, color }) => (
+                  <div key={label} style={{ flex: 1, background: 'var(--bg)', borderRadius: 12, padding: '12px 8px', textAlign: 'center' }}>
+                    <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 900, fontSize: 22, color, lineHeight: 1 }}>{value}</div>
+                    <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 10, fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)', marginTop: 4, letterSpacing: '0.5px' }}>{label}</div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Gráfica */}
+              <RecordChart recs={chartGroup.recs} unit={chartGroup.unit} />
+
+              {/* Historial completo */}
+              <div className="section-title" style={{ marginTop: 20 }}>Historial</div>
+              <div className="card">
+                {[...chartGroup.recs].reverse().map((r, i) => {
+                  const isBest = parseFloat(r.value) === Math.min(...chartGroup.recs.map(x => parseFloat(x.value)))
+                  return (
+                    <div key={r.id} className="list-item" style={{ borderBottom: i < chartGroup.recs.length-1 ? undefined : 'none', cursor: 'default' }}>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontWeight: 600, fontSize: 14 }}>{new Date(r.date+'T12:00:00').toLocaleDateString('es-ES', { day:'numeric', month:'short', year:'numeric' })}</div>
+                        {r.notes && <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2, fontStyle: 'italic' }}>{r.notes}</div>}
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        {isBest && <span style={{ fontSize: 14 }}>⭐</span>}
+                        <div style={{ textAlign: 'right' }}>
+                          <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 900, fontSize: 20, color: isBest ? 'var(--success)' : 'var(--text)' }}>{r.value}</span>
+                          <span style={{ fontSize: 12, color: 'var(--text-muted)', marginLeft: 4 }}>{r.unit}</span>
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+
+              {canEdit && (
+                <>
+                  <div className="divider" />
+                  <button className="btn btn-primary btn-full" onClick={() => { setChartGroup(null); openNew() }}>
+                    + Añadir nuevo registro
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+        </>
       )}
 
       {sheet && (
