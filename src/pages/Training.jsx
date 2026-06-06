@@ -35,6 +35,10 @@ export default function Training({ athleteId = null, coachView = false, embedded
   const [detailSession, setDetailSession] = useState(null)
   const [saving, setSaving] = useState(false)
   const [tab, setTab] = useState('upcoming')
+  const [templates, setTemplates] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('ns_session_templates') || '[]') } catch { return [] }
+  })
+  const [showTemplates, setShowTemplates] = useState(false)
 
   const load = async () => {
     setLoading(true)
@@ -75,6 +79,24 @@ export default function Training({ athleteId = null, coachView = false, embedded
   }
 
   const remove = async (id) => { await Sessions.delete(id); await load(); setSheet(null) }
+
+  const saveAsTemplate = () => {
+    if (!form.title.trim()) return
+    const tpl = { id: Date.now().toString(), title: form.title, type: form.type, duration: form.duration, notes: form.notes, exercises: form.exercises }
+    const updated = [...templates.filter(t => t.title !== tpl.title), tpl]
+    localStorage.setItem('ns_session_templates', JSON.stringify(updated))
+    setTemplates(updated)
+    alert('Plantilla guardada ✓')
+  }
+  const deleteTemplate = (id) => {
+    const updated = templates.filter(t => t.id !== id)
+    localStorage.setItem('ns_session_templates', JSON.stringify(updated))
+    setTemplates(updated)
+  }
+  const loadTemplate = (tpl) => {
+    setForm(f => ({ ...f, title: tpl.title, type: tpl.type, duration: tpl.duration, notes: tpl.notes, exercises: tpl.exercises.map(e => ({...e, id: Date.now().toString() + Math.random()})) }))
+    setShowTemplates(false)
+  }
 
   const addExercise = () => setForm(f => ({ ...f, exercises: [...f.exercises, { ...emptyExercise, id: Date.now().toString() }] }))
   const updateExercise = (idx, data) => setForm(f => ({ ...f, exercises: f.exercises.map((e,i) => i===idx ? {...e,...data} : e) }))
@@ -211,6 +233,26 @@ export default function Training({ athleteId = null, coachView = false, embedded
               <button className="btn btn-ghost btn-sm" onClick={() => setSheet(null)}>✕</button>
             </div>
             <div className="sheet-body">
+              {/* Botón plantillas */}
+              {templates.length > 0 && (
+                <button type="button" onClick={() => setShowTemplates(s => !s)}
+                  style={{ width: '100%', padding: '10px 14px', borderRadius: 12, background: 'var(--accent-dim)', border: '1px solid var(--accent)', color: 'var(--accent)', fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700, fontSize: 13, textTransform: 'uppercase', letterSpacing: '0.5px', cursor: 'pointer', marginBottom: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                  📋 Usar plantilla {showTemplates ? '▲' : '▼'}
+                </button>
+              )}
+              {showTemplates && (
+                <div style={{ marginBottom: 16, display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  {templates.map(tpl => (
+                    <div key={tpl.id} style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--bg)', borderRadius: 10, padding: '10px 12px', border: '1px solid var(--border)' }}>
+                      <button onClick={() => loadTemplate(tpl)} style={{ flex: 1, textAlign: 'left', background: 'none', border: 'none', cursor: 'pointer' }}>
+                        <div style={{ fontWeight: 700, fontSize: 14 }}>{tpl.title}</div>
+                        <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{tpl.type} · {tpl.duration} min · {tpl.exercises?.length || 0} ejercicios</div>
+                      </button>
+                      <button onClick={() => deleteTemplate(tpl.id)} style={{ color: 'var(--text-dim)', background: 'none', border: 'none', cursor: 'pointer', fontSize: 16, padding: 4 }}>🗑</button>
+                    </div>
+                  ))}
+                </div>
+              )}
               <div className="input-group">
                 <label className="input-label">Nombre *</label>
                 <input className="input" placeholder="ej. Fuerza tren superior" value={form.title} onChange={e => setForm(f=>({...f,title:e.target.value}))} />
@@ -266,6 +308,10 @@ export default function Training({ athleteId = null, coachView = false, embedded
                 </label>
               ))}
 
+              <button type="button" onClick={saveAsTemplate}
+                style={{ width: '100%', padding: '10px 14px', borderRadius: 12, background: 'var(--bg)', border: '1px solid var(--border)', color: 'var(--text-muted)', fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700, fontSize: 13, textTransform: 'uppercase', letterSpacing: '0.5px', cursor: 'pointer', marginTop: 8 }}>
+                💾 Guardar como plantilla
+              </button>
               <button className="btn btn-primary btn-full" onClick={save} disabled={saving} style={{ marginTop: 20 }}>
                 {saving ? 'Guardando...' : editing ? 'Guardar cambios' : 'Crear sesión'}
               </button>

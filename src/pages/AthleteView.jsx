@@ -563,10 +563,17 @@ function AthleteTrainingWithRPE({ athleteId }) {
   const [moodPost, setMoodPost] = useState(0)
   const [savingPre, setSavingPre] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [attendanceMap, setAttendanceMap] = useState({})
 
   useEffect(() => {
     Sessions.getByAthlete(athleteId).then(data => { setSessions(data); setLoading(false) })
   }, [athleteId])
+
+  useEffect(() => {
+    const map = {}
+    sessions.forEach(s => { map[s.id] = s.attendance?.[athleteId] || false })
+    setAttendanceMap(map)
+  }, [sessions, athleteId])
 
   const today = new Date().toISOString().slice(0,10)
   const past = sessions.filter(s => s.date < today).reverse()
@@ -667,6 +674,7 @@ function AthleteTrainingWithRPE({ athleteId }) {
             {past.map(s => {
               const color = TYPE_COLORS[s.type] || 'var(--accent)'
               const icon = TYPE_ICONS[s.type] || '📅'
+              const attended = attendanceMap[s.id] || false
               return (
                 <div key={s.id} className="card" style={{ padding: '14px 16px', cursor: 'pointer' }} onClick={() => setDetailSession(s)}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -684,6 +692,19 @@ function AthleteTrainingWithRPE({ athleteId }) {
                       ⭐ Valorar
                     </button>
                   </div>
+                  <button onClick={async e => {
+                    e.stopPropagation()
+                    await Sessions.toggleAttendance(s.id, athleteId, attended)
+                    setAttendanceMap(m => ({...m, [s.id]: !attended}))
+                  }}
+                    style={{ marginTop: 10, width: '100%', padding: '7px 12px', borderRadius: 10,
+                      background: attended ? 'var(--success-dim)' : 'var(--bg)',
+                      border: `1px solid ${attended ? 'var(--success)' : 'var(--border)'}`,
+                      color: attended ? 'var(--success)' : 'var(--text-muted)',
+                      fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700, fontSize: 12,
+                      textTransform: 'uppercase', letterSpacing: '0.5px', cursor: 'pointer' }}>
+                    {attended ? '✓ Realicé esta sesión' : '¿Realizaste esta sesión?'}
+                  </button>
                 </div>
               )
             })}

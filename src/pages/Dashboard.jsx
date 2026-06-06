@@ -15,6 +15,7 @@ export default function Dashboard() {
   const [recentInjuries, setRecentInjuries] = useState([])
   const [athleteMap, setAthleteMap] = useState({})
   const [dismissedAlerts, setDismissedAlerts] = useState(() => getDismissed())
+  const [statsOpen, setStatsOpen] = useState(false)
 
   useEffect(() => {
     return subscribeAlerts(() => setDismissedAlerts(new Set(getDismissed())))
@@ -215,8 +216,125 @@ export default function Dashboard() {
           </div>
         )}
 
+        {/* Estadísticas del equipo */}
+        <button onClick={() => setStatsOpen(true)}
+          style={{ width: '100%', padding: '14px 18px', borderRadius: 'var(--radius)', background: 'var(--card)', border: '1px solid var(--border)', boxShadow: 'var(--shadow)', display: 'flex', alignItems: 'center', gap: 14, cursor: 'pointer', textAlign: 'left' }}>
+          <span style={{ fontSize: 28 }}>📊</span>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 800, fontSize: 16, textTransform: 'uppercase' }}>Estadísticas del equipo</div>
+            <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>Volumen, distribución y ranking</div>
+          </div>
+          <span style={{ color: 'var(--text-dim)', fontSize: 20 }}>›</span>
+        </button>
+
+        {statsOpen && <TeamStatsSheet onClose={() => setStatsOpen(false)} />}
+
       </div>
     </div>
+  )
+}
+
+function TeamStatsSheet({ onClose }) {
+  const [athletes, setAthletes] = useState([])
+  const [sessions, setSessions] = useState([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    Promise.all([Athletes.getAll(), Sessions.getAll()]).then(([aths, sess]) => {
+      setAthletes(aths)
+      setSessions(sess)
+      setLoading(false)
+    })
+  }, [])
+
+  // Volumen por deportista
+  const athleteStats = athletes.map(a => {
+    const mySessions = sessions.filter(s => s.athlete_ids?.includes(a.id))
+    const attended = sessions.filter(s => s.attendance?.[a.id] === true)
+    const totalMin = mySessions.reduce((acc, s) => acc + (s.duration || 0), 0)
+    return { ...a, count: mySessions.length, attended: attended.length, hours: Math.round(totalMin / 60) }
+  }).sort((a, b) => b.count - a.count)
+
+  // Distribución por tipo (este mes)
+  const now = new Date()
+  const monthStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`
+  const TYPE_COLORS_LOCAL = { run:'#10B981', fuerza:'#F59E0B', series:'#EF4444', endurance:'#3B82F6', especifico:'#8B5CF6', ergometros:'#14B8A6', cardio:'#EC4899', rest_day:'#9CA3AF' }
+  const TYPE_LABELS_LOCAL = { run:'Run', fuerza:'Fuerza', series:'Series', endurance:'Endurance', especifico:'Específico', ergometros:'Ergómetros', cardio:'Cardio', rest_day:'Rest Day' }
+  const monthSessions = sessions.filter(s => s.date.startsWith(monthStr))
+  const byType = monthSessions.reduce((acc, s) => { acc[s.type] = (acc[s.type]||0)+1; return acc }, {})
+  const typeEntries = Object.entries(byType).sort((a,b)=>b[1]-a[1])
+  const maxType = Math.max(...typeEntries.map(([,v])=>v), 1)
+
+  return (
+    <>
+      <div className="overlay" onClick={onClose} />
+      <div className="sheet" style={{ maxHeight: '88vh' }}>
+        <div className="sheet-handle" />
+        <div className="sheet-header">
+          <h3>Estadísticas del equipo</h3>
+          <button className="btn btn-ghost btn-sm" onClick={onClose}>✕</button>
+        </div>
+        <div className="sheet-body">
+          {loading ? (
+            <div style={{ color: 'var(--text-muted)', textAlign: 'center', padding: 32 }}>Cargando...</div>
+          ) : (
+            <>
+              {/* Distribución por tipo este mes */}
+              <div className="section-title">Tipos de sesión — {['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'][now.getMonth()]}</div>
+              {typeEntries.length === 0 ? (
+                <div style={{ color: 'var(--text-muted)', fontSize: 14, marginBottom: 20 }}>Sin sesiones este mes</div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 24 }}>
+                  {typeEntries.map(([type, count]) => {
+                    const color = TYPE_COLORS_LOCAL[type] || '#9CA3AF'
+                    const pct = (count / maxType) * 100
+                    return (
+                      <div key={type}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                          <span style={{ fontSize: 13, fontWeight: 600, color }}>{TYPE_LABELS_LOCAL[type] || type}</span>
+                          <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 800, fontSize: 14, color }}>{count}</span>
+                        </div>
+                        <div style={{ height: 6, background: 'var(--bg)', borderRadius: 3 }}>
+                          <div style={{ height: '100%', width: `${pct}%`, background: color, borderRadius: 3, transition: 'width 0.5s ease' }} />
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+
+              {/* Ranking deportistas */}
+              <div className="section-title">Volumen por deportista — total</div>
+              <div className="card">
+                {athleteStats.map((a, i) => (
+                  <div key={a.id} className="list-item" style={{ borderBottom: i < athleteStats.length-1 ? undefined : 'none', cursor: 'default' }}>
+                    <div style={{ width: 28, fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 900, fontSize: 18, color: i === 0 ? '#F59E0B' : i === 1 ? '#9CA3AF' : i === 2 ? '#CD7F32' : 'var(--text-dim)', flexShrink: 0 }}>
+                      {i+1}
+                    </div>
+                    {a.avatar_url
+                      ? <img src={a.avatar_url} style={{ width: 36, height: 36, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
+                      : <div style={{ width: 36, height: 36, borderRadius: '50%', background: a.color+'20', color: a.color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 13, flexShrink: 0, fontFamily: "'Barlow Condensed', sans-serif" }}>
+                          {a.name?.split(' ').map(w=>w[0]).join('').slice(0,2)}
+                        </div>
+                    }
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontWeight: 700, fontSize: 14 }}>{a.name}</div>
+                      <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+                        {a.attended} asistencias · {a.hours}h entrenadas
+                      </div>
+                    </div>
+                    <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                      <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 900, fontSize: 22, color: a.color, lineHeight: 1 }}>{a.count}</div>
+                      <div style={{ fontSize: 10, color: 'var(--text-muted)' }}>sesiones</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+    </>
   )
 }
 
