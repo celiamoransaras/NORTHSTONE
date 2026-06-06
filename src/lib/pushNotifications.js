@@ -34,16 +34,20 @@ export async function subscribeToPush(athleteId) {
 }
 
 export async function subscribeCoachToPush(userId) {
+  console.log('[Push] subscribeCoachToPush userId:', userId)
   const sub = await getOrCreateSubscription()
+  console.log('[Push] subscription:', sub)
   if (!sub) return null
   const subJson = sub.toJSON()
-  await supabase.from('push_subscriptions').upsert({
+  console.log('[Push] subJson:', subJson)
+  const { data, error } = await supabase.from('push_subscriptions').upsert({
     user_id: userId,
     athlete_id: null,
     endpoint: subJson.endpoint,
     p256dh: subJson.keys.p256dh,
     auth: subJson.keys.auth,
   }, { onConflict: 'endpoint' })
+  console.log('[Push] upsert result:', { data, error })
   return sub
 }
 
