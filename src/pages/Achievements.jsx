@@ -56,6 +56,7 @@ export function StreakBadge({ streak }) {
   )
 }
 
+// ---- Vista completa (para tab Progreso) ----
 export default function AchievementsSection({ athleteId }) {
   const [achievements, setAchievements] = useState([])
 
@@ -73,19 +74,77 @@ export default function AchievementsSection({ athleteId }) {
           const isUnlocked = unlocked.has(def.type)
           const data = achievements.find(a => a.type === def.type)
           return (
-            <div key={def.type} className="card" style={{ padding: '12px 14px', opacity: isUnlocked ? 1 : 0.4, filter: isUnlocked ? 'none' : 'grayscale(1)' }}>
+            <div key={def.type} className="card" style={{ padding: '12px 14px', opacity: isUnlocked ? 1 : 0.35, filter: isUnlocked ? 'none' : 'grayscale(1)', transition: 'all 0.3s' }}>
               <div style={{ fontSize: 28, marginBottom: 6 }}>{def.icon}</div>
               <div style={{ fontWeight: 700, fontSize: 13 }}>{def.title}</div>
               <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>{def.description}</div>
               {isUnlocked && data && (
-                <div style={{ fontSize: 10, color: 'var(--accent)', fontWeight: 600, marginTop: 6 }}>
-                  {new Date(data.unlocked_at).toLocaleDateString('es-ES')}
+                <div style={{ fontSize: 10, color: 'var(--accent)', fontWeight: 700, marginTop: 6 }}>
+                  ✓ {new Date(data.unlocked_at).toLocaleDateString('es-ES')}
                 </div>
+              )}
+              {!isUnlocked && (
+                <div style={{ fontSize: 10, color: 'var(--text-dim)', marginTop: 6 }}>🔒 Bloqueado</div>
               )}
             </div>
           )
         })}
       </div>
+    </div>
+  )
+}
+
+// ---- Vista resumen (para Home) ----
+export function AchievementsHomeSection({ athleteId }) {
+  const [achievements, setAchievements] = useState([])
+
+  useEffect(() => {
+    Achievements.getByAthlete(athleteId).then(setAchievements)
+  }, [athleteId])
+
+  const unlockedDefs = ACHIEVEMENT_DEFS.filter(d => achievements.find(a => a.type === d.type))
+  const nextDef = ACHIEVEMENT_DEFS.find(d => !achievements.find(a => a.type === d.type))
+
+  if (unlockedDefs.length === 0 && !nextDef) return null
+
+  return (
+    <div>
+      {/* Logros desbloqueados */}
+      {unlockedDefs.length > 0 && (
+        <>
+          <div className="section-title" style={{ marginBottom: 10 }}>🏆 Mis logros</div>
+          <div style={{ display: 'flex', gap: 10, overflowX: 'auto', paddingBottom: 4 }}>
+            {unlockedDefs.map(def => (
+              <div key={def.type} style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, minWidth: 72 }}>
+                <div style={{ width: 56, height: 56, borderRadius: 18, background: 'linear-gradient(135deg, #FCD34D, #F59E0B)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 28, boxShadow: '0 4px 16px rgba(245,158,11,0.35)' }}>
+                  {def.icon}
+                </div>
+                <div style={{ fontSize: 10, fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)', textAlign: 'center', lineHeight: 1.2 }}>
+                  {def.title}
+                </div>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+
+      {/* Próximo logro */}
+      {nextDef && (
+        <div style={{ marginTop: unlockedDefs.length > 0 ? 14 : 0 }}>
+          {unlockedDefs.length === 0 && <div className="section-title" style={{ marginBottom: 10 }}>🏆 Logros</div>}
+          <div className="card" style={{ padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 14 }}>
+            <div style={{ width: 48, height: 48, borderRadius: 14, background: 'var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24, opacity: 0.5, flexShrink: 0 }}>
+              {nextDef.icon}
+            </div>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Próximo logro</div>
+              <div style={{ fontWeight: 700, fontSize: 14, marginTop: 2 }}>{nextDef.title}</div>
+              <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>{nextDef.description}</div>
+            </div>
+            <div style={{ fontSize: 20, opacity: 0.3 }}>🔒</div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

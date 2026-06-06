@@ -10,7 +10,7 @@ import Training from './Training'
 import Messages from './Messages'
 import DocsPage from './Documents'
 import Progress from './Progress'
-import AchievementsSection, { StreakBadge, WeeklyPlan, calculateStreak, checkAndUnlockAchievements } from './Achievements'
+import AchievementsSection, { AchievementsHomeSection, StreakBadge, WeeklyPlan, calculateStreak, checkAndUnlockAchievements } from './Achievements'
 import { Records } from '../lib/db'
 
 const NAV = [
@@ -172,8 +172,8 @@ function AthleteHome({ athlete, athleteId }) {
           </div>
         )}
 
-        {/* Logros */}
-        <AchievementsSection athleteId={athleteId} />
+        {/* Logros (vista resumen) */}
+        <AchievementsHomeSection athleteId={athleteId} />
 
         {/* Próximas sesiones */}
         <div className="section-title">Mis próximas sesiones</div>
