@@ -153,7 +153,7 @@ function AthleteHome({ athlete, athleteId }) {
 
       const rpeCount = rpeData?.length || 0
       const goalCount = goalData?.length || 0
-      const hasMsg = (msgData?.count || 0) > 0
+      const msgCount = msgData?.count || 0
       const earlyBird = (rpeData || []).some(r => r.fatigue_pre != null)
 
       // Semana perfecta: 7 días de wellness consecutivos
@@ -168,14 +168,32 @@ function AthleteHome({ athlete, athleteId }) {
         }
       }
 
+      // Aniversarios (basado en primer mensaje o primera sesión)
+      const firstSession = sessions.length > 0 ? new Date(sessions[0].date + 'T12:00:00') : null
+      const daysSince = firstSession ? Math.floor((today2 - firstSession) / (1000*60*60*24)) : 0
+
+      // Tipos de sesión únicos
+      const TYPE_OPTS = ['run','fuerza','series','endurance','especifico','ergometros','cardio','rest_day']
+      const usedTypes = new Set(sessions.map(s => s.type))
+      const allTypes = TYPE_OPTS.every(t => usedTypes.has(t))
+
       await checkAndUnlockAchievements(athleteId, sessions.length, records.length, s, {
-        firstGoal: goalCount >= 1,
-        threeGoals: goalCount >= 3,
-        firstRpe: rpeCount >= 1,
-        tenRpe: rpeCount >= 10,
-        firstMsg: hasMsg,
+        firstGoal:    goalCount >= 1,
+        threeGoals:   goalCount >= 3,
+        tenGoals:     goalCount >= 10,
+        firstRpe:     rpeCount >= 1,
+        tenRpe:       rpeCount >= 10,
+        fiftyRpe:     rpeCount >= 50,
+        hundredRpe:   rpeCount >= 100,
+        firstMsg:     msgCount >= 1,
+        chat50:       msgCount >= 50,
         earlyBird,
-        perfectWeek: perfectWellness,
+        perfectWeek:  perfectWellness,
+        month1:       daysSince >= 30,
+        month3:       daysSince >= 90,
+        month6:       daysSince >= 180,
+        year1:        daysSince >= 365,
+        allTypes,
       })
     }
     load()

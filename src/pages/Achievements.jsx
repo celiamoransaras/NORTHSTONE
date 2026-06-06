@@ -27,9 +27,34 @@ const ACHIEVEMENT_DEFS = [
   // Comunicación
   { type: 'first_message',   icon: '💬', title: 'Primera charla',        description: '¡Enviaste tu primer mensaje!' },
   // Especiales
-  { type: 'early_bird',      icon: '🌅', title: 'Madrugadora',           description: 'Registraste tu cansancio antes de una sesión' },
-  { type: 'wellness_week',   icon: '🧘', title: 'Semana consciente',     description: '7 días seguidos registrando tu estado' },
-  { type: 'perfect_week',    icon: '✨', title: 'Semana perfecta',       description: '¡Asististe a todas las sesiones de la semana!' },
+  { type: 'early_bird',       icon: '🌅', title: 'Madrugadora',           description: 'Registraste tu cansancio antes de una sesión' },
+  { type: 'wellness_week',    icon: '🧘', title: 'Semana consciente',     description: '7 días seguidos registrando tu estado' },
+  { type: 'perfect_week',     icon: '✨', title: 'Semana perfecta',       description: '¡Asististe a todas las sesiones de la semana!' },
+  // Sesiones avanzadas
+  { type: 'hundred_sessions', icon: '💯', title: '100 sesiones',          description: '¡Triple dígito! Eres una atleta de élite' },
+  { type: 'two_hundred',      icon: '🎖️', title: '200 sesiones',          description: '200 entrenamientos. Leyenda absoluta' },
+  { type: 'three_hundred',    icon: '🌠', title: '300 sesiones',          description: '300 sesiones. No hay palabras.' },
+  // Rachas largas
+  { type: 'streak_16',        icon: '🔱', title: 'Racha 4 meses',         description: '4 meses sin faltar. ¡Eres increíble!' },
+  { type: 'streak_26',        icon: '🦁', title: 'Medio año',             description: '6 meses consecutivos. ¡Una fiera!' },
+  { type: 'streak_52',        icon: '🏵️', title: 'Un año seguido',        description: '52 semanas. La constancia es tu superpoder' },
+  // Marcas avanzadas
+  { type: 'ten_records',      icon: '📉', title: '10 marcas',             description: '10 marcas personales. ¡El progreso habla!' },
+  { type: 'twenty_records',   icon: '🗂️', title: '20 marcas',             description: '20 registros. Cada número cuenta.' },
+  // Objetivos avanzados
+  { type: 'ten_goals',        icon: '🗺️', title: '10 objetivos',          description: '10 metas alcanzadas. ¡Imparable!' },
+  // Valoraciones avanzadas
+  { type: 'fifty_rpe',        icon: '🧠', title: '50 valoraciones',       description: '50 sesiones analizadas. ¡Muy autodisciplinada!' },
+  { type: 'hundred_rpe',      icon: '🔬', title: '100 valoraciones',      description: 'Un año de autoconocimiento deportivo' },
+  // Aniversarios
+  { type: 'month_1',          icon: '🥉', title: 'Primer mes',            description: '1 mes entrenando con Northstone' },
+  { type: 'month_3',          icon: '🥈', title: 'Tres meses',            description: '3 meses creciendo juntas' },
+  { type: 'month_6',          icon: '🥇', title: 'Medio año',             description: '6 meses de compromiso. ¡Orgullosa de ti!' },
+  { type: 'year_1',           icon: '🎂', title: 'Un año',                description: '365 días. Esto ya es un estilo de vida 🎉' },
+  // Actitud
+  { type: 'comeback',         icon: '🦅', title: 'Comeback',              description: 'Volviste después de una pausa. ¡Eso es carácter!' },
+  { type: 'chat_50',          icon: '📱', title: 'Siempre conectada',     description: '50 mensajes con tu entrenadora' },
+  { type: 'all_types',        icon: '🎨', title: 'Todoterreno',           description: 'Has entrenado todos los tipos de sesión' },
 ]
 
 export function calculateStreak(sessions) {
@@ -57,27 +82,45 @@ export async function checkAndUnlockAchievements(athleteId, attendedCount, recor
     if (def) return Achievements.unlock(athleteId, def.type, def.title, def.description, def.icon)
   }
   // Sesiones
-  if (attendedCount >= 1)  await u('first_session')
-  if (attendedCount >= 5)  await u('five_sessions')
-  if (attendedCount >= 10) await u('ten_sessions')
-  if (attendedCount >= 20) await u('twenty_sessions')
-  if (attendedCount >= 50) await u('fifty_sessions')
+  if (attendedCount >= 1)   await u('first_session')
+  if (attendedCount >= 5)   await u('five_sessions')
+  if (attendedCount >= 10)  await u('ten_sessions')
+  if (attendedCount >= 20)  await u('twenty_sessions')
+  if (attendedCount >= 50)  await u('fifty_sessions')
+  if (attendedCount >= 100) await u('hundred_sessions')
+  if (attendedCount >= 200) await u('two_hundred')
+  if (attendedCount >= 300) await u('three_hundred')
   // Rachas
   if (streak >= 2)  await u('streak_2')
   if (streak >= 4)  await u('streak_4')
   if (streak >= 8)  await u('streak_8')
   if (streak >= 12) await u('streak_12')
+  if (streak >= 16) await u('streak_16')
+  if (streak >= 26) await u('streak_26')
+  if (streak >= 52) await u('streak_52')
   // Marcas
-  if (recordsCount >= 1) await u('first_record')
-  if (recordsCount >= 5) await u('five_records')
+  if (recordsCount >= 1)  await u('first_record')
+  if (recordsCount >= 5)  await u('five_records')
+  if (recordsCount >= 10) await u('ten_records')
+  if (recordsCount >= 20) await u('twenty_records')
   // Extras opcionales
-  if (extras.firstGoal)   await u('first_goal')
-  if (extras.threeGoals)  await u('three_goals')
-  if (extras.firstRpe)    await u('first_rpe')
-  if (extras.tenRpe)      await u('ten_rpe')
-  if (extras.firstMsg)    await u('first_message')
-  if (extras.earlyBird)   await u('early_bird')
-  if (extras.perfectWeek) await u('perfect_week')
+  if (extras.firstGoal)    await u('first_goal')
+  if (extras.threeGoals)   await u('three_goals')
+  if (extras.tenGoals)     await u('ten_goals')
+  if (extras.firstRpe)     await u('first_rpe')
+  if (extras.tenRpe)       await u('ten_rpe')
+  if (extras.fiftyRpe)     await u('fifty_rpe')
+  if (extras.hundredRpe)   await u('hundred_rpe')
+  if (extras.firstMsg)     await u('first_message')
+  if (extras.chat50)       await u('chat_50')
+  if (extras.earlyBird)    await u('early_bird')
+  if (extras.perfectWeek)  await u('perfect_week')
+  if (extras.month1)       await u('month_1')
+  if (extras.month3)       await u('month_3')
+  if (extras.month6)       await u('month_6')
+  if (extras.year1)        await u('year_1')
+  if (extras.comeback)     await u('comeback')
+  if (extras.allTypes)     await u('all_types')
 }
 
 export function StreakBadge({ streak }) {
