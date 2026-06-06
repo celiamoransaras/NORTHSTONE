@@ -1,7 +1,10 @@
 import { useState, useEffect } from 'react'
 import { Athletes as DB, Sessions, Storage } from '../lib/db'
 import Training from './Training'
-import { GoalsSection, RecordsSection, LoadChart } from './Progress'
+import GoalsSection from '../components/progress/GoalsSection'
+import RecordsSection from '../components/progress/RecordsSection'
+import LoadChart from '../components/progress/LoadChart'
+import { initials as getInitials } from '../lib/utils'
 
 const COLORS = ['#F59E0B','#10B981','#3B82F6','#EC4899','#8B5CF6','#EF4444','#14B8A6','#F97316']
 const STATUS_OPTS = [{ value: 'active', label: 'Activo' }, { value: 'injured', label: 'Lesionado' }, { value: 'inactive', label: 'Baja' }]
@@ -62,7 +65,7 @@ export default function Athletes() {
     setSheet(null)
   }
 
-  const initials = (name) => name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()
+  const initials = (name) => getInitials(name)
   const statusBadge = (s) => s === 'active' ? 'badge-green' : s === 'injured' ? 'badge-red' : 'badge-gray'
   const statusLabel = (s) => s === 'active' ? 'Activo' : s === 'injured' ? 'Lesionado' : 'Baja'
 
