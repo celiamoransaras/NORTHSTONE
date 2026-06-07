@@ -847,4 +847,59 @@ export default function Progress({ athleteId, sessions = [], isCoach = false }) 
   )
 }
 
-export { WellnessCheckin, GoalsSection, RecordsSection, LoadChart }
+// ---- Bienestar de hoy en modo lectura (para la entrenadora) ----
+export function WellnessTodayCoach({ athleteId }) {
+  const [entry, setEntry] = useState(null)
+  const [loaded, setLoaded] = useState(false)
+
+  useEffect(() => {
+    Wellness.getByAthlete(athleteId, 1).then(data => {
+      console.log('🏥 WellnessTodayCoach →', athleteId, data)
+      setEntry(data?.[0] || null)
+      setLoaded(true)
+    })
+  }, [athleteId])
+
+  if (!loaded) return null
+
+  const today = new Date().toISOString().slice(0, 10)
+  const yesterday = new Date(); yesterday.setDate(yesterday.getDate() - 1)
+  const dateLabel = !entry ? '' : entry.date === today ? 'Hoy'
+    : entry.date === yesterday.toISOString().slice(0,10) ? 'Ayer'
+    : new Date(entry.date + 'T12:00:00').toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })
+
+  if (!entry) return (
+    <div className="card" style={{ padding: '16px 18px', marginBottom: 4 }}>
+      <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 800, fontSize: 16, textTransform: 'uppercase', marginBottom: 6 }}>Bienestar</div>
+      <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>La deportista aún no ha registrado su estado.</div>
+    </div>
+  )
+
+  return (
+    <div className="card" style={{ padding: '16px 18px', marginBottom: 4 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+        <div>
+          <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 800, fontSize: 16, textTransform: 'uppercase' }}>Bienestar</div>
+          <div style={{ fontSize: 12, color: entry.date === today ? 'var(--success)' : 'var(--text-muted)', marginTop: 2 }}>
+            {dateLabel}
+          </div>
+        </div>
+        <span className={`badge ${entry.date === today ? 'badge-green' : 'badge-gray'}`}>✓ Registrado</span>
+      </div>
+      <div style={{ display: 'flex', gap: 8 }}>
+        {[
+          { label: 'Cansancio', value: entry.fatigue, emojis: ['😴','😐','🙂','💪','🔥'] },
+          { label: 'Dolor', value: entry.soreness, emojis: ['✅','😊','😐','😬','🤕'] },
+          { label: 'Ánimo', value: entry.mood, emojis: ['😔','😐','🙂','😄','🤩'] },
+        ].map(({ label, value, emojis }) => (
+          <div key={label} className="stat-card" style={{ flex: 1, padding: '12px 8px', textAlign: 'center' }}>
+            <div style={{ fontSize: 24, marginBottom: 4 }}>{value ? emojis[value - 1] : '—'}</div>
+            <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 10, fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)', letterSpacing: '0.5px' }}>{label}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+export { WellnessCheckin, WellnessHistory, GoalsSection, RecordsSection, LoadChart }

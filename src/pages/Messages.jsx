@@ -16,7 +16,12 @@ export default function Messages() {
   const myAthleteId = profile?.athlete_id
   const [athletes, setAthletes] = useState([])
   const [coachAvatar, setCoachAvatar] = useState(null)
-  const [activeChat, setActiveChat] = useState(location.state?.chatId || 'general')
+  // Leer chatId desde query param (notificación push) o desde state (navegación interna)
+  const initialChat = (() => {
+    const params = new URLSearchParams(location.search)
+    return params.get('chat') || location.state?.chatId || 'general'
+  })()
+  const [activeChat, setActiveChat] = useState(initialChat)
   const [fatigueAlert, setFatigueAlert] = useState(location.state?.fatigueAlert || null)
   const [messages, setMessages] = useState([])
   const [reactions, setReactions] = useState({})
@@ -74,18 +79,18 @@ export default function Messages() {
       await DB.send(activeChat, text || (fileType?.startsWith('image/') ? '📷 Imagen' : '📎 Archivo'), myId, senderName, fileUrl, fileType)
       await loadMessages()
       if (!isCoach) {
-        // Deportista → notificar al coach
+        // Deportista → notificar al coach: URL abre el chat de esa deportista directamente
         sendPushToCoach({
           title: `💬 ${senderName}`,
           body: text || (fileType?.startsWith('image/') ? '📷 Imagen' : '📎 Archivo'),
-          url: '/messages',
+          url: `/messages?chat=${myAthleteId}`,
         })
       } else if (activeChat && activeChat !== 'general') {
-        // Coach → notificar al deportista
+        // Coach → notificar al deportista: URL abre la tab de mensajes directamente
         sendPushToAthletes([activeChat], {
           title: '💬 Celia (Entrenadora)',
           body: text || (fileType?.startsWith('image/') ? '📷 Imagen' : '📎 Archivo'),
-          url: '/',
+          url: '/?tab=messages',
         })
       }
     } catch {

@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react'
 import { Athletes as DB, Sessions, Storage } from '../lib/db'
 import Training from './Training'
-import { GoalsSection, RecordsSection, LoadChart } from './Progress'
+import { GoalsSection, RecordsSection, LoadChart, WellnessTodayCoach, WellnessHistory } from './Progress'
+import { useToast } from '../contexts/ToastContext'
 
 function getWeekRange() {
   const now = new Date()
@@ -36,6 +37,7 @@ const STATUS_OPTS = [{ value: 'active', label: 'Activo' }, { value: 'injured', l
 const emptyForm = { name: '', email: '', phone: '', dob: '', sport: 'Híbrido', color: COLORS[0], status: 'active', notes: '' }
 
 export default function Athletes() {
+  const toast = useToast()
   const [athletes, setAthletes] = useState([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
@@ -67,11 +69,17 @@ export default function Athletes() {
   const save = async () => {
     if (!form.name.trim()) return
     setSaving(true)
-    if (editing) await DB.update(editing, form)
-    else await DB.create(form)
-    await load()
-    setSaving(false)
-    setSheet(null)
+    try {
+      if (editing) await DB.update(editing, form)
+      else await DB.create(form)
+      await load()
+      setSheet(null)
+      toast(editing ? 'Deportista actualizada' : 'Deportista añadida')
+    } catch {
+      toast('Error al guardar', 'error')
+    } finally {
+      setSaving(false)
+    }
   }
 
   const handlePhotoUpload = async (file, athleteId) => {
@@ -80,15 +88,20 @@ export default function Athletes() {
     try {
       const url = await Storage.uploadAvatar(athleteId || 'new_' + Date.now(), file)
       setForm(f => ({ ...f, avatar_url: url }))
-    } catch (e) { console.error(e) }
+    } catch { toast('Error al subir la foto', 'error') }
     setUploadingPhoto(false)
   }
 
   const remove = async (id) => {
-    await DB.delete(id)
-    await load()
-    setConfirmDelete(null)
-    setSheet(null)
+    try {
+      await DB.delete(id)
+      await load()
+      setConfirmDelete(null)
+      setSheet(null)
+      toast('Deportista eliminada')
+    } catch {
+      toast('Error al eliminar', 'error')
+    }
   }
 
   const initials = (name) => name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()
@@ -188,6 +201,9 @@ export default function Athletes() {
                     </div>
                   </div>
                   <WeeklyAdherence athleteId={sheet.id} color={sheet.color} />
+                  <div style={{ marginBottom: 16 }}>
+                    <WellnessTodayCoach athleteId={sheet.id} />
+                  </div>
                   <InfoRow icon="✉️" label="Email" val={sheet.email || '—'} />
                   <InfoRow icon="📱" label="Teléfono" val={sheet.phone || '—'} />
                   <InfoRow icon="🎂" label="Fecha de nacimiento" val={sheet.dob ? new Date(sheet.dob+'T12:00:00').toLocaleDateString('es-ES') : '—'} />
@@ -370,6 +386,8 @@ function AthleteProgress({ athleteId }) {
   useEffect(() => { Sessions.getByAthlete(athleteId).then(setSessions) }, [athleteId])
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      <WellnessTodayCoach athleteId={athleteId} />
+      <WellnessHistory athleteId={athleteId} />
       <LoadChart sessions={sessions} />
       <GoalsSection athleteId={athleteId} canCreate={true} />
       <RecordsSection athleteId={athleteId} canEdit={true} />

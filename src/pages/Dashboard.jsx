@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Athletes, Sessions, Injuries, Payments } from '../lib/db'
+import { Athletes, Sessions, Injuries, Payments, Wellness } from '../lib/db'
 import { supabase } from '../lib/supabase'
 import { getDismissed, dismissFatigueAlert, isFatigueDismissed, subscribeAlerts } from '../lib/alertState'
 
@@ -237,6 +237,9 @@ export default function Dashboard() {
         {/* Adherencia semanal */}
         <WeeklyAdherenceSection athleteMap={athleteMap} />
 
+        {/* Bienestar del equipo hoy */}
+        <TeamWellnessSection />
+
       </div>
     </div>
   )
@@ -352,6 +355,79 @@ function StatCard({ value, label, color, icon, onClick }) {
       <div style={{ position: 'absolute', top: 12, right: 14, fontSize: 22, opacity: 0.15 }}>{icon}</div>
       <div className="stat-value" style={{ color }}>{value}</div>
       <div className="stat-label">{label}</div>
+    </div>
+  )
+}
+
+function TeamWellnessSection() {
+  const [entries, setEntries] = useState([])
+
+  useEffect(() => {
+    Wellness.getLatestPerAthlete().then(setEntries)
+  }, [])
+
+  if (!entries.length) return null
+
+  const today = new Date().toISOString().slice(0, 10)
+  const moodEmojis    = ['😔','😐','🙂','😄','🤩']
+  const fatigueEmojis = ['😴','😐','🙂','💪','🔥']
+  const sorenessEmojis= ['✅','😊','😐','😬','🤕']
+  const alerts = entries.filter(e => e.fatigue >= 4 || e.soreness >= 4)
+
+  const dateLabel = (date) => {
+    if (date === today) return 'Hoy'
+    const yesterday = new Date(); yesterday.setDate(yesterday.getDate() - 1)
+    if (date === yesterday.toISOString().slice(0,10)) return 'Ayer'
+    return new Date(date + 'T12:00:00').toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })
+  }
+
+  return (
+    <div className="card" style={{ padding: '16px 18px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+        <div>
+          <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 800, fontSize: 16, textTransform: 'uppercase' }}>
+            Bienestar del equipo
+          </div>
+          <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>
+            Último registro por deportista
+          </div>
+        </div>
+        {alerts.length > 0 && (
+          <span style={{ background: 'var(--error-dim)', color: 'var(--error)', fontSize: 11, fontWeight: 700, padding: '4px 10px', borderRadius: 20, fontFamily: "'Barlow Condensed', sans-serif" }}>
+            ⚠️ {alerts.length} alerta{alerts.length !== 1 ? 's' : ''}
+          </span>
+        )}
+      </div>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        {entries.map(e => {
+          const hasAlert = e.fatigue >= 4 || e.soreness >= 4
+          const name = e.athletes?.name || 'Deportista'
+          const color = e.athletes?.color || 'var(--accent)'
+          const isToday = e.date === today
+          return (
+            <div key={e.id} style={{
+              display: 'flex', alignItems: 'center', gap: 12,
+              padding: '10px 12px', borderRadius: 'var(--radius-sm)',
+              background: hasAlert ? 'var(--error-dim)' : 'var(--bg)',
+              border: `1px solid ${hasAlert ? 'var(--error)' : 'var(--border)'}`,
+            }}>
+              <div style={{ width: 8, height: 8, borderRadius: '50%', background: color, flexShrink: 0 }} />
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontWeight: 600, fontSize: 14 }}>{name}</div>
+                <div style={{ fontSize: 11, color: isToday ? 'var(--success)' : 'var(--text-muted)', marginTop: 1 }}>
+                  {dateLabel(e.date)}
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: 6, fontSize: 20 }}>
+                <span title="Cansancio">{e.fatigue ? fatigueEmojis[e.fatigue - 1] : '—'}</span>
+                <span title="Dolor muscular">{e.soreness ? sorenessEmojis[e.soreness - 1] : '—'}</span>
+                <span title="Ánimo">{e.mood ? moodEmojis[e.mood - 1] : '—'}</span>
+              </div>
+            </div>
+          )
+        })}
+      </div>
     </div>
   )
 }

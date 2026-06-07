@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useAuth } from '../contexts/AuthContext'
-import { Sessions, Injuries, Payments, Storage, RPE } from '../lib/db'
+import { Sessions, Injuries, Payments, Storage, RPE, Athletes as AthletesDB } from '../lib/db'
 import { supabase } from '../lib/supabase'
 import Messages from './Messages'
 import DocsPage from './Documents'
@@ -26,9 +26,14 @@ const NAV = [
 
 export default function AthleteView() {
   const { profile, signOut } = useAuth()
+  const toast = useToast()
   const athlete = profile?.athletes
   const athleteId = profile?.athlete_id
-  const [tab, setTab] = useState('home')
+  // Leer tab inicial desde query param (viene de notificación push) o por defecto 'home'
+  const [tab, setTab] = useState(() => {
+    const params = new URLSearchParams(window.location.search)
+    return params.get('tab') || 'home'
+  })
   const [unreadMessages, setUnreadMessages] = useState(0)
   const [unratedCount, setUnratedCount] = useState(0)
   const [profileOpen, setProfileOpen] = useState(false)
@@ -89,6 +94,23 @@ export default function AthleteView() {
   }
 
   const initials = (name) => name.split(' ').map(w => w[0]).join('').slice(0,2).toUpperCase()
+  const [uploadingAvatar, setUploadingAvatar] = useState(false)
+
+  const handleAvatarChange = async (e) => {
+    const file = e.target.files[0]
+    if (!file || !athleteId) return
+    setUploadingAvatar(true)
+    try {
+      const url = await Storage.uploadAvatar(athleteId, file)
+      await AthletesDB.update(athleteId, { avatar_url: url })
+      // Forzar recarga del perfil para que se actualice el header y el sheet
+      window.location.reload()
+    } catch {
+      toast('Error al subir la foto', 'error')
+    } finally {
+      setUploadingAvatar(false)
+    }
+  }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100dvh', overflow: 'hidden' }}>
@@ -143,20 +165,26 @@ export default function AthleteView() {
             <div className="sheet-handle" />
             <div className="sheet-body" style={{ paddingTop: 12 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 28 }}>
-                {athlete.avatar_url
-                  ? <img src={athlete.avatar_url} alt={athlete.name} style={{ width: 56, height: 56, borderRadius: '50%', objectFit: 'cover' }} />
-                  : <div className="avatar" style={{ width: 56, height: 56, background: athlete.color+'30', color: athlete.color, fontSize: 20 }}>{initials(athlete.name)}</div>
-                }
+                <label style={{ position: 'relative', cursor: 'pointer', flexShrink: 0 }}>
+                  {athlete.avatar_url
+                    ? <img src={athlete.avatar_url} alt={athlete.name} style={{ width: 64, height: 64, borderRadius: '50%', objectFit: 'cover', display: 'block', opacity: uploadingAvatar ? 0.5 : 1 }} />
+                    : <div className="avatar" style={{ width: 64, height: 64, background: athlete.color+'30', color: athlete.color, fontSize: 22, opacity: uploadingAvatar ? 0.5 : 1 }}>{initials(athlete.name)}</div>
+                  }
+                  <div style={{ position: 'absolute', bottom: 0, right: 0, width: 22, height: 22, borderRadius: '50%', background: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, boxShadow: '0 1px 4px rgba(0,0,0,0.3)' }}>
+                    {uploadingAvatar ? '⏳' : '📷'}
+                  </div>
+                  <input type="file" accept="image/*" style={{ display: 'none' }} onChange={handleAvatarChange} disabled={uploadingAvatar} />
+                </label>
                 <div>
                   <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 800, fontSize: 20 }}>{athlete.name}</div>
-                  <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 2 }}>Deportista · Northstone</div>
+                  <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 2 }}>Toca la foto para cambiarla</div>
                 </div>
               </div>
               <button
                 className="btn btn-secondary btn-full"
                 onClick={() => {
                   if (!pushSupported) {
-                    alert('Para activar notificaciones, añade la app a tu pantalla de inicio:\nSafari → botón compartir → "Añadir a pantalla de inicio"')
+                    toast('Para activar notificaciones, añade la app a tu pantalla de inicio: Safari → compartir → "Añadir a pantalla de inicio"', 'info')
                     return
                   }
                   pushSubscribed ? disablePush() : enablePush()
@@ -584,8 +612,24 @@ function AthleteTrainingWithRPE({ athleteId }) {
   const [saving, setSaving] = useState(false)
   const [attendanceMap, setAttendanceMap] = useState({})
 
+  const loadSessions = () => Sessions.getByAthlete(athleteId).then(data => { setSessions(data); setLoading(false) })
+
   useEffect(() => {
-    Sessions.getByAthlete(athleteId).then(data => { setSessions(data); setLoading(false) })
+    loadSessions()
+  }, [athleteId])
+
+  // Realtime: nueva sesión asignada a la deportista
+  useEffect(() => {
+    if (!athleteId) return
+    const channel = supabase.channel(`athlete_sessions_${athleteId}`)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'session_athletes', filter: `athlete_id=eq.${athleteId}` }, () => {
+        loadSessions()
+      })
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'sessions' }, () => {
+        loadSessions()
+      })
+      .subscribe()
+    return () => channel.unsubscribe()
   }, [athleteId])
 
   useEffect(() => {

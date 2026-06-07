@@ -1,9 +1,10 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Sessions, Athletes } from '../lib/db'
 import ConfirmSheet from '../components/ConfirmSheet'
 import { useToast } from '../contexts/ToastContext'
 import { haptic } from '../lib/haptic'
 import { sendPushToAthletes } from '../lib/pushNotifications'
+import { supabase } from '../lib/supabase'
 
 const TYPE_OPTS = [
   { value: 'run',        label: '🏃 Run' },
@@ -47,6 +48,8 @@ export default function Training({ athleteId = null, coachView = false, embedded
   })
   const [showTemplates, setShowTemplates] = useState(false)
 
+  const detailSessionRef = useRef(null)
+
   const load = async () => {
     setLoading(true)
     const [sess, ath] = await Promise.all([
@@ -58,6 +61,27 @@ export default function Training({ athleteId = null, coachView = false, embedded
     setLoading(false)
   }
   useEffect(() => { load() }, [athleteId])
+
+  // Realtime: asistencia en tiempo real (vista entrenadora)
+  useEffect(() => {
+    if (athleteId) return // solo en vista coach
+    const channel = supabase.channel('training_attendance')
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'session_athletes' }, async (payload) => {
+        const { session_id, athlete_id, attended } = payload.new
+        // Actualizar lista de sesiones
+        setSessions(prev => prev.map(s => {
+          if (s.id !== session_id) return s
+          return { ...s, attendance: { ...s.attendance, [athlete_id]: attended } }
+        }))
+        // Actualizar detail si está abierto en esa sesión
+        setDetailSession(prev => {
+          if (!prev || prev.id !== session_id) return prev
+          return { ...prev, attendance: { ...prev.attendance, [athlete_id]: attended } }
+        })
+      })
+      .subscribe()
+    return () => channel.unsubscribe()
+  }, [athleteId])
 
   const today = new Date().toISOString().slice(0,10)
   const upcoming = sessions.filter(s => s.date >= today)

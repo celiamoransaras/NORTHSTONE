@@ -1,6 +1,6 @@
 import { Routes, Route, NavLink, useLocation } from 'react-router-dom'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
-import { ToastProvider } from './contexts/ToastContext'
+import { ToastProvider, useToast } from './contexts/ToastContext'
 import { useState, useEffect, lazy, Suspense, Component } from 'react'
 import { supabase } from './lib/supabase'
 import { usePushNotifications } from './hooks/usePushNotifications'
@@ -89,6 +89,7 @@ function useUnreadMessages() {
 function CoachApp() {
   const { signOut, profile, updateAvatar, user } = useAuth()
   const unreadMessages = useUnreadMessages()
+  const toast = useToast()
   const { subscribed: pushSubscribed, loading: pushLoading, supported: pushSupported, enable: enablePush, disable: disablePush } = usePushNotifications({ userId: user?.id, isCoach: true })
 
   const handleAvatarClick = () => {
@@ -116,7 +117,7 @@ function CoachApp() {
           <button
             onClick={() => {
               if (!pushSupported) {
-                alert('Para activar notificaciones, añade la app a tu pantalla de inicio:\nSafari → botón compartir → "Añadir a pantalla de inicio"')
+                toast('Para activar notificaciones, añade la app a tu pantalla de inicio: Safari → compartir → "Añadir a pantalla de inicio"', 'info')
                 return
               }
               pushSubscribed ? disablePush() : enablePush()

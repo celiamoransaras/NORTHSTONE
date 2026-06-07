@@ -57,8 +57,9 @@ Deno.serve(async (req) => {
       )
     )
 
+    const failures = results.filter(r => r.status === 'rejected').map(r => (r as PromiseRejectedResult).reason?.message)
     return new Response(
-      JSON.stringify({ sent: results.filter(r => r.status === 'fulfilled').length }),
+      JSON.stringify({ sent: results.filter(r => r.status === 'fulfilled').length, total: subs.length, failures }),
       { headers: { 'Content-Type': 'application/json', ...corsHeaders } }
     )
 

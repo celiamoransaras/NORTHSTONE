@@ -302,6 +302,13 @@ export const Wellness = {
     const { data } = await supabase.from('wellness').select('*, athletes(name, color)').order('date', { ascending: false }).limit(50)
     return data || []
   },
+  getLatestPerAthlete: async () => {
+    const { data, error } = await supabase.from('wellness').select('*, athletes(name, color)').order('date', { ascending: false }).limit(100)
+    console.log('🏥 Wellness.getLatestPerAthlete →', { data, error })
+    if (!data) return []
+    const seen = new Set()
+    return data.filter(e => { if (seen.has(e.athlete_id)) return false; seen.add(e.athlete_id); return true })
+  },
   upsert: async (entry) => {
     const { data } = await supabase.from('wellness').upsert(entry, { onConflict: 'athlete_id,date' }).select().single()
     return data
