@@ -46,6 +46,7 @@ export default function Athletes() {
   const [editing, setEditing] = useState(null)
   const [saving, setSaving] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(null)
+  const [showInactive, setShowInactive] = useState(false)
   const [detailTab, setDetailTab] = useState('profile')
   const [uploadingPhoto, setUploadingPhoto] = useState(false)
 
@@ -57,7 +58,13 @@ export default function Athletes() {
   useEffect(() => { load() }, [])
   const weeklyStats = useWeeklyStats(athletes)
 
-  const filtered = athletes.filter(a =>
+  const activeAthletes = athletes.filter(a => a.status !== 'inactive')
+  const inactiveAthletes = athletes.filter(a => a.status === 'inactive')
+  const filtered = activeAthletes.filter(a =>
+    a.name.toLowerCase().includes(search.toLowerCase()) ||
+    a.email?.toLowerCase().includes(search.toLowerCase())
+  )
+  const filteredInactive = inactiveAthletes.filter(a =>
     a.name.toLowerCase().includes(search.toLowerCase()) ||
     a.email?.toLowerCase().includes(search.toLowerCase())
   )
@@ -92,15 +99,26 @@ export default function Athletes() {
     setUploadingPhoto(false)
   }
 
-  const remove = async (id) => {
+  const deactivate = async (id) => {
     try {
-      await DB.delete(id)
+      await DB.update(id, { status: 'inactive' })
       await load()
       setConfirmDelete(null)
       setSheet(null)
-      toast('Deportista eliminada')
+      toast('Deportista dado/a de baja')
     } catch {
-      toast('Error al eliminar', 'error')
+      toast('Error al dar de baja', 'error')
+    }
+  }
+
+  const reactivate = async (id) => {
+    try {
+      await DB.update(id, { status: 'active' })
+      await load()
+      setSheet(null)
+      toast('Deportista reactivado/a ✓')
+    } catch {
+      toast('Error al reactivar', 'error')
     }
   }
 
@@ -121,7 +139,7 @@ export default function Athletes() {
 
         <div style={{ display: 'flex', gap: 8 }}>
           {[
-            { label: 'Total', val: athletes.length },
+            { label: 'Total', val: activeAthletes.length },
             { label: 'Activos', val: athletes.filter(a=>a.status==='active').length },
             { label: 'Lesionados', val: athletes.filter(a=>a.status==='injured').length },
           ].map(({ label, val }) => (
@@ -137,37 +155,72 @@ export default function Athletes() {
 
         {loading ? (
           <div style={{ color: 'var(--text-muted)', padding: 24, textAlign: 'center' }}>Cargando...</div>
-        ) : filtered.length === 0 ? (
+        ) : filtered.length === 0 && inactiveAthletes.length === 0 ? (
           <div className="empty-state">
             <div className="icon">👥</div>
             <h3>Sin deportistas</h3>
             <p>Añade tu primer deportista con el botón de arriba</p>
           </div>
         ) : (
-          <div className="card">
-            {filtered.map((a, i) => (
-              <div key={a.id} className="list-item" onClick={() => openDetail(a)}
-                style={{ borderBottom: i < filtered.length - 1 ? undefined : 'none', borderLeft: `3px solid ${a.color}`, paddingLeft: 14 }}>
-                {a.avatar_url
-                  ? <img src={a.avatar_url} alt={a.name} style={{ width: 44, height: 44, borderRadius: '50%', objectFit: 'cover', flexShrink: 0, boxShadow: `0 0 0 2px ${a.color}40` }} />
-                  : <div className="avatar" style={{ width: 44, height: 44, fontSize: 17, background: `linear-gradient(135deg, ${a.color}CC, ${a.color}88)`, color: '#fff', boxShadow: `0 4px 12px ${a.color}40` }}>{initials(a.name)}</div>
-                }
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontWeight: 700, fontSize: 15 }}>{a.name}</div>
-                  <div style={{ color: 'var(--text-muted)', fontSize: 12, marginTop: 1 }}>{a.sport || 'Sin deporte'}</div>
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
-                  <span className={`badge ${statusBadge(a.status)}`}>{statusLabel(a.status)}</span>
-                  {weeklyStats[a.id]?.assigned > 0 && (
-                    <span style={{ fontSize: 11, fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700,
-                      color: weeklyStats[a.id].done === weeklyStats[a.id].assigned ? 'var(--success)' : weeklyStats[a.id].done > 0 ? 'var(--warning)' : 'var(--text-muted)' }}>
-                      📅 {weeklyStats[a.id].done}/{weeklyStats[a.id].assigned} esta semana
-                    </span>
-                  )}
-                </div>
+          <>
+            {filtered.length > 0 && (
+              <div className="card">
+                {filtered.map((a, i) => (
+                  <div key={a.id} className="list-item" onClick={() => openDetail(a)}
+                    style={{ borderBottom: i < filtered.length - 1 ? undefined : 'none', borderLeft: `3px solid ${a.color}`, paddingLeft: 14 }}>
+                    {a.avatar_url
+                      ? <img src={a.avatar_url} alt={a.name} style={{ width: 44, height: 44, borderRadius: '50%', objectFit: 'cover', flexShrink: 0, boxShadow: `0 0 0 2px ${a.color}40` }} />
+                      : <div className="avatar" style={{ width: 44, height: 44, fontSize: 17, background: `linear-gradient(135deg, ${a.color}CC, ${a.color}88)`, color: '#fff', boxShadow: `0 4px 12px ${a.color}40` }}>{initials(a.name)}</div>
+                    }
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontWeight: 700, fontSize: 15 }}>{a.name}</div>
+                      <div style={{ color: 'var(--text-muted)', fontSize: 12, marginTop: 1 }}>{a.sport || 'Sin deporte'}</div>
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
+                      <span className={`badge ${statusBadge(a.status)}`}>{statusLabel(a.status)}</span>
+                      {weeklyStats[a.id]?.assigned > 0 && (
+                        <span style={{ fontSize: 11, fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700,
+                          color: weeklyStats[a.id].done === weeklyStats[a.id].assigned ? 'var(--success)' : weeklyStats[a.id].done > 0 ? 'var(--warning)' : 'var(--text-muted)' }}>
+                          📅 {weeklyStats[a.id].done}/{weeklyStats[a.id].assigned} esta semana
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
+            )}
+
+            {/* Dados de baja */}
+            {filteredInactive.length > 0 && (
+              <div style={{ marginTop: 8 }}>
+                <button onClick={() => setShowInactive(s => !s)}
+                  style={{ width: '100%', background: 'none', border: '1.5px solid var(--border)', borderRadius: 'var(--radius)', padding: '10px 16px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 800, fontSize: 14, textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--text-muted)' }}>
+                    ⛔ Dados de baja ({filteredInactive.length})
+                  </span>
+                  <span style={{ color: 'var(--text-muted)', fontSize: 16 }}>{showInactive ? '▲' : '▼'}</span>
+                </button>
+                {showInactive && (
+                  <div className="card" style={{ marginTop: 8, opacity: 0.7 }}>
+                    {filteredInactive.map((a, i) => (
+                      <div key={a.id} className="list-item" onClick={() => openDetail(a)}
+                        style={{ borderBottom: i < filteredInactive.length - 1 ? undefined : 'none', borderLeft: '3px solid var(--border)', paddingLeft: 14 }}>
+                        {a.avatar_url
+                          ? <img src={a.avatar_url} alt={a.name} style={{ width: 44, height: 44, borderRadius: '50%', objectFit: 'cover', flexShrink: 0, filter: 'grayscale(100%)' }} />
+                          : <div className="avatar" style={{ width: 44, height: 44, fontSize: 17, background: 'var(--border)', color: 'var(--text-muted)' }}>{initials(a.name)}</div>
+                        }
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontWeight: 700, fontSize: 15, color: 'var(--text-muted)' }}>{a.name}</div>
+                          <div style={{ color: 'var(--text-muted)', fontSize: 12, marginTop: 1 }}>{a.sport || 'Sin deporte'}</div>
+                        </div>
+                        <span className="badge badge-gray">Baja</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </>
         )}
       </div>
 
@@ -210,7 +263,10 @@ export default function Athletes() {
                   <InfoRow icon="🏋️" label="Deporte" val={sheet.sport || '—'} />
                   {sheet.notes && <><div className="divider" /><div style={{ color: 'var(--text-muted)', fontSize: 14 }}>{sheet.notes}</div></>}
                   <div className="divider" />
-                  <button className="btn btn-danger btn-full" onClick={() => setConfirmDelete(sheet.id)}>🗑 Eliminar deportista</button>
+                  {sheet.status === 'inactive'
+                    ? <button className="btn btn-primary btn-full" onClick={() => reactivate(sheet.id)}>✅ Reactivar deportista</button>
+                    : <button className="btn btn-danger btn-full" onClick={() => setConfirmDelete(sheet.id)}>⛔ Dar de baja</button>
+                  }
                 </>
               )}
               {detailTab === 'training' && (
@@ -306,12 +362,12 @@ export default function Athletes() {
           <div className="sheet">
             <div className="sheet-handle" />
             <div className="sheet-body" style={{ textAlign: 'center', paddingTop: 32 }}>
-              <div style={{ fontSize: 48, marginBottom: 16 }}>🗑</div>
-              <h3 style={{ marginBottom: 8 }}>¿Eliminar deportista?</h3>
-              <p style={{ color: 'var(--text-muted)', marginBottom: 28, fontSize: 14 }}>Esta acción no se puede deshacer.</p>
+              <div style={{ fontSize: 48, marginBottom: 16 }}>⛔</div>
+              <h3 style={{ marginBottom: 8 }}>¿Dar de baja?</h3>
+              <p style={{ color: 'var(--text-muted)', marginBottom: 28, fontSize: 14 }}>El deportista dejará de aparecer en las listas. Sus datos se conservan y puedes reactivarle cuando quieras.</p>
               <div style={{ display: 'flex', gap: 10 }}>
                 <button className="btn btn-secondary btn-full" onClick={() => setConfirmDelete(null)}>Cancelar</button>
-                <button className="btn btn-danger btn-full" onClick={() => remove(confirmDelete)}>Eliminar</button>
+                <button className="btn btn-danger btn-full" onClick={() => deactivate(confirmDelete)}>Dar de baja</button>
               </div>
             </div>
           </div>
