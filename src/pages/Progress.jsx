@@ -28,7 +28,7 @@ function WellnessCheckin({ athleteId }) {
     setDone(true)
     // Alertar al coach si el cansancio o dolor es alto (≥ 4)
     if (today.fatigue >= 4 || today.soreness >= 4) {
-      const fatigueLabels = ['', 'Muy baja', 'Baja', 'Normal', 'Alta', 'Muy alta']
+      const fatigueLabels = ['', 'A tope', 'Bien', 'Normal', 'Cansado/a', 'Agotado/a']
       const parts = []
       if (today.fatigue >= 4) parts.push(`Cansancio: ${fatigueLabels[today.fatigue]}`)
       if (today.soreness >= 4) parts.push(`Dolor: ${fatigueLabels[today.soreness]}`)
@@ -41,7 +41,7 @@ function WellnessCheckin({ athleteId }) {
   }
 
   const FIELD_LABELS = {
-    fatigue:  ['Muy descansado/a', 'Algo cansado/a', 'Normal', 'Bastante cansado/a', 'Agotado/a'],
+    fatigue:  ['A tope de energía', 'Bien', 'Normal', 'Cansado/a', 'Agotado/a'],
     soreness: ['Sin dolor', 'Leve molestia', 'Algo de dolor', 'Bastante dolor', 'Mucho dolor'],
     mood:     ['Muy bajo', 'Bajo', 'Normal', 'Bueno', 'Excelente'],
   }
@@ -76,7 +76,7 @@ function WellnessCheckin({ athleteId }) {
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
           {[
-            { label: 'Cansancio', value: today?.fatigue, emojis: ['😴','😐','🙂','💪','🔥'] },
+            { label: 'Cansancio', value: today?.fatigue, emojis: ['🔥','💪','🙂','😐','😴'] },
             { label: 'Dolor', value: today?.soreness, emojis: ['✅','😊','😐','😬','🤕'] },
             { label: 'Ánimo', value: today?.mood, emojis: ['😔','😐','🙂','😄','🤩'] },
           ].map(({ label, value, emojis }) => (
@@ -96,8 +96,8 @@ function WellnessCheckin({ athleteId }) {
         <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 800, fontSize: 16, textTransform: 'uppercase' }}>¿Cómo estás hoy?</div>
         <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 2 }}>Registra tu estado para que tu entrenadora lo vea</div>
       </div>
-      <EmojiRow label="Cansancio" field="fatigue" emojis={['😴','😐','🙂','💪','🔥']}
-        colors={['#DC2626','#D97706','#059669','#059669','#059669']} />
+      <EmojiRow label="Cansancio" field="fatigue" emojis={['🔥','💪','🙂','😐','😴']}
+        colors={['#059669','#059669','#059669','#D97706','#DC2626']} />
       <EmojiRow label="Dolor muscular" field="soreness" emojis={['✅','😊','😐','😬','🤕']}
         colors={['#059669','#059669','#D97706','#DC2626','#DC2626']} />
       <EmojiRow label="Ánimo" field="mood" emojis={['😔','😐','🙂','😄','🤩']}
@@ -287,7 +287,7 @@ function WellnessHistory({ athleteId }) {
             const val = latest[f.key]
             const labels = {
               mood:    ['😔 Bajo','😐 Regular','🙂 Bien','😄 Muy bien','🤩 Excelente'],
-              fatigue: ['😴 Agotada','😬 Cansada','😐 Normal','🙂 Bien','🔥 En forma'],
+              fatigue: ['🔥 En forma','🙂 Bien','😐 Normal','😬 Cansada','😴 Agotada'],
             }
             return val ? (
               <div key={f.key} style={{ flex: 1, background: 'var(--bg)', borderRadius: 10, padding: '8px 10px', textAlign: 'center' }}>
@@ -897,7 +897,7 @@ setEntry(data?.[0] || null)
       </div>
       <div style={{ display: 'flex', gap: 8 }}>
         {[
-          { label: 'Cansancio', value: entry.fatigue, emojis: ['😴','😐','🙂','💪','🔥'], alert: entry.fatigue >= 4 },
+          { label: 'Cansancio', value: entry.fatigue, emojis: ['🔥','💪','🙂','😐','😴'], alert: entry.fatigue >= 4 },
           { label: 'Dolor', value: entry.soreness, emojis: ['✅','😊','😐','😬','🤕'], alert: entry.soreness >= 4 },
           { label: 'Ánimo', value: entry.mood, emojis: ['😔','😐','🙂','😄','🤩'], alert: false },
         ].map(({ label, value, emojis, alert }) => (

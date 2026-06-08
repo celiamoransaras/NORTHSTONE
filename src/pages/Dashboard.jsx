@@ -374,7 +374,7 @@ function TeamWellnessSection() {
 
   const today = new Date().toISOString().slice(0, 10)
   const moodEmojis    = ['😔','😐','🙂','😄','🤩']
-  const fatigueEmojis = ['😴','😐','🙂','💪','🔥']
+  const fatigueEmojis = ['🔥','💪','🙂','😐','😴']
   const sorenessEmojis= ['✅','😊','😐','😬','🤕']
   const alerts = entries.filter(e => e.fatigue >= 4 || e.soreness >= 4)
 
