@@ -325,8 +325,7 @@ export const Wellness = {
   },
   getLatestPerAthlete: async () => {
     const { data, error } = await supabase.from('wellness').select('*, athletes(name, color)').order('date', { ascending: false }).limit(100)
-    console.log('🏥 Wellness.getLatestPerAthlete →', { data, error })
-    if (!data) return []
+if (!data) return []
     const seen = new Set()
     return data.filter(e => { if (seen.has(e.athlete_id)) return false; seen.add(e.athlete_id); return true })
   },
