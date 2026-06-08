@@ -887,13 +887,14 @@ setEntry(data?.[0] || null)
       </div>
       <div style={{ display: 'flex', gap: 8 }}>
         {[
-          { label: 'Cansancio', value: entry.fatigue, emojis: ['😴','😐','🙂','💪','🔥'] },
-          { label: 'Dolor', value: entry.soreness, emojis: ['✅','😊','😐','😬','🤕'] },
-          { label: 'Ánimo', value: entry.mood, emojis: ['😔','😐','🙂','😄','🤩'] },
-        ].map(({ label, value, emojis }) => (
-          <div key={label} className="stat-card" style={{ flex: 1, padding: '12px 8px', textAlign: 'center' }}>
-            <div style={{ fontSize: 24, marginBottom: 4 }}>{value ? emojis[value - 1] : '—'}</div>
-            <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 10, fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)', letterSpacing: '0.5px' }}>{label}</div>
+          { label: 'Cansancio', value: entry.fatigue, emojis: ['😴','😐','🙂','💪','🔥'], alert: entry.fatigue >= 4 },
+          { label: 'Dolor', value: entry.soreness, emojis: ['✅','😊','😐','😬','🤕'], alert: entry.soreness >= 4 },
+          { label: 'Ánimo', value: entry.mood, emojis: ['😔','😐','🙂','😄','🤩'], alert: false },
+        ].map(({ label, value, emojis, alert }) => (
+          <div key={label} className="stat-card" style={{ flex: 1, padding: '12px 8px', textAlign: 'center', border: alert ? '1.5px solid var(--error)' : undefined, background: alert ? 'var(--error-dim)' : undefined }}>
+            <div style={{ fontSize: 24, marginBottom: 2 }}>{value ? emojis[value - 1] : '—'}</div>
+            <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 13, fontWeight: 900, color: alert ? 'var(--error)' : 'var(--text)', marginBottom: 2 }}>{value ? `${value}/5` : '—'}</div>
+            <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 10, fontWeight: 700, textTransform: 'uppercase', color: alert ? 'var(--error)' : 'var(--text-muted)', letterSpacing: '0.5px' }}>{label}{alert ? ' ⚠️' : ''}</div>
           </div>
         ))}
       </div>
