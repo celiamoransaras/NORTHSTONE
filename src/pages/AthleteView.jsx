@@ -40,6 +40,8 @@ export default function AthleteView() {
   const [profileOpen, setProfileOpen] = useState(false)
   const { subscribed: pushSubscribed, loading: pushLoading, supported: pushSupported, enable: enablePush, disable: disablePush } = usePushNotifications({ athleteId })
   const [uploadingAvatar, setUploadingAvatar] = useState(false)
+  const [onboarding, setOnboarding] = useState(() => !localStorage.getItem('ns_onboarding_done'))
+  const [onboardingStep, setOnboardingStep] = useState(0)
 
   // Mensajes no leídos
   useEffect(() => {
@@ -114,8 +116,37 @@ export default function AthleteView() {
     }
   }
 
+  const ONBOARDING_STEPS = [
+    { icon: '📅', title: 'Tus entrenos', text: 'En "Entrenos" verás todas las sesiones que Celia te prepare. Puedes confirmar asistencia y valorar cada sesión.' },
+    { icon: '📈', title: 'Tu progreso', text: 'En "Progreso" registra cómo te sientes cada día. Celia verá tu estado de forma y podrá adaptar los entrenos.' },
+    { icon: '💬', title: 'Chat directo', text: 'Habla con Celia y con el resto del equipo en "Chat". Recibirás notificaciones cuando te escriba.' },
+  ]
+  const finishOnboarding = () => { localStorage.setItem('ns_onboarding_done', '1'); setOnboarding(false) }
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100dvh', overflow: 'hidden' }}>
+      {/* Onboarding primera vez */}
+      {onboarding && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 1000, display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
+          <div style={{ background: 'var(--bg)', borderRadius: '24px 24px 0 0', padding: '32px 24px 48px', width: '100%', maxWidth: 480, textAlign: 'center' }}>
+            <div style={{ display: 'flex', justifyContent: 'center', gap: 6, marginBottom: 24 }}>
+              {ONBOARDING_STEPS.map((_, i) => (
+                <div key={i} style={{ height: 4, borderRadius: 2, width: i === onboardingStep ? 24 : 8, background: i === onboardingStep ? 'var(--accent)' : 'var(--border)', transition: 'all 0.3s' }} />
+              ))}
+            </div>
+            <div style={{ fontSize: 56, marginBottom: 16 }}>{ONBOARDING_STEPS[onboardingStep].icon}</div>
+            <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 900, fontSize: 26, textTransform: 'uppercase', marginBottom: 10 }}>{ONBOARDING_STEPS[onboardingStep].title}</div>
+            <div style={{ fontSize: 15, color: 'var(--text-muted)', lineHeight: 1.5, marginBottom: 32, maxWidth: 300, margin: '0 auto 32px' }}>{ONBOARDING_STEPS[onboardingStep].text}</div>
+            {onboardingStep < ONBOARDING_STEPS.length - 1
+              ? <button className="btn btn-primary btn-full" onClick={() => setOnboardingStep(s => s + 1)}>Siguiente →</button>
+              : <button className="btn btn-primary btn-full" onClick={finishOnboarding}>¡Empezar! 🚀</button>
+            }
+            {onboardingStep === 0 && (
+              <button onClick={finishOnboarding} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: 13, marginTop: 16, cursor: 'pointer' }}>Saltar</button>
+            )}
+          </div>
+        </div>
+      )}
       {/* Header — sin botón Salir, avatar abre perfil */}
       <header style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 20px', height: 'var(--header-height)', background: 'var(--bg)', flexShrink: 0 }}>
         <div>

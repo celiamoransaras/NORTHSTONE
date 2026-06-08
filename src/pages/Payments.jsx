@@ -5,10 +5,65 @@ import { haptic } from '../lib/haptic'
 
 const MONTHS = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
 
+function AnnualSummary({ year, amount, athletes }) {
+  const [data, setData] = useState(null)
+
+  useEffect(() => {
+    const load = async () => {
+      let totalPaid = 0, totalPending = 0
+      const byAthlete = {}
+      athletes.forEach(a => { byAthlete[a.id] = { name: a.name, color: a.color, paid: 0, pending: 0 } })
+
+      for (let m = 1; m <= 12; m++) {
+        const pays = await DB.getByMonth(m, year)
+        pays.forEach(p => {
+          if (!byAthlete[p.athlete_id]) return
+          if (p.status === 'paid') { byAthlete[p.athlete_id].paid++; totalPaid += p.amount }
+          else { byAthlete[p.athlete_id].pending++; totalPending += p.amount }
+        })
+      }
+      setData({ totalPaid, totalPending, byAthlete: Object.values(byAthlete) })
+    }
+    if (athletes.length) load()
+  }, [year, athletes])
+
+  if (!data) return <div style={{ textAlign: 'center', padding: 16, color: 'var(--text-muted)', fontSize: 13 }}>Cargando resumen...</div>
+
+  const initials = (name) => name?.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase() || '?'
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+      <div className="grid-2">
+        <div className="stat-card" style={{ borderLeft: '3px solid var(--success)' }}>
+          <div className="stat-value" style={{ color: 'var(--success)' }}>{data.totalPaid}€</div>
+          <div className="stat-label">Cobrado en {year}</div>
+        </div>
+        <div className="stat-card" style={{ borderLeft: '3px solid var(--error)' }}>
+          <div className="stat-value" style={{ color: 'var(--error)' }}>{data.totalPending}€</div>
+          <div className="stat-label">Pendiente en {year}</div>
+        </div>
+      </div>
+      <div className="card">
+        {data.byAthlete.map((a, i) => (
+          <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 0', borderBottom: i < data.byAthlete.length - 1 ? '1px solid var(--border)' : 'none' }}>
+            <div className="avatar" style={{ background: a.color + '20', color: a.color, width: 36, height: 36, fontSize: 13, flexShrink: 0 }}>{initials(a.name)}</div>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontWeight: 700, fontSize: 14 }}>{a.name}</div>
+              <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{a.paid} meses pagados · {a.pending} pendientes</div>
+            </div>
+            <div style={{ fontWeight: 800, fontSize: 15, color: 'var(--success)' }}>{a.paid * amount}€</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 export default function Payments() {
   const [payments, setPayments] = useState([])
   const [athletes, setAthletes] = useState([])
   const [loading, setLoading] = useState(true)
+  const [showAnnual, setShowAnnual] = useState(false)
   const now = new Date()
   const [month, setMonth] = useState(now.getMonth() + 1)
   const [year, setYear] = useState(now.getFullYear())
@@ -187,6 +242,22 @@ export default function Payments() {
             <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 4 }}>Todos los pagos de {MONTHS[month-1]} están al día</div>
           </div>
         )}
+
+        {/* Resumen anual */}
+        <div style={{ marginTop: 8 }}>
+          <button onClick={() => setShowAnnual(s => !s)}
+            style={{ width: '100%', background: 'none', border: '1.5px solid var(--border)', borderRadius: 'var(--radius)', padding: '12px 16px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 800, fontSize: 15, textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--text)' }}>
+              📊 Resumen anual {year}
+            </span>
+            <span style={{ color: 'var(--text-muted)', fontSize: 18 }}>{showAnnual ? '▲' : '▼'}</span>
+          </button>
+          {showAnnual && (
+            <div style={{ marginTop: 12 }}>
+              <AnnualSummary year={year} amount={amount} athletes={athletes} />
+            </div>
+          )}
+        </div>
       </div>
     </div>
   )

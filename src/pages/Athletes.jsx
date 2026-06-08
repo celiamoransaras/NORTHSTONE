@@ -202,7 +202,7 @@ export default function Athletes() {
                   </div>
                   <WeeklyAdherence athleteId={sheet.id} color={sheet.color} />
                   <div style={{ marginBottom: 16 }}>
-                    <WellnessTodayCoach athleteId={sheet.id} />
+                    <WellnessTodayCoach athleteId={sheet.id} athleteName={sheet.name} />
                   </div>
                   <InfoRow icon="✉️" label="Email" val={sheet.email || '—'} />
                   <InfoRow icon="📱" label="Teléfono" val={sheet.phone || '—'} />

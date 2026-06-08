@@ -848,7 +848,7 @@ export default function Progress({ athleteId, sessions = [], isCoach = false }) 
 }
 
 // ---- Bienestar de hoy en modo lectura (para la entrenadora) ----
-export function WellnessTodayCoach({ athleteId }) {
+export function WellnessTodayCoach({ athleteId, athleteName }) {
   const [entry, setEntry] = useState(null)
   const [loaded, setLoaded] = useState(false)
 
@@ -870,7 +870,7 @@ setEntry(data?.[0] || null)
   if (!entry) return (
     <div className="card" style={{ padding: '16px 18px', marginBottom: 4 }}>
       <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 800, fontSize: 16, textTransform: 'uppercase', marginBottom: 6 }}>Bienestar</div>
-      <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>La deportista aún no ha registrado su estado.</div>
+      <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>{athleteName ? `${athleteName} aún no ha registrado su estado.` : 'Aún no hay registro de bienestar.'}</div>
     </div>
   )
 
