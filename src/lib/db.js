@@ -88,6 +88,7 @@ export const Sessions = {
   update: async (id, { exercises = [], athlete_ids = [], attendance, session_athletes, id: _id, ...session }) => {
     await supabase.from('sessions').update(session).eq('id', id)
 
+    // Actualizar ejercicios (delete + reinsert)
     if (exercises) {
       await supabase.from('exercises').delete().eq('session_id', id)
       if (exercises.length) {
@@ -102,10 +103,30 @@ export const Sessions = {
         })))
       }
     }
+
+    // Actualizar deportistas convocadas preservando asistencia/RPE existentes
     if (athlete_ids) {
-      await supabase.from('session_athletes').delete().eq('session_id', id)
-      if (athlete_ids.length) {
-        await supabase.from('session_athletes').insert(athlete_ids.map(aid => ({ session_id: id, athlete_id: aid })))
+      // Obtener registros actuales para no perder attended/rpe
+      const { data: existing } = await supabase
+        .from('session_athletes')
+        .select('athlete_id, attended, rpe, fatigue_pre, fatigue_post, mood_post, rpe_notes')
+        .eq('session_id', id)
+      const existingMap = {}
+      ;(existing || []).forEach(r => { existingMap[r.athlete_id] = r })
+
+      // Eliminar los que ya no están convocados
+      const toRemove = (existing || []).filter(r => !athlete_ids.includes(r.athlete_id))
+      if (toRemove.length) {
+        await supabase.from('session_athletes').delete().eq('session_id', id)
+          .in('athlete_id', toRemove.map(r => r.athlete_id))
+      }
+
+      // Insertar los nuevos preservando datos de los que ya existían
+      const toInsert = athlete_ids
+        .filter(aid => !existingMap[aid])
+        .map(aid => ({ session_id: id, athlete_id: aid }))
+      if (toInsert.length) {
+        await supabase.from('session_athletes').insert(toInsert)
       }
     }
   },

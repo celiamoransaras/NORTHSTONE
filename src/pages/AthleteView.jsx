@@ -618,18 +618,26 @@ function AthleteTrainingWithRPE({ athleteId }) {
     loadSessions()
   }, [athleteId])
 
-  // Realtime: nueva sesión asignada a la deportista
+  // Realtime: sesiones nuevas, editadas o eliminadas
   useEffect(() => {
     if (!athleteId) return
+    const reload = () => Sessions.getByAthlete(athleteId).then(data => { setSessions(data); setLoading(false) })
+
     const channel = supabase.channel(`athlete_sessions_${athleteId}`)
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'session_athletes', filter: `athlete_id=eq.${athleteId}` }, () => {
-        loadSessions()
-      })
-      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'sessions' }, () => {
-        loadSessions()
-      })
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'session_athletes', filter: `athlete_id=eq.${athleteId}` }, reload)
+      .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'session_athletes', filter: `athlete_id=eq.${athleteId}` }, reload)
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'sessions' }, reload)
+      .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'sessions' }, reload)
       .subscribe()
-    return () => channel.unsubscribe()
+
+    // Recarga cuando la deportista vuelve a la app (por si el WebSocket perdió eventos)
+    const onVisible = () => { if (document.visibilityState === 'visible') reload() }
+    document.addEventListener('visibilitychange', onVisible)
+
+    return () => {
+      channel.unsubscribe()
+      document.removeEventListener('visibilitychange', onVisible)
+    }
   }, [athleteId])
 
   useEffect(() => {

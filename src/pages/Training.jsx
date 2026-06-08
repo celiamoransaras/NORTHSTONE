@@ -80,7 +80,14 @@ export default function Training({ athleteId = null, coachView = false, embedded
         })
       })
       .subscribe()
-    return () => channel.unsubscribe()
+    // Recarga al volver a la pestaña
+    const onVisible = () => { if (document.visibilityState === 'visible') load() }
+    document.addEventListener('visibilitychange', onVisible)
+
+    return () => {
+      channel.unsubscribe()
+      document.removeEventListener('visibilitychange', onVisible)
+    }
   }, [athleteId])
 
   const today = new Date().toISOString().slice(0,10)
