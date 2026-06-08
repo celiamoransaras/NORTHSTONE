@@ -39,6 +39,7 @@ export default function AthleteView() {
   const [unratedCount, setUnratedCount] = useState(0)
   const [profileOpen, setProfileOpen] = useState(false)
   const { subscribed: pushSubscribed, loading: pushLoading, supported: pushSupported, enable: enablePush, disable: disablePush } = usePushNotifications({ athleteId })
+  const [uploadingAvatar, setUploadingAvatar] = useState(false)
 
   // Mensajes no leídos
   useEffect(() => {
@@ -95,7 +96,6 @@ export default function AthleteView() {
   }
 
   const initials = (name) => name.split(' ').map(w => w[0]).join('').slice(0,2).toUpperCase()
-  const [uploadingAvatar, setUploadingAvatar] = useState(false)
 
   const handleAvatarChange = async (e) => {
     const file = e.target.files[0]

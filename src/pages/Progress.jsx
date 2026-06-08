@@ -854,8 +854,7 @@ export function WellnessTodayCoach({ athleteId }) {
 
   useEffect(() => {
     Wellness.getByAthlete(athleteId, 1).then(data => {
-      console.log('🏥 WellnessTodayCoach →', athleteId, data)
-      setEntry(data?.[0] || null)
+setEntry(data?.[0] || null)
       setLoaded(true)
     })
   }, [athleteId])
