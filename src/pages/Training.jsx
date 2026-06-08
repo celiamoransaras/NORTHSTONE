@@ -271,13 +271,20 @@ export default function Training({ athleteId = null, coachView = false, embedded
                             <span style={{ fontSize: 14, fontWeight: 500, flex: 1 }}>{a.name}</span>
                             <span style={{ fontSize: 12, color: attended ? 'var(--success)' : 'var(--text-muted)' }}>{attended ? 'Asistió' : 'No asistió'}</span>
                           </div>
-                          {r && (r.rpe || r.fatigue_pre || r.fatigue_post || r.mood_post) && (
-                            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 6, marginLeft: 12 }}>
-                              {r.fatigue_pre != null && <span style={{ fontSize: 11, background: 'var(--bg)', padding: '2px 8px', borderRadius: 6, color: 'var(--text-muted)' }}>😴 Pre: <strong>{r.fatigue_pre}</strong></span>}
-                              {r.rpe != null && <span style={{ fontSize: 11, background: 'var(--bg)', padding: '2px 8px', borderRadius: 6, color: 'var(--text-muted)' }}>💪 RPE: <strong>{r.rpe}</strong></span>}
-                              {r.fatigue_post != null && <span style={{ fontSize: 11, background: 'var(--bg)', padding: '2px 8px', borderRadius: 6, color: 'var(--text-muted)' }}>🥵 Post: <strong>{r.fatigue_post}</strong></span>}
-                              {r.mood_post != null && <span style={{ fontSize: 11, background: 'var(--bg)', padding: '2px 8px', borderRadius: 6, color: 'var(--text-muted)' }}>😊 Ánimo: <strong>{r.mood_post}</strong></span>}
-                              {r.fatigue_pre >= 8 && <span style={{ fontSize: 11, background: 'var(--error-dim)', color: 'var(--error)', padding: '2px 8px', borderRadius: 6 }}>⚠️ Cansancio alto</span>}
+                          {r && (r.rpe || r.fatigue_pre || r.fatigue_post || r.mood_post || r.rpe_notes) && (
+                            <div style={{ marginTop: 6, marginLeft: 12 }}>
+                              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                                {r.fatigue_pre != null && <span style={{ fontSize: 11, background: 'var(--bg)', padding: '2px 8px', borderRadius: 6, color: 'var(--text-muted)' }}>😴 Pre: <strong>{r.fatigue_pre}</strong></span>}
+                                {r.rpe != null && <span style={{ fontSize: 11, background: 'var(--bg)', padding: '2px 8px', borderRadius: 6, color: 'var(--text-muted)' }}>💪 RPE: <strong>{r.rpe}</strong></span>}
+                                {r.fatigue_post != null && <span style={{ fontSize: 11, background: 'var(--bg)', padding: '2px 8px', borderRadius: 6, color: 'var(--text-muted)' }}>🥵 Post: <strong>{r.fatigue_post}</strong></span>}
+                                {r.mood_post != null && <span style={{ fontSize: 11, background: 'var(--bg)', padding: '2px 8px', borderRadius: 6, color: 'var(--text-muted)' }}>😊 Ánimo: <strong>{r.mood_post}</strong></span>}
+                                {r.fatigue_pre >= 8 && <span style={{ fontSize: 11, background: 'var(--error-dim)', color: 'var(--error)', padding: '2px 8px', borderRadius: 6 }}>⚠️ Cansancio alto</span>}
+                              </div>
+                              {r.rpe_notes && (
+                                <div style={{ marginTop: 6, padding: '8px 10px', background: 'var(--bg)', borderRadius: 8, borderLeft: '3px solid var(--accent)', fontSize: 13, color: 'var(--text)', fontStyle: 'italic' }}>
+                                  💬 "{r.rpe_notes}"
+                                </div>
+                              )}
                             </div>
                           )}
                         </div>

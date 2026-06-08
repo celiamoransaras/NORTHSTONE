@@ -641,6 +641,7 @@ function AthleteTrainingWithRPE({ athleteId }) {
   const [fatiguePre, setFatiguePre] = useState(0)
   const [fatiguePost, setFatiguePost] = useState(0)
   const [moodPost, setMoodPost] = useState(0)
+  const [rpeNotes, setRpeNotes] = useState('')
   const [savingPre, setSavingPre] = useState(false)
   const [saving, setSaving] = useState(false)
   const [attendanceMap, setAttendanceMap] = useState({})
@@ -687,7 +688,7 @@ function AthleteTrainingWithRPE({ athleteId }) {
   useEffect(() => {
     if (!rpeSheet) return
     RPE.get(rpeSheet.id, athleteId).then(data => {
-      if (data) { setRpe(data.rpe || 0); setFatiguePost(data.fatigue_post || 0); setMoodPost(data.mood_post || 0) }
+      if (data) { setRpe(data.rpe || 0); setFatiguePost(data.fatigue_post || 0); setMoodPost(data.mood_post || 0); setRpeNotes(data.rpe_notes || '') }
     })
   }, [rpeSheet])
 
@@ -702,9 +703,9 @@ function AthleteTrainingWithRPE({ athleteId }) {
     if (!canSave) return
     setSaving(true)
     try {
-      await RPE.set(rpeSheet.id, athleteId, { rpe: rpe || null, fatigue_post: fatiguePost || null, mood_post: moodPost || null })
+      await RPE.set(rpeSheet.id, athleteId, { rpe: rpe || null, fatigue_post: fatiguePost || null, mood_post: moodPost || null, rpe_notes: rpeNotes.trim() || null })
       setRpeSheet(null)
-      setRpe(0); setFatiguePost(0); setMoodPost(0)
+      setRpe(0); setFatiguePost(0); setMoodPost(0); setRpeNotes('')
       haptic('success')
       toast('Valoración guardada ✓')
     } catch {
@@ -955,6 +956,17 @@ function AthleteTrainingWithRPE({ athleteId }) {
                 colors={['','var(--success)','var(--success)','var(--success)','var(--success)','var(--warning)','var(--warning)','var(--warning)','var(--error)','var(--error)','var(--error)']} />
               <ScaleRow label="😊 Ánimo al salir" value={moodPost} onChange={setMoodPost}
                 colors={['','var(--error)','var(--error)','var(--warning)','var(--warning)','var(--warning)','var(--success)','var(--success)','var(--success)','var(--success)','var(--success)']} />
+              <div style={{ marginBottom: 12 }}>
+                <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 8, color: 'var(--text)' }}>💬 Comentario para Celia <span style={{ fontWeight: 400, color: 'var(--text-muted)' }}>(opcional)</span></div>
+                <textarea
+                  value={rpeNotes}
+                  onChange={e => setRpeNotes(e.target.value)}
+                  placeholder="¿Cómo fue el entreno? ¿Algo que quieras contarle..."
+                  maxLength={300}
+                  rows={3}
+                  style={{ width: '100%', resize: 'none', padding: '10px 12px', borderRadius: 'var(--radius-sm)', border: '1.5px solid var(--border)', background: 'var(--bg)', fontSize: 14, color: 'var(--text)', fontFamily: 'inherit', boxSizing: 'border-box', outline: 'none' }}
+                />
+              </div>
               <button className="btn btn-primary btn-full" onClick={saveRpe} disabled={!canSave || saving} style={{ marginTop: 8 }}>
                 {saving ? 'Guardando...' : 'Guardar valoración'}
               </button>
