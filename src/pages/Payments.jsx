@@ -5,7 +5,7 @@ import { haptic } from '../lib/haptic'
 
 const MONTHS = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
 
-function AnnualSummary({ year, amount, athletes }) {
+function AnnualSummary({ year, athletes }) {
   const [data, setData] = useState(null)
 
   useEffect(() => {
@@ -44,16 +44,19 @@ function AnnualSummary({ year, amount, athletes }) {
         </div>
       </div>
       <div className="card">
-        {data.byAthlete.map((a, i) => (
-          <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 0', borderBottom: i < data.byAthlete.length - 1 ? '1px solid var(--border)' : 'none' }}>
+        {data.byAthlete.filter(a => a.paid > 0 || a.pending > 0).map((a, i, arr) => (
+          <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 0', borderBottom: i < arr.length - 1 ? '1px solid var(--border)' : 'none' }}>
             <div className="avatar" style={{ background: a.color + '20', color: a.color, width: 36, height: 36, fontSize: 13, flexShrink: 0 }}>{initials(a.name)}</div>
             <div style={{ flex: 1 }}>
               <div style={{ fontWeight: 700, fontSize: 14 }}>{a.name}</div>
               <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{a.paid} meses pagados · {a.pending} pendientes</div>
             </div>
-            <div style={{ fontWeight: 800, fontSize: 15, color: 'var(--success)' }}>{a.paid * amount}€</div>
+            <div style={{ fontWeight: 800, fontSize: 15, color: 'var(--success)' }}>{a.paid > 0 ? `${a.paid * (a.paid > 0 ? Math.round(data.totalPaid / a.paid / a.paid * a.paid) : 0)}€` : '—'}</div>
           </div>
         ))}
+        {data.byAthlete.every(a => a.paid === 0 && a.pending === 0) && (
+          <div style={{ textAlign: 'center', padding: 16, color: 'var(--text-muted)', fontSize: 13 }}>Sin datos en {year}</div>
+        )}
       </div>
     </div>
   )
@@ -67,21 +70,49 @@ export default function Payments() {
   const now = new Date()
   const [month, setMonth] = useState(now.getMonth() + 1)
   const [year, setYear] = useState(now.getFullYear())
-  const [amount, setAmount] = useState(() => Number(localStorage.getItem('ns_payment_amount') || 80))
-  const [editingAmount, setEditingAmount] = useState(false)
   const [toggling, setToggling] = useState(null)
+  // Per-athlete fees: { [athleteId]: number }
+  const [fees, setFees] = useState({})
+  const [editingFee, setEditingFee] = useState(null) // athleteId being edited
+  const [feeInput, setFeeInput] = useState('')
   const toast = useToast()
+
+  // Load fees from localStorage
+  const loadFees = (athlList) => {
+    const f = {}
+    athlList.forEach(a => {
+      const stored = localStorage.getItem(`ns_fee_${a.id}`)
+      if (stored) f[a.id] = Number(stored)
+    })
+    setFees(f)
+  }
 
   const load = async () => {
     setLoading(true)
     const ath = await Athletes.getAll()
     setAthletes(ath)
-    const pays = await DB.ensureMonth(ath, month, year, amount)
+    loadFees(ath)
+    const pays = await DB.ensureMonth(ath, month, year)
     setPayments(pays)
     setLoading(false)
   }
 
   useEffect(() => { load() }, [month, year])
+
+  const saveFee = async (athleteId) => {
+    const val = Number(feeInput)
+    if (!val || val <= 0) { toast('Introduce un importe válido', 'error'); return }
+    localStorage.setItem(`ns_fee_${athleteId}`, val)
+    setFees(prev => ({ ...prev, [athleteId]: val }))
+    setEditingFee(null)
+    setFeeInput('')
+    haptic('success')
+    toast('Cuota guardada ✓')
+    // Reload to create payment record if it didn't exist
+    const ath = await Athletes.getAll()
+    const pays = await DB.ensureMonth(ath, month, year)
+    setPayments(pays)
+  }
 
   const toggle = async (id, currentStatus) => {
     setToggling(id)
@@ -104,6 +135,10 @@ export default function Payments() {
   const pct = total ? Math.round((paid / total) * 100) : 0
   const pending = payments.filter(p => p.status === 'pending')
   const paidList = payments.filter(p => p.status === 'paid')
+  const totalCobrado = paidList.reduce((s, p) => s + p.amount, 0)
+
+  // Athletes without fee assigned
+  const noFeeAthletes = athletes.filter(a => !fees[a.id])
 
   const prevMonth = () => { if (month === 1) { setMonth(12); setYear(y => y-1) } else setMonth(m => m-1) }
   const nextMonth = () => { if (month === 12) { setMonth(1); setYear(y => y+1) } else setMonth(m => m+1) }
@@ -128,20 +163,88 @@ export default function Payments() {
     <div className="page fade-in">
       <div className="page-header">
         <h2>Pagos</h2>
-        {editingAmount ? (
-          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-            <input className="input" type="number" value={amount} style={{ width: 80, padding: '8px 12px' }}
-              onChange={e => setAmount(Number(e.target.value))} />
-            <button className="btn btn-primary btn-sm" onClick={() => { localStorage.setItem('ns_payment_amount', amount); setEditingAmount(false); load() }}>OK</button>
-          </div>
-        ) : (
-          <button className="btn btn-secondary btn-sm" onClick={() => setEditingAmount(true)}>
-            Cuota: <strong>{amount}€</strong>
-          </button>
-        )}
       </div>
 
       <div className="page-content">
+
+        {/* Aviso si hay deportistas sin cuota */}
+        {noFeeAthletes.length > 0 && (
+          <div className="card" style={{ borderLeft: '3px solid var(--accent)', background: 'var(--accent)10' }}>
+            <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 800, fontSize: 14, textTransform: 'uppercase', marginBottom: 10, color: 'var(--accent)' }}>
+              💶 Cuotas sin asignar
+            </div>
+            {noFeeAthletes.map(a => (
+              <div key={a.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 0', borderBottom: '1px solid var(--border)' }}>
+                {a.avatar_url
+                  ? <img src={a.avatar_url} style={{ width: 36, height: 36, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
+                  : <div className="avatar" style={{ background: a.color+'20', color: a.color, width: 36, height: 36, fontSize: 13, flexShrink: 0 }}>{initials(a.name)}</div>
+                }
+                <div style={{ flex: 1, fontWeight: 700, fontSize: 14 }}>{a.name}</div>
+                {editingFee === a.id ? (
+                  <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                    <input
+                      className="input"
+                      type="number"
+                      value={feeInput}
+                      onChange={e => setFeeInput(e.target.value)}
+                      placeholder="€/mes"
+                      autoFocus
+                      style={{ width: 80, padding: '6px 10px', fontSize: 14 }}
+                    />
+                    <button className="btn btn-primary btn-sm" onClick={() => saveFee(a.id)}>OK</button>
+                    <button className="btn btn-ghost btn-sm" onClick={() => { setEditingFee(null); setFeeInput('') }}>✕</button>
+                  </div>
+                ) : (
+                  <button className="btn btn-secondary btn-sm" onClick={() => { setEditingFee(a.id); setFeeInput('') }}>
+                    + Añadir cuota
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Cuotas asignadas */}
+        {Object.keys(fees).length > 0 && (
+          <div className="card">
+            <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 800, fontSize: 13, textTransform: 'uppercase', color: 'var(--text-muted)', letterSpacing: '0.5px', marginBottom: 10 }}>
+              Cuotas mensuales
+            </div>
+            {athletes.filter(a => fees[a.id]).map((a, i, arr) => (
+              <div key={a.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 0', borderBottom: i < arr.length - 1 ? '1px solid var(--border)' : 'none' }}>
+                {a.avatar_url
+                  ? <img src={a.avatar_url} style={{ width: 32, height: 32, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
+                  : <div className="avatar" style={{ background: a.color+'20', color: a.color, width: 32, height: 32, fontSize: 12, flexShrink: 0 }}>{initials(a.name)}</div>
+                }
+                <div style={{ flex: 1, fontWeight: 600, fontSize: 14 }}>{a.name}</div>
+                {editingFee === a.id ? (
+                  <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                    <input
+                      className="input"
+                      type="number"
+                      value={feeInput}
+                      onChange={e => setFeeInput(e.target.value)}
+                      autoFocus
+                      style={{ width: 80, padding: '6px 10px', fontSize: 14 }}
+                    />
+                    <button className="btn btn-primary btn-sm" onClick={() => saveFee(a.id)}>OK</button>
+                    <button className="btn btn-ghost btn-sm" onClick={() => { setEditingFee(null); setFeeInput('') }}>✕</button>
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span style={{ fontWeight: 800, fontSize: 15, color: 'var(--text)' }}>{fees[a.id]}€</span>
+                    <button
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 14, padding: 4, color: 'var(--text-muted)' }}
+                      onClick={() => { setEditingFee(a.id); setFeeInput(String(fees[a.id])) }}>
+                      ✏️
+                    </button>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+
         {/* Month selector */}
         <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -153,29 +256,45 @@ export default function Payments() {
             <button onClick={nextMonth} style={{ padding: '16px 20px', background: 'none', border: 'none', fontSize: 22, cursor: 'pointer', color: 'var(--text-muted)' }}>›</button>
           </div>
 
-          {/* Progress bar */}
-          <div style={{ padding: '0 16px 16px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
-              <span style={{ fontSize: 12, color: 'var(--text-muted)', fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Cobrado</span>
-              <span style={{ fontSize: 13, fontWeight: 800, color: pct === 100 ? 'var(--success)' : 'var(--accent)', fontFamily: "'Barlow Condensed', sans-serif" }}>{paid * amount}€ · {pct}%</span>
+          {total > 0 && (
+            <div style={{ padding: '0 16px 16px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
+                <span style={{ fontSize: 12, color: 'var(--text-muted)', fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Cobrado</span>
+                <span style={{ fontSize: 13, fontWeight: 800, color: pct === 100 ? 'var(--success)' : 'var(--accent)', fontFamily: "'Barlow Condensed', sans-serif" }}>{totalCobrado}€ · {pct}%</span>
+              </div>
+              <div style={{ height: 8, background: 'var(--border)', borderRadius: 4, overflow: 'hidden' }}>
+                <div style={{ height: '100%', width: `${pct}%`, background: pct === 100 ? 'var(--success)' : 'var(--accent-gradient)', borderRadius: 4, transition: 'width 0.5s ease' }} />
+              </div>
             </div>
-            <div style={{ height: 8, background: 'var(--border)', borderRadius: 4, overflow: 'hidden' }}>
-              <div style={{ height: '100%', width: `${pct}%`, background: pct === 100 ? 'var(--success)' : 'var(--accent-gradient)', borderRadius: 4, transition: 'width 0.5s ease' }} />
-            </div>
-          </div>
+          )}
         </div>
 
-        {/* Stats */}
-        <div className="grid-2">
-          <div className="stat-card" style={{ borderLeft: `3px solid var(--error)` }}>
-            <div className="stat-value" style={{ color: 'var(--error)' }}>{pending.length}</div>
-            <div className="stat-label">Pendientes</div>
+        {total > 0 && (
+          <div className="grid-2">
+            <div className="stat-card" style={{ borderLeft: `3px solid var(--error)` }}>
+              <div className="stat-value" style={{ color: 'var(--error)' }}>{pending.length}</div>
+              <div className="stat-label">Pendientes</div>
+            </div>
+            <div className="stat-card" style={{ borderLeft: `3px solid var(--success)` }}>
+              <div className="stat-value" style={{ color: 'var(--success)' }}>{paid}</div>
+              <div className="stat-label">Pagados</div>
+            </div>
           </div>
-          <div className="stat-card" style={{ borderLeft: `3px solid var(--success)` }}>
-            <div className="stat-value" style={{ color: 'var(--success)' }}>{paid}</div>
-            <div className="stat-label">Pagados</div>
+        )}
+
+        {total === 0 && Object.keys(fees).length > 0 && (
+          <div style={{ textAlign: 'center', padding: '24px 0', color: 'var(--text-muted)', fontSize: 14 }}>
+            Sin registros de pago en {MONTHS[month-1]} {year}
           </div>
-        </div>
+        )}
+
+        {total === 0 && Object.keys(fees).length === 0 && (
+          <div style={{ textAlign: 'center', padding: '32px 16px' }}>
+            <div style={{ fontSize: 40, marginBottom: 12 }}>💶</div>
+            <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 800, fontSize: 18, textTransform: 'uppercase', marginBottom: 8 }}>Añade las cuotas</div>
+            <div style={{ fontSize: 14, color: 'var(--text-muted)' }}>Asigna un importe mensual a cada deportista para empezar a gestionar los pagos</div>
+          </div>
+        )}
 
         {/* Pendientes */}
         {pending.length > 0 && (
@@ -254,7 +373,7 @@ export default function Payments() {
           </button>
           {showAnnual && (
             <div style={{ marginTop: 12 }}>
-              <AnnualSummary year={year} amount={amount} athletes={athletes} />
+              <AnnualSummary year={year} athletes={athletes} />
             </div>
           )}
         </div>

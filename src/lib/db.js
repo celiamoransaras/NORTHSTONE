@@ -177,13 +177,20 @@ export const Payments = {
     const { data } = await supabase.from('payments').select('*').eq('athlete_id', athleteId).order('year', { ascending: false }).order('month', { ascending: false })
     return data || []
   },
-  ensureMonth: async (athletes, month, year, amount = 80) => {
+  ensureMonth: async (athletes, month, year) => {
     const existing = await Payments.getByMonth(month, year)
     const existingIds = existing.map(p => p.athlete_id)
-    const missing = athletes.filter(a => !existingIds.includes(a.id))
+    // Only create records for athletes that have a fee set
+    const missing = athletes.filter(a => {
+      if (existingIds.includes(a.id)) return false
+      const fee = Number(localStorage.getItem(`ns_fee_${a.id}`))
+      return fee > 0
+    })
     if (missing.length) {
       await supabase.from('payments').insert(missing.map(a => ({
-        athlete_id: a.id, month, year, amount, status: 'pending'
+        athlete_id: a.id, month, year,
+        amount: Number(localStorage.getItem(`ns_fee_${a.id}`)),
+        status: 'pending'
       })))
     }
     return Payments.getByMonth(month, year)
