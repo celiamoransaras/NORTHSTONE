@@ -74,6 +74,9 @@ export default function Dashboard() {
       setRecentInjuries(activeInjuries.slice(0, 3))
     }
     load()
+    const onVisible = () => { if (document.visibilityState === 'visible') load() }
+    document.addEventListener('visibilitychange', onVisible)
+    return () => document.removeEventListener('visibilitychange', onVisible)
   }, [])
 
   if (!stats) return (

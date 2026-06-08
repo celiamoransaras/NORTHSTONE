@@ -94,8 +94,12 @@ export function AuthProvider({ children }) {
     return url
   }
 
+  const updateAthleteAvatar = (url) => {
+    setProfile(p => p ? { ...p, athletes: { ...p.athletes, avatar_url: url } } : p)
+  }
+
   return (
-    <AuthContext.Provider value={{ user, profile, loading, isCoach, signIn, signOut, updateAvatar }}>
+    <AuthContext.Provider value={{ user, profile, loading, isCoach, signIn, signOut, updateAvatar, updateAthleteAvatar }}>
       {children}
     </AuthContext.Provider>
   )

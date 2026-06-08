@@ -25,7 +25,7 @@ const NAV = [
 ]
 
 export default function AthleteView() {
-  const { profile, signOut } = useAuth()
+  const { profile, signOut, updateAthleteAvatar } = useAuth()
   const toast = useToast()
   const athlete = profile?.athletes
   const athleteId = profile?.athlete_id
@@ -103,8 +103,9 @@ export default function AthleteView() {
     try {
       const url = await Storage.uploadAvatar(athleteId, file)
       await AthletesDB.update(athleteId, { avatar_url: url })
-      // Forzar recarga del perfil para que se actualice el header y el sheet
-      window.location.reload()
+      updateAthleteAvatar(url) // Actualiza el estado sin recargar la página
+      toast('Foto actualizada ✓')
+      haptic('success')
     } catch {
       toast('Error al subir la foto', 'error')
     } finally {
@@ -668,19 +669,35 @@ function AthleteTrainingWithRPE({ athleteId }) {
   const saveRpe = async () => {
     if (!canSave) return
     setSaving(true)
-    await RPE.set(rpeSheet.id, athleteId, { rpe: rpe || null, fatigue_post: fatiguePost || null, mood_post: moodPost || null })
-    setSaving(false)
-    setRpeSheet(null)
-    setRpe(0); setFatiguePost(0); setMoodPost(0)
+    try {
+      await RPE.set(rpeSheet.id, athleteId, { rpe: rpe || null, fatigue_post: fatiguePost || null, mood_post: moodPost || null })
+      setRpeSheet(null)
+      setRpe(0); setFatiguePost(0); setMoodPost(0)
+      haptic('success')
+      toast('Valoración guardada ✓')
+    } catch {
+      toast('Error al guardar la valoración', 'error')
+      haptic('error')
+    } finally {
+      setSaving(false)
+    }
   }
 
   const savePreFatigue = async () => {
     if (!fatiguePre) return
     setSavingPre(true)
-    await RPE.set(preSheet.id, athleteId, { fatigue_pre: fatiguePre })
-    setSavingPre(false)
-    setPreSheet(null)
-    setFatiguePre(0)
+    try {
+      await RPE.set(preSheet.id, athleteId, { fatigue_pre: fatiguePre })
+      setPreSheet(null)
+      setFatiguePre(0)
+      haptic('success')
+      toast('Estado guardado ✓')
+    } catch {
+      toast('Error al guardar', 'error')
+      haptic('error')
+    } finally {
+      setSavingPre(false)
+    }
   }
 
   const formatDate = (d) => {

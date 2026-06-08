@@ -80,7 +80,7 @@ export default function Messages() {
       await loadMessages()
       if (!isCoach) {
         // Deportista → notificar al coach: URL abre el chat de esa deportista directamente
-        sendPushToCoach({
+        if (myAthleteId) sendPushToCoach({
           title: `💬 ${senderName}`,
           body: text || (fileType?.startsWith('image/') ? '📷 Imagen' : '📎 Archivo'),
           url: `/messages?chat=${myAthleteId}`,

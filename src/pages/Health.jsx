@@ -72,14 +72,23 @@ export default function Health() {
     }
   }
 
+  const [confirmDischarge, setConfirmDischarge] = useState(null)
+
   const discharge = async (id) => {
-    const inj = injuries.find(i => i.id === id)
-    await Injuries.update(id, { date_end: today })
-    if (inj?.athlete_id) {
-      const otherActive = injuries.filter(i => i.id !== id && i.athlete_id === inj.athlete_id && (!i.date_end || i.date_end >= today))
-      if (!otherActive.length) await supabase.from('athletes').update({ status: 'active' }).eq('id', inj.athlete_id)
+    try {
+      const inj = injuries.find(i => i.id === id)
+      await Injuries.update(id, { date_end: today })
+      if (inj?.athlete_id) {
+        const otherActive = injuries.filter(i => i.id !== id && i.athlete_id === inj.athlete_id && (!i.date_end || i.date_end >= today))
+        if (!otherActive.length) await supabase.from('athletes').update({ status: 'active' }).eq('id', inj.athlete_id)
+      }
+      await load()
+      setConfirmDischarge(null)
+      toast('Deportista dada de alta ✓')
+      haptic('success')
+    } catch {
+      toast('Error al dar de alta', 'error')
     }
-    await load()
   }
 
   const remove = async (id) => {
@@ -194,7 +203,7 @@ export default function Health() {
 
                 {isActive && (
                   <button className="btn btn-secondary btn-full btn-sm" style={{ marginTop: 10 }}
-                    onClick={e => { e.stopPropagation(); discharge(inj.id) }}>
+                    onClick={e => { e.stopPropagation(); setConfirmDischarge(inj.id) }}>
                     ✅ Dar de alta
                   </button>
                 )}
@@ -210,6 +219,18 @@ export default function Health() {
           message="Se eliminará el registro de esta lesión permanentemente."
           onConfirm={() => remove(confirmDelete)}
           onCancel={() => setConfirmDelete(null)}
+        />
+      )}
+
+      {confirmDischarge && (
+        <ConfirmSheet
+          title="Dar de alta"
+          message="¿Confirmas que la deportista está recuperada?"
+          confirmLabel="✅ Confirmar alta"
+          icon="✅"
+          danger={false}
+          onConfirm={() => discharge(confirmDischarge)}
+          onCancel={() => setConfirmDischarge(null)}
         />
       )}
 

@@ -359,7 +359,7 @@ function GoalsSection({ athleteId, canCreate }) {
         <div className="card" style={{ padding: '24px 20px', textAlign: 'center' }}>
           <div style={{ fontSize: 36, marginBottom: 8, opacity: 0.35 }}>🎯</div>
           <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 800, fontSize: 16, textTransform: 'uppercase', color: 'var(--text-dim)', marginBottom: 6 }}>Sin objetivos aún</div>
-          <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>Tu entrenadora irá añadiendo objetivos para ti</div>
+          <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>{canCreate ? 'Añade el primer objetivo con el botón +' : 'Tu entrenadora irá añadiendo objetivos para ti'}</div>
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>

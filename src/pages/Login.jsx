@@ -22,7 +22,10 @@ export default function Login() {
     } else {
       const { error: err } = await supabase.auth.signUp({ email, password })
       if (err) setError(err.message)
-      else setSuccess('¡Cuenta creada! Ya puedes iniciar sesión.')
+      else {
+        setSuccess('¡Cuenta creada! Ahora inicia sesión.')
+        setTimeout(() => { setMode('login'); setSuccess('') }, 2000)
+      }
     }
     setLoading(false)
   }

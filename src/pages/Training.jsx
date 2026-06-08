@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { Sessions, Athletes } from '../lib/db'
 import ConfirmSheet from '../components/ConfirmSheet'
 import { useToast } from '../contexts/ToastContext'
@@ -47,8 +47,6 @@ export default function Training({ athleteId = null, coachView = false, embedded
     try { return JSON.parse(localStorage.getItem('ns_session_templates') || '[]') } catch { return [] }
   })
   const [showTemplates, setShowTemplates] = useState(false)
-
-  const detailSessionRef = useRef(null)
 
   const load = async () => {
     setLoading(true)
