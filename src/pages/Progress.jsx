@@ -40,16 +40,26 @@ function WellnessCheckin({ athleteId }) {
     }
   }
 
+  const FIELD_LABELS = {
+    fatigue:  ['Muy descansado/a', 'Algo cansado/a', 'Normal', 'Bastante cansado/a', 'Agotado/a'],
+    soreness: ['Sin dolor', 'Leve molestia', 'Algo de dolor', 'Bastante dolor', 'Mucho dolor'],
+    mood:     ['Muy bajo', 'Bajo', 'Normal', 'Bueno', 'Excelente'],
+  }
   const EmojiRow = ({ label, field, emojis, colors }) => (
     <div style={{ marginBottom: 14 }}>
       <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700, fontSize: 12, textTransform: 'uppercase', letterSpacing: '1px', color: 'var(--text-muted)', marginBottom: 8 }}>{label}</div>
-      <div style={{ display: 'flex', gap: 8 }}>
-        {[1,2,3,4,5].map((v, i) => (
-          <button key={v} onClick={() => !done && set(field, v)}
-            style={{ flex: 1, padding: '10px 4px', borderRadius: 12, background: today?.[field] === v ? (colors?.[i] || 'var(--accent)') + '20' : 'var(--bg)', border: `2px solid ${today?.[field] === v ? (colors?.[i] || 'var(--accent)') : 'var(--border)'}`, fontSize: 22, cursor: done ? 'default' : 'pointer', transition: 'all 0.12s' }}>
-            {emojis[i]}
-          </button>
-        ))}
+      <div style={{ display: 'flex', gap: 6 }}>
+        {[1,2,3,4,5].map((v, i) => {
+          const selected = today?.[field] === v
+          const color = colors?.[i] || 'var(--accent)'
+          return (
+            <button key={v} onClick={() => !done && set(field, v)}
+              style={{ flex: 1, padding: '8px 2px', borderRadius: 12, background: selected ? color + '20' : 'var(--bg)', border: `2px solid ${selected ? color : 'var(--border)'}`, cursor: done ? 'default' : 'pointer', transition: 'all 0.12s', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+              <span style={{ fontSize: 22 }}>{emojis[i]}</span>
+              <span style={{ fontSize: 9, fontWeight: 600, color: selected ? color : 'var(--text-muted)', lineHeight: 1.2, textAlign: 'center' }}>{FIELD_LABELS[field][i]}</span>
+            </button>
+          )
+        })}
       </div>
     </div>
   )
