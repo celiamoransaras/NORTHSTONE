@@ -363,6 +363,7 @@ function StatCard({ value, label, color, icon, onClick }) {
 }
 
 function TeamWellnessSection() {
+  const navigate = useNavigate()
   const [entries, setEntries] = useState([])
 
   useEffect(() => {
@@ -409,11 +410,12 @@ function TeamWellnessSection() {
           const color = e.athletes?.color || 'var(--accent)'
           const isToday = e.date === today
           return (
-            <div key={e.id} style={{
+            <div key={e.id} onClick={() => navigate('/athletes', { state: { openAthlete: e.athlete_id } })} style={{
               display: 'flex', alignItems: 'center', gap: 12,
               padding: '10px 12px', borderRadius: 'var(--radius-sm)',
               background: hasAlert ? 'var(--error-dim)' : 'var(--bg)',
               border: `1px solid ${hasAlert ? 'var(--error)' : 'var(--border)'}`,
+              cursor: 'pointer',
             }}>
               <div style={{ width: 8, height: 8, borderRadius: '50%', background: color, flexShrink: 0 }} />
               <div style={{ flex: 1, minWidth: 0 }}>

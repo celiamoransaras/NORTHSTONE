@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useLocation } from 'react-router-dom'
 import { Athletes as DB, Sessions, Storage } from '../lib/db'
 import Training from './Training'
 import { GoalsSection, RecordsSection, LoadChart, WellnessTodayCoach, WellnessHistory } from './Progress'
@@ -38,6 +39,7 @@ const emptyForm = { name: '', email: '', phone: '', dob: '', sport: 'Híbrido', 
 
 export default function Athletes() {
   const toast = useToast()
+  const location = useLocation()
   const [athletes, setAthletes] = useState([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
@@ -52,8 +54,14 @@ export default function Athletes() {
 
   const load = async () => {
     setLoading(true)
-    setAthletes(await DB.getAll())
+    const data = await DB.getAll()
+    setAthletes(data)
     setLoading(false)
+    // Auto-abrir perfil si venimos del Dashboard con un athleteId
+    if (location.state?.openAthlete) {
+      const target = data.find(a => a.id === location.state.openAthlete)
+      if (target) { setSheet({ ...target }); setDetailTab('profile') }
+    }
   }
   useEffect(() => { load() }, [])
   const weeklyStats = useWeeklyStats(athletes)
