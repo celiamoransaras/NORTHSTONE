@@ -211,43 +211,49 @@ export default function Payments() {
 
         {/* Cuotas asignadas */}
         {Object.keys(fees).length > 0 && (
-          <div className="card">
-            <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 800, fontSize: 13, textTransform: 'uppercase', color: 'var(--text-muted)', letterSpacing: '0.5px', marginBottom: 10 }}>
-              Cuotas mensuales
+          <>
+            <div style={{ fontSize: 11, fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: 8 }}>
+              💳 Cuotas mensuales
             </div>
-            {athletes.filter(a => fees[a.id] != null).map((a, i, arr) => (
-              <div key={a.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 0', borderBottom: i < arr.length - 1 ? '1px solid var(--border)' : 'none' }}>
-                {a.avatar_url
-                  ? <img src={a.avatar_url} style={{ width: 32, height: 32, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
-                  : <div className="avatar" style={{ background: a.color+'20', color: a.color, width: 32, height: 32, fontSize: 12, flexShrink: 0 }}>{initials(a.name)}</div>
-                }
-                <div style={{ flex: 1, fontWeight: 600, fontSize: 14 }}>{a.name}</div>
-                {editingFee === a.id ? (
-                  <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                    <input
-                      className="input"
-                      type="number"
-                      value={feeInput}
-                      onChange={e => setFeeInput(e.target.value)}
-                      autoFocus
-                      style={{ width: 80, padding: '6px 10px', fontSize: 14 }}
-                    />
-                    <button className="btn btn-primary btn-sm" onClick={() => saveFee(a.id)}>OK</button>
-                    <button className="btn btn-ghost btn-sm" onClick={() => { setEditingFee(null); setFeeInput('') }}>✕</button>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {athletes.filter(a => fees[a.id] != null).map(a => (
+              <div key={a.id} className="card" style={{ padding: '14px 16px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  {a.avatar_url
+                    ? <img src={a.avatar_url} style={{ width: 44, height: 44, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
+                    : <div className="avatar" style={{ background: a.color+'20', color: a.color, width: 44, height: 44, fontSize: 15, flexShrink: 0 }}>{initials(a.name)}</div>
+                  }
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontWeight: 700, fontSize: 14 }}>{a.name}</div>
+                    <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>cuota mensual</div>
                   </div>
-                ) : (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <span style={{ fontWeight: 800, fontSize: 15, color: 'var(--text)' }}>{fees[a.id]}€</span>
+                  {editingFee === a.id ? (
+                    <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                      <input
+                        className="input"
+                        type="number"
+                        value={feeInput}
+                        onChange={e => setFeeInput(e.target.value)}
+                        min="0"
+                        autoFocus
+                        style={{ width: 80, padding: '6px 10px', fontSize: 14 }}
+                      />
+                      <button className="btn btn-primary btn-sm" onClick={() => saveFee(a.id)}>OK</button>
+                      <button className="btn btn-ghost btn-sm" onClick={() => { setEditingFee(null); setFeeInput('') }}>✕</button>
+                    </div>
+                  ) : (
                     <button
-                      style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 14, padding: 4, color: 'var(--text-muted)' }}
-                      onClick={() => { setEditingFee(a.id); setFeeInput(String(fees[a.id])) }}>
-                      ✏️
+                      onClick={() => { setEditingFee(a.id); setFeeInput(String(fees[a.id])) }}
+                      style={{ background: 'var(--accent-dim)', border: 'none', borderRadius: 12, padding: '6px 14px', cursor: 'pointer', textAlign: 'right' }}>
+                      <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 900, fontSize: 22, color: 'var(--accent)', lineHeight: 1 }}>{fees[a.id]}€</div>
+                      <div style={{ fontSize: 10, color: 'var(--accent)', opacity: 0.7, marginTop: 1 }}>toca para editar</div>
                     </button>
-                  </div>
-                )}
+                  )}
+                </div>
               </div>
             ))}
-          </div>
+            </div>
+          </>
         )}
 
         {/* Month selector */}
