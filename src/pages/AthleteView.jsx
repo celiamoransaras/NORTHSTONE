@@ -410,6 +410,7 @@ function AthleteHome({ athlete, athleteId }) {
 // ---- Salud del deportista (lesiones + ciclo + docs médicos) ----
 function AthleteHealth({ athleteId }) {
   const toast = useToast()
+  const { profile } = useAuth()
   const [injuries, setInjuries] = useState([])
   const [medDocs, setMedDocs] = useState([])
   const [uploading, setUploading] = useState(false)
