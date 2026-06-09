@@ -273,7 +273,7 @@ export default function Athletes() {
                   </div>
                   <InfoRow icon="✉️" label="Email" val={sheet.email || '—'} />
                   <InfoRow icon="📱" label="Teléfono" val={sheet.phone || '—'} />
-                  <InfoRow icon="🎂" label="Fecha de nacimiento" val={sheet.dob ? new Date(sheet.dob+'T12:00:00').toLocaleDateString('es-ES') : '—'} />
+                  <InfoRow icon="🎂" label="Fecha de nacimiento" val={(() => { if (!sheet.dob) return '—'; const d = new Date(sheet.dob+'T12:00:00'); if (d.getFullYear() < 100) d.setFullYear(d.getFullYear() + 1900); return d.toLocaleDateString('es-ES'); })()} />
                   <InfoRow icon="🏋️" label="Deporte" val={sheet.sport || '—'} />
                   {sheet.notes && <><div className="divider" /><div style={{ color: 'var(--text-muted)', fontSize: 14 }}>{sheet.notes}</div></>}
                   <div className="divider" />
@@ -412,9 +412,14 @@ export default function Athletes() {
 
 function CyclePhaseCoach({ athleteId }) {
   const [phase, setPhase] = useState(null)
+  const [currentCycle, setCurrentCycle] = useState(null)
+
   useEffect(() => {
     Cycle.getByAthlete(athleteId).then(cycles => {
-      if (cycles.length > 0) setPhase(Cycle.getPhase(cycles[0], Cycle.getCycleLength(athleteId)))
+      if (cycles.length > 0) {
+        setCurrentCycle(cycles[0])
+        setPhase(Cycle.getPhase(cycles[0], Cycle.getCycleLength(athleteId)))
+      }
     })
   }, [athleteId])
 
@@ -428,14 +433,40 @@ function CyclePhaseCoach({ athleteId }) {
     </div>
   )
 
+  const symptoms = currentCycle ? Cycle.getSymptoms(currentCycle) : []
+
   return (
-    <div style={{ marginBottom: 16, padding: '12px 14px', background: phase.color + '12', border: `1.5px solid ${phase.color}30`, borderRadius: 12, display: 'flex', alignItems: 'center', gap: 10 }}>
-      <span style={{ fontSize: 24 }}>{phase.emoji}</span>
-      <div style={{ flex: 1 }}>
-        <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.4px', marginBottom: 2 }}>Ciclo menstrual · Día {phase.day}</div>
-        <div style={{ fontWeight: 800, fontSize: 14, color: phase.color }}>{phase.label}</div>
-        <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>{phase.desc}</div>
+    <div style={{ marginBottom: 16, padding: '12px 14px', background: phase.color + '12', border: `1.5px solid ${phase.color}30`, borderRadius: 12 }}>
+      {/* Fase actual */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: symptoms.length > 0 ? 10 : 0 }}>
+        <span style={{ fontSize: 24 }}>{phase.emoji}</span>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.4px', marginBottom: 2 }}>
+            Ciclo menstrual · Día {phase.day}
+            {currentCycle?.date_end && phase.phase === 'menstrual' && (
+              <span style={{ marginLeft: 6, color: '#059669' }}>· Regla finalizada</span>
+            )}
+          </div>
+          <div style={{ fontWeight: 800, fontSize: 14, color: phase.color }}>{phase.label}</div>
+          <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>{phase.desc}</div>
+        </div>
       </div>
+      {/* Síntomas registrados */}
+      {symptoms.length > 0 && (
+        <div style={{ borderTop: `1px solid ${phase.color}30`, paddingTop: 8 }}>
+          <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.4px', marginBottom: 5 }}>
+            💬 Síntomas reportados
+          </div>
+          {symptoms.slice(0, 3).map((s, i) => (
+            <div key={i} style={{ fontSize: 12, padding: '5px 8px', background: 'var(--bg)', borderRadius: 6, marginBottom: 4, borderLeft: `2px solid ${phase.color}` }}>
+              <span style={{ color: 'var(--text-muted)', marginRight: 6 }}>
+                {new Date(s.date + 'T12:00:00').toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })} ·
+              </span>
+              {s.text}
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   )
 }

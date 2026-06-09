@@ -56,7 +56,7 @@ export default function Dashboard() {
       setAthleteMap(map)
 
       const upcoming = sessions.filter(s => s.date >= today).slice(0, 3)
-      const activeInjuries = injuries.filter(i => !i.date_end || i.date_end >= today)
+      const activeInjuries = injuries.filter(i => !i.date_end || i.date_end > today)
       const paidCount = payments.filter(p => p.status === 'paid').length
       const pendingPayments = payments.filter(p => p.status === 'pending').length
 

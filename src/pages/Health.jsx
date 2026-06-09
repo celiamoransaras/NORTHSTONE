@@ -37,8 +37,8 @@ export default function Health() {
   useEffect(() => { load() }, [])
 
   const today = new Date().toISOString().slice(0,10)
-  const active = injuries.filter(i => !i.date_end || i.date_end >= today)
-  const resolved = injuries.filter(i => i.date_end && i.date_end < today)
+  const active = injuries.filter(i => !i.date_end || i.date_end > today)
+  const resolved = injuries.filter(i => i.date_end && i.date_end <= today)
   const displayed = tab === 'active' ? active : resolved
 
   const openNew = () => { setForm({ ...emptyForm, athlete_id: athletes[0]?.id || '' }); setEditing(null); setSheet('form') }
@@ -57,8 +57,11 @@ export default function Health() {
         await Injuries.update(editing, clean)
       } else {
         await Injuries.create(clean)
-        const isActive = !clean.date_end || clean.date_end >= today
-        if (isActive) await supabase.from('athletes').update({ status: 'injured' }).eq('id', form.athlete_id)
+        const isActive = !clean.date_end || clean.date_end > today
+        const athlete = athletes.find(a => a.id === form.athlete_id)
+        if (isActive && athlete?.status === 'active') {
+          await supabase.from('athletes').update({ status: 'injured' }).eq('id', form.athlete_id)
+        }
       }
       await load()
       setSheet(null)
@@ -162,7 +165,7 @@ export default function Health() {
         ) : displayed.map(inj => {
           const athlete = getAthlete(inj.athlete_id)
           const sev = getSeverity(inj.severity)
-          const isActive = !inj.date_end || inj.date_end >= today
+          const isActive = !inj.date_end || inj.date_end > today
           const emoji = BODY_EMOJI[inj.body_part] || '🩹'
 
           return (

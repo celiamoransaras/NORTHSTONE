@@ -265,7 +265,7 @@ function AthleteHome({ athlete, athleteId }) {
         const today = new Date().toISOString().slice(0,10)
         setAllSessions(sessions)
         setUpcoming(sessions.filter(s => s.date >= today).slice(0,3))
-        setActiveInjury(injuries.find(i => !i.date_end || i.date_end >= today) || null)
+        setActiveInjury(injuries.find(i => !i.date_end || i.date_end > today) || null)
         const s = calculateStreak(sessions)
         setStreak(s)
 
@@ -673,7 +673,7 @@ function AthleteHealth({ athleteId }) {
             <div className="card">
               {injuries.map((inj, i) => {
                 const sev = SEVERITY_COLOR[inj.severity] || 'var(--text-muted)'
-                const isActive = !inj.date_end || inj.date_end >= today
+                const isActive = !inj.date_end || inj.date_end > today
                 return (
                   <div key={inj.id} className="list-item" style={{ borderBottom: i < injuries.length-1 ? undefined : 'none', cursor: 'default', alignItems: 'flex-start', paddingTop: 14, paddingBottom: 14 }}>
                     <div style={{ width: 44, height: 44, borderRadius: 12, background: sev+'15', border: `1.5px solid ${sev}30`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, flexShrink: 0, marginTop: 2 }}>
