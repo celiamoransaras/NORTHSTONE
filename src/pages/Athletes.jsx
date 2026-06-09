@@ -408,66 +408,92 @@ export default function Athletes() {
 }
 
 function CyclePhaseCoach({ athleteId }) {
-  const [phase, setPhase] = useState(null)
-  const [currentCycle, setCurrentCycle] = useState(null)
+  const [cycles, setCycles] = useState([])
+  const [cycleLength, setCycleLength] = useState(28)
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     Promise.all([
       Cycle.getByAthlete(athleteId),
       supabase.from('athletes').select('cycle_length').eq('id', athleteId).single()
-    ]).then(([cycles, { data: ath }]) => {
-      if (cycles.length > 0) {
-        setCurrentCycle(cycles[0])
-        const len = ath?.cycle_length || 28
-        setPhase(Cycle.getPhase(cycles[0], len))
-      }
+    ]).then(([c, { data: ath }]) => {
+      setCycles(c)
+      setCycleLength(ath?.cycle_length || 28)
+      setLoading(false)
     })
   }, [athleteId])
 
-  if (!phase) return (
-    <div style={{ marginBottom: 16, padding: '12px 14px', background: 'var(--bg)', borderRadius: 12, display: 'flex', alignItems: 'center', gap: 10 }}>
-      <span style={{ fontSize: 20 }}>🩸</span>
-      <div>
-        <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.4px' }}>Ciclo menstrual</div>
-        <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>Sin datos registrados aún</div>
-      </div>
-    </div>
-  )
+  if (loading) return null
 
+  const currentCycle = cycles[0] || null
+  const phase = currentCycle ? Cycle.getPhase(currentCycle, cycleLength) : null
   const symptoms = currentCycle ? Cycle.getSymptoms(currentCycle) : []
 
   return (
-    <div style={{ marginBottom: 16, padding: '12px 14px', background: phase.color + '12', border: `1.5px solid ${phase.color}30`, borderRadius: 12 }}>
-      {/* Fase actual */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: symptoms.length > 0 ? 10 : 0 }}>
-        <span style={{ fontSize: 24 }}>{phase.emoji}</span>
-        <div style={{ flex: 1 }}>
-          <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.4px', marginBottom: 2 }}>
-            Ciclo menstrual · Día {phase.day}
-            {currentCycle?.date_end && phase.phase === 'menstrual' && (
-              <span style={{ marginLeft: 6, color: '#059669' }}>· Regla finalizada</span>
+    <div style={{ marginBottom: 16 }}>
+      <div style={{ fontSize: 11, fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: 8 }}>🩸 Ciclo menstrual</div>
+
+      <div style={{ padding: 16, background: phase ? phase.color + '12' : 'var(--bg)', border: `1.5px solid ${phase ? phase.color + '40' : 'var(--border)'}`, borderRadius: 16, marginBottom: 8 }}>
+        {/* Fase actual */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+          <span style={{ fontSize: 28 }}>{phase ? phase.emoji : '🩸'}</span>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.4px', marginBottom: 2 }}>
+              {phase ? `Ciclo menstrual · Día ${phase.day}` : 'Ciclo menstrual'}
+            </div>
+            {phase ? (
+              <>
+                <div style={{ fontWeight: 800, fontSize: 15, color: phase.color }}>{phase.label}
+                  {phase.periodEnded === true && phase.phase === 'menstrual' && <span style={{ fontSize: 11, fontWeight: 500, color: 'var(--text-muted)', marginLeft: 6 }}>· {phase.periodDays}d</span>}
+                </div>
+                <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>{phase.desc}</div>
+              </>
+            ) : (
+              <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>Sin datos registrados aún</div>
             )}
           </div>
-          <div style={{ fontWeight: 800, fontSize: 14, color: phase.color }}>{phase.label}</div>
-          <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>{phase.desc}</div>
         </div>
-      </div>
-      {/* Síntomas registrados */}
-      {symptoms.length > 0 && (
-        <div style={{ borderTop: `1px solid ${phase.color}30`, paddingTop: 8 }}>
-          <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.4px', marginBottom: 5 }}>
-            💬 Síntomas reportados
+
+        {/* Síntomas del ciclo actual */}
+        {symptoms.length > 0 && (
+          <div style={{ borderTop: `1px solid ${phase?.color || 'var(--border)'}30`, paddingTop: 8, marginTop: 4 }}>
+            <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.4px', marginBottom: 6 }}>💬 Síntomas reportados</div>
+            {symptoms.map((s, i) => (
+              <div key={i} style={{ padding: '8px 10px', background: 'var(--bg)', borderRadius: 8, marginBottom: 4, borderLeft: `3px solid ${phase?.color || 'var(--accent)'}` }}>
+                <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 2 }}>
+                  {new Date(s.date + 'T12:00:00').toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })} · {s.phase}
+                </div>
+                <div style={{ fontSize: 13 }}>{s.text}</div>
+              </div>
+            ))}
           </div>
-          {symptoms.slice(0, 3).map((s, i) => (
-            <div key={i} style={{ fontSize: 12, padding: '5px 8px', background: 'var(--bg)', borderRadius: 6, marginBottom: 4, borderLeft: `2px solid ${phase.color}` }}>
-              <span style={{ color: 'var(--text-muted)', marginRight: 6 }}>
-                {new Date(s.date + 'T12:00:00').toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })} ·
-              </span>
-              {s.text}
-            </div>
-          ))}
-        </div>
-      )}
+        )}
+
+        {/* Historial ciclos */}
+        {cycles.length > 0 && (
+          <div style={{ marginTop: 12, borderTop: '1px solid var(--border)', paddingTop: 10 }}>
+            <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.4px', marginBottom: 6 }}>Historial</div>
+            {cycles.map((c, i) => (
+              <div key={c.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '5px 0', borderBottom: i < cycles.length - 1 ? '1px solid var(--border)' : 'none' }}>
+                <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>
+                  {new Date(c.date_start + 'T12:00:00').toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' })}
+                  {c.date_end && <span style={{ marginLeft: 4, color: '#059669' }}>→ {new Date(c.date_end + 'T12:00:00').toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })}</span>}
+                </span>
+                {i === 0
+                  ? <span style={{ fontSize: 11, fontWeight: 700, color: phase?.color || 'var(--accent)', background: (phase?.color || 'var(--accent)') + '20', padding: '2px 8px', borderRadius: 8 }}>Actual</span>
+                  : cycles[i-1] && <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{Math.round((new Date(cycles[i-1].date_start) - new Date(c.date_start)) / (1000*60*60*24))}d antes</span>
+                }
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Duración configurada — solo lectura */}
+      <div style={{ padding: '8px 14px', background: 'var(--card)', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>⚙️ Ciclo configurado</div>
+        <span style={{ background: 'var(--accent-dim)', color: 'var(--accent)', borderRadius: 8, padding: '3px 12px', fontWeight: 700, fontSize: 14 }}>{cycleLength} días</span>
+      </div>
     </div>
   )
 }
