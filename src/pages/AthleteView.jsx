@@ -420,11 +420,19 @@ function AthleteHealth({ athleteId }) {
   const [endingCycle, setEndingCycle] = useState(false)
   const [symptomText, setSymptomText] = useState('')
   const [savingSymptom, setSavingSymptom] = useState(false)
-  const [cycleLength, setCycleLengthState] = useState(() => athleteProfile?.cycle_length || 28)
-  const [editingCycleLength, setEditingCycleLength] = useState(false)
-  const [cycleLengthInput, setCycleLengthInput] = useState(String(athleteProfile?.cycle_length || 28))
   const athleteProfile = profile?.athletes
   const isFemale = athleteProfile?.gender === 'female'
+  const [cycleLength, setCycleLengthState] = useState(athleteProfile?.cycle_length || 28)
+  const [editingCycleLength, setEditingCycleLength] = useState(false)
+  const [cycleLengthInput, setCycleLengthInput] = useState(String(athleteProfile?.cycle_length || 28))
+
+  // Sincronizar cycleLength cuando el perfil cargue async
+  useEffect(() => {
+    if (athleteProfile?.cycle_length) {
+      setCycleLengthState(athleteProfile.cycle_length)
+      setCycleLengthInput(String(athleteProfile.cycle_length))
+    }
+  }, [athleteProfile?.cycle_length])
   const fileRef = useRef()
   const SEVERITY_COLOR = { mild: 'var(--success)', moderate: 'var(--warning)', severe: 'var(--error)' }
   const SEVERITY_LABEL = { mild: 'Leve', moderate: 'Moderada', severe: 'Grave' }

@@ -131,7 +131,7 @@ export default function Payments() {
   const totalCobrado = paidList.reduce((s, p) => s + p.amount, 0)
 
   // Athletes without fee assigned
-  const noFeeAthletes = athletes.filter(a => !fees[a.id])
+  const noFeeAthletes = athletes.filter(a => fees[a.id] == null)
 
   const prevMonth = () => { if (month === 1) { setMonth(12); setYear(y => y-1) } else setMonth(m => m-1) }
   const nextMonth = () => { if (month === 12) { setMonth(1); setYear(y => y+1) } else setMonth(m => m+1) }
