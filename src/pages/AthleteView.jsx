@@ -420,9 +420,9 @@ function AthleteHealth({ athleteId }) {
   const [endingCycle, setEndingCycle] = useState(false)
   const [symptomText, setSymptomText] = useState('')
   const [savingSymptom, setSavingSymptom] = useState(false)
-  const [cycleLength, setCycleLengthState] = useState(() => Cycle.getCycleLength(athleteId))
+  const [cycleLength, setCycleLengthState] = useState(() => athleteProfile?.cycle_length || 28)
   const [editingCycleLength, setEditingCycleLength] = useState(false)
-  const [cycleLengthInput, setCycleLengthInput] = useState(String(Cycle.getCycleLength(athleteId)))
+  const [cycleLengthInput, setCycleLengthInput] = useState(String(athleteProfile?.cycle_length || 28))
   const athleteProfile = profile?.athletes
   const isFemale = athleteProfile?.gender === 'female'
   const fileRef = useRef()
@@ -488,10 +488,10 @@ function AthleteHealth({ athleteId }) {
     setSavingSymptom(false)
   }
 
-  const saveCycleLength = () => {
+  const saveCycleLength = async () => {
     const val = parseInt(cycleLengthInput)
     if (val >= 21 && val <= 45) {
-      Cycle.setCycleLength(athleteId, val)
+      await Cycle.setCycleLength(athleteId, val)
       setCycleLengthState(val)
       setEditingCycleLength(false)
       toast('Duración guardada ✓')

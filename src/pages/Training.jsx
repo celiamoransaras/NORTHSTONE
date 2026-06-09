@@ -5,6 +5,7 @@ import { useToast } from '../contexts/ToastContext'
 import { haptic } from '../lib/haptic'
 import { sendPushToAthletes } from '../lib/pushNotifications'
 import { supabase } from '../lib/supabase'
+import { useAuth } from '../contexts/AuthContext'
 
 const TYPE_OPTS = [
   { value: 'run',        label: '🏃 Run' },
@@ -43,10 +44,15 @@ export default function Training({ athleteId = null, coachView = false, embedded
   const [tab, setTab] = useState('upcoming')
   const [titleError, setTitleError] = useState(false)
   const toast = useToast()
-  const [templates, setTemplates] = useState(() => {
-    try { return JSON.parse(localStorage.getItem('ns_session_templates') || '[]') } catch { return [] }
-  })
+  const { user } = useAuth()
+  const [templates, setTemplates] = useState([])
   const [showTemplates, setShowTemplates] = useState(false)
+
+  const loadTemplates = async () => {
+    if (!user?.id) return
+    const { data } = await supabase.from('session_templates').select('*').eq('coach_id', user.id).order('created_at', { ascending: false })
+    setTemplates(data || [])
+  }
 
   const load = async () => {
     setLoading(true)
@@ -59,6 +65,7 @@ export default function Training({ athleteId = null, coachView = false, embedded
     setLoading(false)
   }
   useEffect(() => { load() }, [athleteId])
+  useEffect(() => { loadTemplates() }, [user?.id])
 
   // Realtime: asistencia en tiempo real (vista entrenadora)
   useEffect(() => {
@@ -153,18 +160,27 @@ export default function Training({ athleteId = null, coachView = false, embedded
     }
   }
 
-  const saveAsTemplate = () => {
-    if (!form.title.trim()) return
-    const tpl = { id: Date.now().toString(), title: form.title, type: form.type, duration: form.duration, notes: form.notes, exercises: form.exercises }
-    const updated = [...templates.filter(t => t.title !== tpl.title), tpl]
-    localStorage.setItem('ns_session_templates', JSON.stringify(updated))
-    setTemplates(updated)
+  const saveAsTemplate = async () => {
+    if (!form.title.trim() || !user?.id) return
+    // Si ya existe una con ese título, la reemplazamos
+    const existing = templates.find(t => t.title === form.title)
+    if (existing) {
+      await supabase.from('session_templates').update({
+        type: form.type, duration: form.duration, notes: form.notes, exercises: form.exercises
+      }).eq('id', existing.id)
+    } else {
+      await supabase.from('session_templates').insert({
+        coach_id: user.id, title: form.title, type: form.type,
+        duration: form.duration, notes: form.notes, exercises: form.exercises
+      })
+    }
+    await loadTemplates()
     toast('Plantilla guardada ✓')
+    haptic('success')
   }
-  const deleteTemplate = (id) => {
-    const updated = templates.filter(t => t.id !== id)
-    localStorage.setItem('ns_session_templates', JSON.stringify(updated))
-    setTemplates(updated)
+  const deleteTemplate = async (id) => {
+    await supabase.from('session_templates').delete().eq('id', id)
+    setTemplates(prev => prev.filter(t => t.id !== id))
   }
   const loadTemplate = (tpl) => {
     setForm(f => ({ ...f, title: tpl.title, type: tpl.type, duration: tpl.duration, notes: tpl.notes, exercises: tpl.exercises.map(e => ({...e, id: Date.now().toString() + Math.random()})) }))

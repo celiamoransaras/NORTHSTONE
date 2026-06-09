@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Payments as DB, Athletes } from '../lib/db'
+import { supabase } from '../lib/supabase'
 import { useToast } from '../contexts/ToastContext'
 import { haptic } from '../lib/haptic'
 
@@ -77,21 +78,13 @@ export default function Payments() {
   const [feeInput, setFeeInput] = useState('')
   const toast = useToast()
 
-  // Load fees from localStorage
-  const loadFees = (athlList) => {
-    const f = {}
-    athlList.forEach(a => {
-      const stored = localStorage.getItem(`ns_fee_${a.id}`)
-      if (stored) f[a.id] = Number(stored)
-    })
-    setFees(f)
-  }
-
   const load = async () => {
     setLoading(true)
     const ath = await Athletes.getAll()
     setAthletes(ath)
-    loadFees(ath)
+    const f = {}
+    ath.forEach(a => { if (a.monthly_fee != null) f[a.id] = a.monthly_fee })
+    setFees(f)
     const pays = await DB.ensureMonth(ath, month, year)
     setPayments(pays)
     setLoading(false)
@@ -102,7 +95,7 @@ export default function Payments() {
   const saveFee = async (athleteId) => {
     const val = Number(feeInput)
     if (isNaN(val) || val < 0 || feeInput === '') { toast('Introduce un importe válido (0 o mayor)', 'error'); return }
-    localStorage.setItem(`ns_fee_${athleteId}`, val)
+    await supabase.from('athletes').update({ monthly_fee: val }).eq('id', athleteId)
     setFees(prev => ({ ...prev, [athleteId]: val }))
     setEditingFee(null)
     setFeeInput('')

@@ -180,16 +180,14 @@ export const Payments = {
   ensureMonth: async (athletes, month, year) => {
     const existing = await Payments.getByMonth(month, year)
     const existingIds = existing.map(p => p.athlete_id)
-    // Only create records for athletes that have a fee set
     const missing = athletes.filter(a => {
       if (existingIds.includes(a.id)) return false
-      const fee = Number(localStorage.getItem(`ns_fee_${a.id}`))
-      return fee > 0
+      return a.monthly_fee != null && a.monthly_fee >= 0
     })
     if (missing.length) {
       await supabase.from('payments').insert(missing.map(a => ({
         athlete_id: a.id, month, year,
-        amount: Number(localStorage.getItem(`ns_fee_${a.id}`)),
+        amount: a.monthly_fee,
         status: 'pending'
       })))
     }
@@ -416,9 +414,11 @@ export const Cycle = {
       .order('date_start', { ascending: false })
     return data || []
   },
-  // Duración del ciclo en localStorage (configurable por la deportista)
-  getCycleLength: (athleteId) => Number(localStorage.getItem(`ns_cycle_length_${athleteId}`)) || 28,
-  setCycleLength: (athleteId, length) => localStorage.setItem(`ns_cycle_length_${athleteId}`, length),
+  // Duración del ciclo — guardado en Supabase (campo cycle_length en athletes)
+  getCycleLength: (athleteId) => 28, // fallback, valor real viene del perfil
+  setCycleLength: async (athleteId, length) => {
+    await supabase.from('athletes').update({ cycle_length: length }).eq('id', athleteId)
+  },
   // Calcular fase actual — acepta objeto ciclo {date_start, date_end} o string fecha
   // cycleLength: duración configurada por la deportista (por defecto 28)
   getPhase: (cycleOrDate, cycleLength = 28) => {
