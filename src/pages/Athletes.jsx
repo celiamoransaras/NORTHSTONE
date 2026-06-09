@@ -414,7 +414,7 @@ function CyclePhaseCoach({ athleteId }) {
   const [phase, setPhase] = useState(null)
   useEffect(() => {
     Cycle.getByAthlete(athleteId).then(cycles => {
-      if (cycles.length > 0) setPhase(Cycle.getPhase(cycles[0].date_start))
+      if (cycles.length > 0) setPhase(Cycle.getPhase(cycles[0], Cycle.getCycleLength(athleteId)))
     })
   }, [athleteId])
 

@@ -387,27 +387,68 @@ export const Cycle = {
     }).select().single()
     return data
   },
+  // Marcar fin de la regla
+  end: async (cycleId, endDate) => {
+    await supabase.from('injuries').update({ date_end: endDate }).eq('id', cycleId)
+  },
+  // Añadir síntoma al ciclo actual (guardado en notas como JSON)
+  addSymptom: async (cycleId, phase, text) => {
+    const { data: current } = await supabase.from('injuries').select('notes').eq('id', cycleId).single()
+    let parsed = {}
+    try { parsed = JSON.parse(current?.notes || '{}') } catch { parsed = {} }
+    const symptoms = parsed.symptoms || []
+    symptoms.unshift({ date: new Date().toISOString().slice(0,10), phase, text })
+    const newNotes = JSON.stringify({ ...parsed, symptoms })
+    await supabase.from('injuries').update({ notes: newNotes }).eq('id', cycleId)
+    return symptoms
+  },
+  // Obtener síntomas de un ciclo
+  getSymptoms: (cycle) => {
+    if (!cycle?.notes) return []
+    try { return JSON.parse(cycle.notes).symptoms || [] } catch { return [] }
+  },
   // Obtener historial de ciclos de una deportista
   getByAthlete: async (athleteId) => {
     const { data } = await supabase.from('injuries')
-      .select('id, date_start')
+      .select('id, date_start, date_end, notes')
       .eq('athlete_id', athleteId)
       .eq('type', 'cycle')
       .order('date_start', { ascending: false })
     return data || []
   },
-  // Calcular fase actual a partir de la última fecha de inicio
-  getPhase: (lastStartDate) => {
-    if (!lastStartDate) return null
-    const start = new Date(lastStartDate + 'T12:00:00')
+  // Duración del ciclo en localStorage (configurable por la deportista)
+  getCycleLength: (athleteId) => Number(localStorage.getItem(`ns_cycle_length_${athleteId}`)) || 28,
+  setCycleLength: (athleteId, length) => localStorage.setItem(`ns_cycle_length_${athleteId}`, length),
+  // Calcular fase actual — acepta objeto ciclo {date_start, date_end} o string fecha
+  // cycleLength: duración configurada por la deportista (por defecto 28)
+  getPhase: (cycleOrDate, cycleLength = 28) => {
+    if (!cycleOrDate) return null
+    const cycle = typeof cycleOrDate === 'string'
+      ? { date_start: cycleOrDate, date_end: null }
+      : cycleOrDate
+    const { date_start, date_end } = cycle
+    const start = new Date(date_start + 'T12:00:00')
     const today = new Date()
     const dayOfCycle = Math.floor((today - start) / (1000 * 60 * 60 * 24)) + 1
     if (dayOfCycle < 1) return null
-    const day = ((dayOfCycle - 1) % 28) + 1 // normalizar a ciclo de 28 días
-    if (day <= 5)  return { phase: 'menstrual',  day, label: 'Menstrual',  emoji: '🩸', color: '#DC2626', desc: 'Tómate con calma, escucha tu cuerpo' }
-    if (day <= 13) return { phase: 'folicular',  day, label: 'Folicular',  emoji: '🌱', color: '#059669', desc: 'Buena energía, ideal para entrenar fuerte' }
-    if (day === 14) return { phase: 'ovulacion', day, label: 'Ovulación',  emoji: '⚡', color: '#7C3AED', desc: 'Pico de energía y fuerza' }
-    return              { phase: 'lutea',       day, label: 'Lútea',      emoji: '🌙', color: '#D97706', desc: 'Puede aparecer más fatiga o sensibilidad' }
+    const day = ((dayOfCycle - 1) % cycleLength) + 1
+    // Ovulación: 14 días antes del fin del ciclo (fase lútea siempre ~14d)
+    const ovulationDay = cycleLength - 14
+
+    if (date_end) {
+      const end = new Date(date_end + 'T12:00:00')
+      const periodDays = Math.floor((end - start) / (1000 * 60 * 60 * 24)) + 1
+      if (day <= periodDays)   return { phase: 'menstrual', day, label: 'Menstrual', emoji: '🩸', color: '#DC2626', desc: 'Tómate con calma, escucha tu cuerpo', periodEnded: true, periodDays }
+      if (day < ovulationDay)  return { phase: 'folicular', day, label: 'Folicular', emoji: '🌱', color: '#059669', desc: 'Buena energía, ideal para entrenar fuerte', periodEnded: true }
+      if (day === ovulationDay) return { phase: 'ovulacion', day, label: 'Ovulación', emoji: '⚡', color: '#7C3AED', desc: 'Pico de energía y fuerza', periodEnded: true }
+      return                    { phase: 'lutea',    day, label: 'Lútea',    emoji: '🌙', color: '#D97706', desc: 'Puede aparecer más fatiga o sensibilidad', periodEnded: true }
+    } else {
+      // Sin fecha de fin — día ≤5 asume fase menstrual activa
+      if (day <= 5)            return { phase: 'menstrual', day, label: 'Menstrual', emoji: '🩸', color: '#DC2626', desc: 'Tómate con calma, escucha tu cuerpo', periodEnded: false }
+      if (day < ovulationDay)  return { phase: 'folicular', day, label: 'Folicular', emoji: '🌱', color: '#059669', desc: 'Buena energía, ideal para entrenar fuerte', periodEnded: null }
+      if (day === ovulationDay) return { phase: 'ovulacion', day, label: 'Ovulación', emoji: '⚡', color: '#7C3AED', desc: 'Pico de energía y fuerza', periodEnded: null }
+      return                    { phase: 'lutea',    day, label: 'Lútea',    emoji: '🌙', color: '#D97706', desc: 'Puede aparecer más fatiga o sensibilidad', periodEnded: null }
+    }
   }
 }
 

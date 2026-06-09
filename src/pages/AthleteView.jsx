@@ -417,6 +417,12 @@ function AthleteHealth({ athleteId }) {
   const [docsTab, setDocsTab] = useState(false)
   const [cycles, setCycles] = useState([])
   const [loggingCycle, setLoggingCycle] = useState(false)
+  const [endingCycle, setEndingCycle] = useState(false)
+  const [symptomText, setSymptomText] = useState('')
+  const [savingSymptom, setSavingSymptom] = useState(false)
+  const [cycleLength, setCycleLengthState] = useState(() => Cycle.getCycleLength(athleteId))
+  const [editingCycleLength, setEditingCycleLength] = useState(false)
+  const [cycleLengthInput, setCycleLengthInput] = useState(String(Cycle.getCycleLength(athleteId)))
   const isFemale = localStorage.getItem(`ns_gender_${athleteId}`) === 'female'
   const fileRef = useRef()
   const SEVERITY_COLOR = { mild: 'var(--success)', moderate: 'var(--warning)', severe: 'var(--error)' }
@@ -450,6 +456,47 @@ function AthleteHealth({ athleteId }) {
       toast('Ciclo registrado ✓')
     } catch { toast('Error al registrar', 'error') }
     setLoggingCycle(false)
+  }
+
+  const endCycle = async () => {
+    if (!cycles[0]?.id) return
+    setEndingCycle(true)
+    try {
+      const today = new Date().toISOString().slice(0, 10)
+      await Cycle.end(cycles[0].id, today)
+      const updated = await Cycle.getByAthlete(athleteId)
+      setCycles(updated)
+      haptic('success')
+      toast('Periodo finalizado ✓')
+    } catch { toast('Error al guardar', 'error') }
+    setEndingCycle(false)
+  }
+
+  const saveSymptom = async () => {
+    if (!symptomText.trim() || !cycles[0]?.id) return
+    setSavingSymptom(true)
+    try {
+      const phase = Cycle.getPhase(cycles[0], cycleLength)
+      await Cycle.addSymptom(cycles[0].id, phase?.phase || 'unknown', symptomText.trim())
+      const updated = await Cycle.getByAthlete(athleteId)
+      setCycles(updated)
+      setSymptomText('')
+      haptic('success')
+      toast('Síntoma guardado ✓')
+    } catch { toast('Error al guardar', 'error') }
+    setSavingSymptom(false)
+  }
+
+  const saveCycleLength = () => {
+    const val = parseInt(cycleLengthInput)
+    if (val >= 21 && val <= 45) {
+      Cycle.setCycleLength(athleteId, val)
+      setCycleLengthState(val)
+      setEditingCycleLength(false)
+      toast('Duración guardada ✓')
+    } else {
+      toast('Introduce un valor entre 21 y 45 días', 'error')
+    }
   }
 
   const handleUpload = async (e) => {
@@ -491,58 +538,128 @@ function AthleteHealth({ athleteId }) {
       <div className="page-content">
 
         {/* Sección ciclo menstrual (solo mujeres) */}
-        {isFemale && !docsTab && (
-          <div style={{ marginBottom: 8 }}>
-            {(() => {
-              const phase = cycles.length > 0 ? Cycle.getPhase(cycles[0].date_start) : null
-              return (
-                <div style={{ padding: '16px', background: phase ? phase.color + '12' : 'var(--card)', border: `1.5px solid ${phase ? phase.color + '40' : 'var(--border)'}`, borderRadius: 16, marginBottom: 4 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
-                    <span style={{ fontSize: 28 }}>{phase ? phase.emoji : '🩸'}</span>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.4px' }}>
-                        {phase ? `Ciclo menstrual · Día ${phase.day}` : 'Ciclo menstrual'}
-                      </div>
-                      {phase ? (
-                        <>
-                          <div style={{ fontWeight: 800, fontSize: 16, color: phase.color }}>{phase.label}</div>
-                          <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>{phase.desc}</div>
-                        </>
-                      ) : (
-                        <div style={{ fontSize: 14, color: 'var(--text-muted)' }}>Registra tu primer ciclo</div>
-                      )}
+        {isFemale && !docsTab && (() => {
+          const phase = cycles.length > 0 ? Cycle.getPhase(cycles[0], cycleLength) : null
+          const currentCycle = cycles[0] || null
+          const symptoms = currentCycle ? Cycle.getSymptoms(currentCycle) : []
+          return (
+            <div style={{ marginBottom: 8 }}>
+              {/* Tarjeta fase actual */}
+              <div style={{ padding: '16px', background: phase ? phase.color + '12' : 'var(--card)', border: `1.5px solid ${phase ? phase.color + '40' : 'var(--border)'}`, borderRadius: 16, marginBottom: 8 }}>
+
+                {/* Cabecera fase */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 }}>
+                  <span style={{ fontSize: 28 }}>{phase ? phase.emoji : '🩸'}</span>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.4px' }}>
+                      {phase ? `Ciclo menstrual · Día ${phase.day}` : 'Ciclo menstrual'}
                     </div>
-                  </div>
-                  <button
-                    className="btn btn-secondary btn-full"
-                    onClick={logCycle}
-                    disabled={loggingCycle}
-                    style={{ fontSize: 14 }}>
-                    {loggingCycle ? 'Registrando...' : '🩸 Me ha bajado la regla hoy'}
-                  </button>
-                  {cycles.length > 0 && (
-                    <div style={{ marginTop: 12 }}>
-                      <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.4px', marginBottom: 8 }}>Historial</div>
-                      {cycles.slice(0, 3).map((c, i) => (
-                        <div key={c.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 0', borderTop: '1px solid var(--border)' }}>
-                          <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>
-                            {new Date(c.date_start + 'T12:00:00').toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })}
-                          </span>
-                          {i === 0 && <span style={{ fontSize: 11, fontWeight: 700, color: phase?.color || 'var(--accent)', background: (phase?.color || 'var(--accent)') + '20', padding: '2px 8px', borderRadius: 8 }}>Último</span>}
-                          {i > 0 && cycles[i-1] && (
-                            <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
-                              {Math.round((new Date(cycles[i-1].date_start) - new Date(c.date_start)) / (1000*60*60*24))}d de ciclo
-                            </span>
-                          )}
+                    {phase ? (
+                      <>
+                        <div style={{ fontWeight: 800, fontSize: 16, color: phase.color }}>{phase.label}
+                          {phase.periodEnded === true && phase.phase === 'menstrual' && <span style={{ fontSize: 11, fontWeight: 500, color: 'var(--text-muted)', marginLeft: 6 }}>· {phase.periodDays}d</span>}
                         </div>
-                      ))}
-                    </div>
-                  )}
+                        <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>{phase.desc}</div>
+                      </>
+                    ) : (
+                      <div style={{ fontSize: 14, color: 'var(--text-muted)' }}>Registra tu primer ciclo</div>
+                    )}
+                  </div>
                 </div>
-              )
-            })()}
-          </div>
-        )}
+
+                {/* Botones de acción */}
+                <button className="btn btn-secondary btn-full" onClick={logCycle} disabled={loggingCycle} style={{ fontSize: 14, marginBottom: 8 }}>
+                  {loggingCycle ? 'Registrando...' : '🩸 Me ha bajado la regla hoy'}
+                </button>
+                {phase?.phase === 'menstrual' && phase.periodEnded === false && (
+                  <button className="btn btn-full" onClick={endCycle} disabled={endingCycle}
+                    style={{ fontSize: 14, background: '#059669', color: '#fff', border: 'none', marginBottom: 8 }}>
+                    {endingCycle ? 'Guardando...' : '🌸 Mi regla ha terminado hoy'}
+                  </button>
+                )}
+
+                {/* Síntomas — visible cuando hay ciclo activo */}
+                {currentCycle && (
+                  <div style={{ marginTop: 4 }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.4px', marginBottom: 6 }}>
+                      ¿Cómo te sientes? {phase && <span style={{ color: phase.color }}>({phase.label})</span>}
+                    </div>
+                    <textarea
+                      value={symptomText}
+                      onChange={e => setSymptomText(e.target.value)}
+                      placeholder="Escribe cómo te encuentras hoy: energía, dolor, ánimo..."
+                      rows={2}
+                      style={{ width: '100%', resize: 'vertical', padding: '10px 12px', borderRadius: 10, border: '1.5px solid var(--border)', background: 'var(--bg)', color: 'var(--text)', fontSize: 14, fontFamily: 'inherit', boxSizing: 'border-box', outline: 'none' }}
+                    />
+                    <button
+                      className="btn btn-primary btn-full"
+                      onClick={saveSymptom}
+                      disabled={savingSymptom || !symptomText.trim()}
+                      style={{ fontSize: 14, marginTop: 6 }}>
+                      {savingSymptom ? 'Guardando...' : 'Guardar síntoma'}
+                    </button>
+
+                    {/* Historial síntomas del ciclo actual */}
+                    {symptoms.length > 0 && (
+                      <div style={{ marginTop: 10 }}>
+                        <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.4px', marginBottom: 6 }}>Síntomas registrados</div>
+                        {symptoms.slice(0, 5).map((s, i) => (
+                          <div key={i} style={{ padding: '8px 10px', background: 'var(--bg)', borderRadius: 8, marginBottom: 4, borderLeft: `3px solid ${phase?.color || 'var(--accent)'}` }}>
+                            <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 2 }}>
+                              {new Date(s.date + 'T12:00:00').toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })} · {s.phase}
+                            </div>
+                            <div style={{ fontSize: 13 }}>{s.text}</div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Historial ciclos */}
+                {cycles.length > 0 && (
+                  <div style={{ marginTop: 12, borderTop: '1px solid var(--border)', paddingTop: 10 }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.4px', marginBottom: 6 }}>Historial</div>
+                    {cycles.slice(0, 3).map((c, i) => (
+                      <div key={c.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '5px 0' }}>
+                        <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>
+                          {new Date(c.date_start + 'T12:00:00').toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' })}
+                          {c.date_end && <span style={{ marginLeft: 4, color: '#059669' }}>→ {new Date(c.date_end + 'T12:00:00').toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })}</span>}
+                        </span>
+                        {i === 0
+                          ? <span style={{ fontSize: 11, fontWeight: 700, color: phase?.color || 'var(--accent)', background: (phase?.color || 'var(--accent)') + '20', padding: '2px 8px', borderRadius: 8 }}>Último</span>
+                          : cycles[i-1] && <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{Math.round((new Date(cycles[i-1].date_start) - new Date(c.date_start)) / (1000*60*60*24))}d</span>
+                        }
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Config duración del ciclo */}
+              <div style={{ padding: '10px 14px', background: 'var(--card)', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+                <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>⚙️ Mi ciclo dura</div>
+                {editingCycleLength ? (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <input
+                      type="number" min="21" max="45"
+                      value={cycleLengthInput}
+                      onChange={e => setCycleLengthInput(e.target.value)}
+                      style={{ width: 60, padding: '4px 8px', borderRadius: 8, border: '1.5px solid var(--accent)', background: 'var(--bg)', color: 'var(--text)', fontSize: 14, textAlign: 'center' }}
+                    />
+                    <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>días</span>
+                    <button className="btn btn-primary" onClick={saveCycleLength} style={{ fontSize: 12, padding: '4px 10px' }}>✓</button>
+                    <button className="btn btn-secondary" onClick={() => { setEditingCycleLength(false); setCycleLengthInput(String(cycleLength)) }} style={{ fontSize: 12, padding: '4px 10px' }}>✕</button>
+                  </div>
+                ) : (
+                  <button onClick={() => setEditingCycleLength(true)} style={{ background: 'var(--accent-dim)', color: 'var(--accent)', border: 'none', borderRadius: 8, padding: '4px 12px', fontWeight: 700, fontSize: 14, cursor: 'pointer' }}>
+                    {cycleLength} días ✏️
+                  </button>
+                )}
+              </div>
+            </div>
+          )
+        })()}
 
         {!docsTab ? (
           /* Lesiones */
