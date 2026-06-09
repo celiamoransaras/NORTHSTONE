@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useLocation } from 'react-router-dom'
 import { Athletes as DB, Sessions, Storage, Cycle } from '../lib/db'
+import { supabase } from '../lib/supabase'
 import Training from './Training'
 import { GoalsSection, RecordsSection, LoadChart, WellnessTodayCoach, WellnessHistory } from './Progress'
 import { useToast } from '../contexts/ToastContext'
@@ -411,10 +412,14 @@ function CyclePhaseCoach({ athleteId }) {
   const [currentCycle, setCurrentCycle] = useState(null)
 
   useEffect(() => {
-    Cycle.getByAthlete(athleteId).then(cycles => {
+    Promise.all([
+      Cycle.getByAthlete(athleteId),
+      supabase.from('athletes').select('cycle_length').eq('id', athleteId).single()
+    ]).then(([cycles, { data: ath }]) => {
       if (cycles.length > 0) {
         setCurrentCycle(cycles[0])
-        setPhase(Cycle.getPhase(cycles[0], Cycle.getCycleLength(athleteId)))
+        const len = ath?.cycle_length || 28
+        setPhase(Cycle.getPhase(cycles[0], len))
       }
     })
   }, [athleteId])
