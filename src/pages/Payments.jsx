@@ -101,7 +101,7 @@ export default function Payments() {
 
   const saveFee = async (athleteId) => {
     const val = Number(feeInput)
-    if (!val || val <= 0) { toast('Introduce un importe válido', 'error'); return }
+    if (isNaN(val) || val < 0 || feeInput === '') { toast('Introduce un importe válido (0 o mayor)', 'error'); return }
     localStorage.setItem(`ns_fee_${athleteId}`, val)
     setFees(prev => ({ ...prev, [athleteId]: val }))
     setEditingFee(null)
@@ -169,12 +169,19 @@ export default function Payments() {
 
         {/* Aviso si hay deportistas sin cuota */}
         {noFeeAthletes.length > 0 && (
-          <div className="card" style={{ borderLeft: '3px solid var(--accent)', background: 'var(--accent)10' }}>
-            <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 800, fontSize: 14, textTransform: 'uppercase', marginBottom: 10, color: 'var(--accent)' }}>
-              💶 Cuotas sin asignar
+          <div style={{ borderRadius: 16, background: 'rgba(217,119,6,0.08)', border: '1.5px solid rgba(217,119,6,0.3)', overflow: 'hidden' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '12px 16px', background: 'rgba(217,119,6,0.12)', borderBottom: '1px solid rgba(217,119,6,0.15)' }}>
+              <span style={{ fontSize: 18 }}>⚠️</span>
+              <div>
+                <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 800, fontSize: 14, textTransform: 'uppercase', color: '#b45309', letterSpacing: '0.3px' }}>
+                  {noFeeAthletes.length === 1 ? '1 deportista sin cuota asignada' : `${noFeeAthletes.length} deportistas sin cuota asignada`}
+                </div>
+                <div style={{ fontSize: 11, color: '#92400e', marginTop: 1 }}>Añade una cuota mensual para poder registrar pagos</div>
+              </div>
             </div>
-            {noFeeAthletes.map(a => (
-              <div key={a.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 0', borderBottom: '1px solid var(--border)' }}>
+            <div style={{ padding: '4px 16px 8px' }}>
+            {noFeeAthletes.map((a, i) => (
+              <div key={a.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 0', borderBottom: i < noFeeAthletes.length - 1 ? '1px solid rgba(217,119,6,0.12)' : 'none' }}>
                 {a.avatar_url
                   ? <img src={a.avatar_url} style={{ width: 36, height: 36, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
                   : <div className="avatar" style={{ background: a.color+'20', color: a.color, width: 36, height: 36, fontSize: 13, flexShrink: 0 }}>{initials(a.name)}</div>
@@ -188,6 +195,7 @@ export default function Payments() {
                       value={feeInput}
                       onChange={e => setFeeInput(e.target.value)}
                       placeholder="€/mes"
+                      min="0"
                       autoFocus
                       style={{ width: 80, padding: '6px 10px', fontSize: 14 }}
                     />
@@ -195,12 +203,16 @@ export default function Payments() {
                     <button className="btn btn-ghost btn-sm" onClick={() => { setEditingFee(null); setFeeInput('') }}>✕</button>
                   </div>
                 ) : (
-                  <button className="btn btn-secondary btn-sm" onClick={() => { setEditingFee(a.id); setFeeInput('') }}>
+                  <button
+                    className="btn btn-sm"
+                    style={{ background: '#b45309', color: '#fff', border: 'none', fontWeight: 700 }}
+                    onClick={() => { setEditingFee(a.id); setFeeInput('') }}>
                     + Añadir cuota
                   </button>
                 )}
               </div>
             ))}
+            </div>
           </div>
         )}
 
@@ -210,7 +222,7 @@ export default function Payments() {
             <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 800, fontSize: 13, textTransform: 'uppercase', color: 'var(--text-muted)', letterSpacing: '0.5px', marginBottom: 10 }}>
               Cuotas mensuales
             </div>
-            {athletes.filter(a => fees[a.id]).map((a, i, arr) => (
+            {athletes.filter(a => fees[a.id] != null).map((a, i, arr) => (
               <div key={a.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 0', borderBottom: i < arr.length - 1 ? '1px solid var(--border)' : 'none' }}>
                 {a.avatar_url
                   ? <img src={a.avatar_url} style={{ width: 32, height: 32, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
