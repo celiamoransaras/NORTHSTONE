@@ -548,6 +548,11 @@ function AthleteHealth({ athleteId }) {
       <div className="page-content">
 
         {/* Sección ciclo menstrual (solo mujeres) */}
+        {isFemale && !docsTab && (
+          <div style={{ fontSize: 11, fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: 8 }}>
+            🩸 Ciclo menstrual
+          </div>
+        )}
         {isFemale && !docsTab && (() => {
           const phase = cycles.length > 0 ? Cycle.getPhase(cycles[0], cycleLength) : null
           const currentCycle = cycles[0] || null
@@ -671,6 +676,11 @@ function AthleteHealth({ athleteId }) {
           )
         })()}
 
+        {!docsTab && (
+          <div style={{ fontSize: 11, fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.8px', marginTop: isFemale ? 20 : 0, marginBottom: 8, paddingTop: isFemale ? 16 : 0, borderTop: isFemale ? '1px solid var(--border)' : 'none' }}>
+            🩹 Lesiones
+          </div>
+        )}
         {!docsTab ? (
           /* Lesiones */
           injuries.length === 0 ? (
