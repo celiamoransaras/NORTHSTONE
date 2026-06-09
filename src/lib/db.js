@@ -383,6 +383,16 @@ export const Cycle = {
       severity: 'mild',
       notes: ''
     }).select().single()
+    // Mantener solo los últimos 3 ciclos — borrar los más antiguos
+    const { data: all } = await supabase.from('injuries')
+      .select('id')
+      .eq('athlete_id', athleteId)
+      .eq('type', 'cycle')
+      .order('date_start', { ascending: false })
+    if (all && all.length > 3) {
+      const toDelete = all.slice(3).map(c => c.id)
+      await supabase.from('injuries').delete().in('id', toDelete)
+    }
     return data
   },
   // Marcar fin de la regla
