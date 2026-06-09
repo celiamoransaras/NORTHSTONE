@@ -208,9 +208,15 @@ export default function Messages() {
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   fontSize: c.icon ? 16 : 11, fontWeight: 800,
                   color: isActive ? '#fff' : (c.color || 'var(--text-muted)') }}>
-                  {athlete?.avatar_url
-                    ? <img src={athlete.avatar_url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                    : c.icon ? c.icon : initials(c.name)}
+                  {c.id === 'general'
+                    ? c.icon
+                    : (!isCoach && c.id === myAthleteId)
+                      ? (coachAvatar
+                          ? <img src={coachAvatar} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                          : c.icon ? c.icon : initials(c.name))
+                      : athlete?.avatar_url
+                        ? <img src={athlete.avatar_url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        : c.icon ? c.icon : initials(c.name)}
                 </div>
                 <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700, fontSize: 13, textTransform: 'uppercase', letterSpacing: '0.3px',
                   color: isActive ? '#fff' : 'var(--text-muted)', whiteSpace: 'nowrap' }}>
