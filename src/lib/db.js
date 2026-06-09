@@ -143,11 +143,11 @@ export const Sessions = {
 // ---- INJURIES ----
 export const Injuries = {
   getAll: async () => {
-    const { data } = await supabase.from('injuries').select('*').order('date_start', { ascending: false })
+    const { data } = await supabase.from('injuries').select('*').neq('type', 'cycle').order('date_start', { ascending: false })
     return data || []
   },
   getByAthlete: async (athleteId) => {
-    const { data } = await supabase.from('injuries').select('*').eq('athlete_id', athleteId).order('date_start', { ascending: false })
+    const { data } = await supabase.from('injuries').select('*').eq('athlete_id', athleteId).neq('type', 'cycle').order('date_start', { ascending: false })
     return data || []
   },
   create: async (injury) => {
@@ -370,6 +370,44 @@ export const Achievements = {
       { athlete_id: athleteId, type, title, description, icon },
       { onConflict: 'athlete_id,type', ignoreDuplicates: true }
     )
+  }
+}
+
+// ---- Ciclo menstrual (usa tabla injuries con type='cycle') ----
+export const Cycle = {
+  // Registrar inicio de regla
+  log: async (athleteId, startDate) => {
+    const { data } = await supabase.from('injuries').insert({
+      athlete_id: athleteId,
+      date_start: startDate,
+      type: 'cycle',
+      body_part: '',
+      severity: 'mild',
+      notes: ''
+    }).select().single()
+    return data
+  },
+  // Obtener historial de ciclos de una deportista
+  getByAthlete: async (athleteId) => {
+    const { data } = await supabase.from('injuries')
+      .select('id, date_start')
+      .eq('athlete_id', athleteId)
+      .eq('type', 'cycle')
+      .order('date_start', { ascending: false })
+    return data || []
+  },
+  // Calcular fase actual a partir de la última fecha de inicio
+  getPhase: (lastStartDate) => {
+    if (!lastStartDate) return null
+    const start = new Date(lastStartDate + 'T12:00:00')
+    const today = new Date()
+    const dayOfCycle = Math.floor((today - start) / (1000 * 60 * 60 * 24)) + 1
+    if (dayOfCycle < 1) return null
+    const day = ((dayOfCycle - 1) % 28) + 1 // normalizar a ciclo de 28 días
+    if (day <= 5)  return { phase: 'menstrual',  day, label: 'Menstrual',  emoji: '🩸', color: '#DC2626', desc: 'Tómate con calma, escucha tu cuerpo' }
+    if (day <= 13) return { phase: 'folicular',  day, label: 'Folicular',  emoji: '🌱', color: '#059669', desc: 'Buena energía, ideal para entrenar fuerte' }
+    if (day === 14) return { phase: 'ovulacion', day, label: 'Ovulación',  emoji: '⚡', color: '#7C3AED', desc: 'Pico de energía y fuerza' }
+    return              { phase: 'lutea',       day, label: 'Lútea',      emoji: '🌙', color: '#D97706', desc: 'Puede aparecer más fatiga o sensibilidad' }
   }
 }
 

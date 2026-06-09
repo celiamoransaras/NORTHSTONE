@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useAuth } from '../contexts/AuthContext'
-import { Sessions, Injuries, Payments, Storage, RPE, Athletes as AthletesDB } from '../lib/db'
+import { Sessions, Injuries, Payments, Storage, RPE, Athletes as AthletesDB, Cycle } from '../lib/db'
 import { supabase } from '../lib/supabase'
 import Messages from './Messages'
 import DocsPage from './Documents'
@@ -407,7 +407,7 @@ function AthleteHome({ athlete, athleteId }) {
   )
 }
 
-// ---- Salud del deportista (lesiones + docs médicos) ----
+// ---- Salud del deportista (lesiones + ciclo + docs médicos) ----
 function AthleteHealth({ athleteId }) {
   const toast = useToast()
   const [injuries, setInjuries] = useState([])
@@ -415,6 +415,9 @@ function AthleteHealth({ athleteId }) {
   const [uploading, setUploading] = useState(false)
   const [loading, setLoading] = useState(true)
   const [docsTab, setDocsTab] = useState(false)
+  const [cycles, setCycles] = useState([])
+  const [loggingCycle, setLoggingCycle] = useState(false)
+  const isFemale = localStorage.getItem(`ns_gender_${athleteId}`) === 'female'
   const fileRef = useRef()
   const SEVERITY_COLOR = { mild: 'var(--success)', moderate: 'var(--warning)', severe: 'var(--error)' }
   const SEVERITY_LABEL = { mild: 'Leve', moderate: 'Moderada', severe: 'Grave' }
@@ -428,11 +431,26 @@ function AthleteHealth({ athleteId }) {
   }
 
   useEffect(() => {
-    Promise.all([
+    const loads = [
       Injuries.getByAthlete(athleteId).then(setInjuries),
       loadDocs(),
-    ]).then(() => setLoading(false))
+    ]
+    if (isFemale) loads.push(Cycle.getByAthlete(athleteId).then(setCycles))
+    Promise.all(loads).then(() => setLoading(false))
   }, [athleteId])
+
+  const logCycle = async () => {
+    setLoggingCycle(true)
+    try {
+      const today = new Date().toISOString().slice(0, 10)
+      await Cycle.log(athleteId, today)
+      const updated = await Cycle.getByAthlete(athleteId)
+      setCycles(updated)
+      haptic('success')
+      toast('Ciclo registrado ✓')
+    } catch { toast('Error al registrar', 'error') }
+    setLoggingCycle(false)
+  }
 
   const handleUpload = async (e) => {
     const file = e.target.files[0]
@@ -471,6 +489,60 @@ function AthleteHealth({ athleteId }) {
         </div>
       </div>
       <div className="page-content">
+
+        {/* Sección ciclo menstrual (solo mujeres) */}
+        {isFemale && !docsTab && (
+          <div style={{ marginBottom: 8 }}>
+            {(() => {
+              const phase = cycles.length > 0 ? Cycle.getPhase(cycles[0].date_start) : null
+              return (
+                <div style={{ padding: '16px', background: phase ? phase.color + '12' : 'var(--card)', border: `1.5px solid ${phase ? phase.color + '40' : 'var(--border)'}`, borderRadius: 16, marginBottom: 4 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
+                    <span style={{ fontSize: 28 }}>{phase ? phase.emoji : '🩸'}</span>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.4px' }}>
+                        {phase ? `Ciclo menstrual · Día ${phase.day}` : 'Ciclo menstrual'}
+                      </div>
+                      {phase ? (
+                        <>
+                          <div style={{ fontWeight: 800, fontSize: 16, color: phase.color }}>{phase.label}</div>
+                          <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>{phase.desc}</div>
+                        </>
+                      ) : (
+                        <div style={{ fontSize: 14, color: 'var(--text-muted)' }}>Registra tu primer ciclo</div>
+                      )}
+                    </div>
+                  </div>
+                  <button
+                    className="btn btn-secondary btn-full"
+                    onClick={logCycle}
+                    disabled={loggingCycle}
+                    style={{ fontSize: 14 }}>
+                    {loggingCycle ? 'Registrando...' : '🩸 Me ha bajado la regla hoy'}
+                  </button>
+                  {cycles.length > 0 && (
+                    <div style={{ marginTop: 12 }}>
+                      <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.4px', marginBottom: 8 }}>Historial</div>
+                      {cycles.slice(0, 3).map((c, i) => (
+                        <div key={c.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 0', borderTop: '1px solid var(--border)' }}>
+                          <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>
+                            {new Date(c.date_start + 'T12:00:00').toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })}
+                          </span>
+                          {i === 0 && <span style={{ fontSize: 11, fontWeight: 700, color: phase?.color || 'var(--accent)', background: (phase?.color || 'var(--accent)') + '20', padding: '2px 8px', borderRadius: 8 }}>Último</span>}
+                          {i > 0 && cycles[i-1] && (
+                            <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+                              {Math.round((new Date(cycles[i-1].date_start) - new Date(c.date_start)) / (1000*60*60*24))}d de ciclo
+                            </span>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )
+            })()}
+          </div>
+        )}
 
         {!docsTab ? (
           /* Lesiones */

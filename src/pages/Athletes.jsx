@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useLocation } from 'react-router-dom'
-import { Athletes as DB, Sessions, Storage } from '../lib/db'
+import { Athletes as DB, Sessions, Storage, Cycle } from '../lib/db'
 import Training from './Training'
 import { GoalsSection, RecordsSection, LoadChart, WellnessTodayCoach, WellnessHistory } from './Progress'
 import { useToast } from '../contexts/ToastContext'
@@ -35,7 +35,9 @@ function useWeeklyStats(athletes) {
 
 const COLORS = ['#F59E0B','#10B981','#3B82F6','#EC4899','#8B5CF6','#EF4444','#14B8A6','#F97316']
 const STATUS_OPTS = [{ value: 'active', label: 'Activo' }, { value: 'injured', label: 'Lesionado' }, { value: 'inactive', label: 'Baja' }]
-const emptyForm = { name: '', email: '', phone: '', dob: '', sport: 'Híbrido', color: COLORS[0], status: 'active', notes: '' }
+const emptyForm = { name: '', email: '', phone: '', dob: '', sport: 'Híbrido', color: COLORS[0], status: 'active', notes: '', gender: '' }
+const getGender = (id) => localStorage.getItem(`ns_gender_${id}`) || ''
+const setGenderLS = (id, g) => localStorage.setItem(`ns_gender_${id}`, g)
 
 export default function Athletes() {
   const toast = useToast()
@@ -78,15 +80,18 @@ export default function Athletes() {
   )
 
   const openNew = () => { setForm(emptyForm); setEditing(null); setSheet('form') }
-  const openEdit = (a) => { setForm({ ...a }); setEditing(a.id); setSheet('form') }
+  const openEdit = (a) => { setForm({ ...a, gender: getGender(a.id) }); setEditing(a.id); setSheet('form') }
   const openDetail = (a) => { setSheet({ ...a }); setDetailTab('profile') }
 
   const save = async () => {
     if (!form.name.trim()) return
     setSaving(true)
     try {
-      if (editing) await DB.update(editing, form)
-      else await DB.create(form)
+      const { gender, ...dbForm } = form
+      let savedId = editing
+      if (editing) await DB.update(editing, dbForm)
+      else { const created = await DB.create(dbForm); savedId = created?.id }
+      if (savedId && gender) setGenderLS(savedId, gender)
       await load()
       setSheet(null)
       toast(editing ? 'Deportista actualizada' : 'Deportista añadida')
@@ -261,6 +266,7 @@ export default function Athletes() {
                       <span className={`badge ${statusBadge(sheet.status)}`}>{statusLabel(sheet.status)}</span>
                     </div>
                   </div>
+                  {getGender(sheet.id) === 'female' && <CyclePhaseCoach athleteId={sheet.id} />}
                   <WeeklyAdherence athleteId={sheet.id} color={sheet.color} />
                   <div style={{ marginBottom: 16 }}>
                     <WellnessTodayCoach athleteId={sheet.id} athleteName={sheet.name} />
@@ -332,6 +338,25 @@ export default function Athletes() {
                 <input className="input" type="date" value={form.dob} onChange={e => setForm(f => ({ ...f, dob: e.target.value }))} />
               </div>
               <div className="input-group">
+                <label className="input-label">Género</label>
+                <div style={{ display: 'flex', gap: 10 }}>
+                  {[{ value: 'female', label: '♀ Mujer' }, { value: 'male', label: '♂ Hombre' }].map(opt => (
+                    <button key={opt.value} type="button"
+                      onClick={() => setForm(f => ({ ...f, gender: opt.value }))}
+                      style={{
+                        flex: 1, padding: '10px 0', borderRadius: 'var(--radius)',
+                        border: `2px solid ${form.gender === opt.value ? 'var(--accent)' : 'var(--border)'}`,
+                        background: form.gender === opt.value ? 'var(--accent-dim)' : 'var(--card)',
+                        color: form.gender === opt.value ? 'var(--accent)' : 'var(--text-muted)',
+                        fontWeight: form.gender === opt.value ? 800 : 500,
+                        fontSize: 14, cursor: 'pointer', transition: 'all 0.2s'
+                      }}>
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="input-group">
                 <label className="input-label">Deporte</label>
                 <input className="input" placeholder="Híbrido, Fuerza, Cardio..." value={form.sport}
                   onChange={e => setForm(f => ({ ...f, sport: e.target.value }))} />
@@ -381,6 +406,36 @@ export default function Athletes() {
           </div>
         </>
       )}
+    </div>
+  )
+}
+
+function CyclePhaseCoach({ athleteId }) {
+  const [phase, setPhase] = useState(null)
+  useEffect(() => {
+    Cycle.getByAthlete(athleteId).then(cycles => {
+      if (cycles.length > 0) setPhase(Cycle.getPhase(cycles[0].date_start))
+    })
+  }, [athleteId])
+
+  if (!phase) return (
+    <div style={{ marginBottom: 16, padding: '12px 14px', background: 'var(--bg)', borderRadius: 12, display: 'flex', alignItems: 'center', gap: 10 }}>
+      <span style={{ fontSize: 20 }}>🩸</span>
+      <div>
+        <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.4px' }}>Ciclo menstrual</div>
+        <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>Sin datos registrados aún</div>
+      </div>
+    </div>
+  )
+
+  return (
+    <div style={{ marginBottom: 16, padding: '12px 14px', background: phase.color + '12', border: `1.5px solid ${phase.color}30`, borderRadius: 12, display: 'flex', alignItems: 'center', gap: 10 }}>
+      <span style={{ fontSize: 24 }}>{phase.emoji}</span>
+      <div style={{ flex: 1 }}>
+        <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.4px', marginBottom: 2 }}>Ciclo menstrual · Día {phase.day}</div>
+        <div style={{ fontWeight: 800, fontSize: 14, color: phase.color }}>{phase.label}</div>
+        <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>{phase.desc}</div>
+      </div>
     </div>
   )
 }
