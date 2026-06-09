@@ -423,7 +423,8 @@ function AthleteHealth({ athleteId }) {
   const [cycleLength, setCycleLengthState] = useState(() => Cycle.getCycleLength(athleteId))
   const [editingCycleLength, setEditingCycleLength] = useState(false)
   const [cycleLengthInput, setCycleLengthInput] = useState(String(Cycle.getCycleLength(athleteId)))
-  const isFemale = localStorage.getItem(`ns_gender_${athleteId}`) === 'female'
+  const athleteProfile = profile?.athletes
+  const isFemale = athleteProfile?.gender === 'female'
   const fileRef = useRef()
   const SEVERITY_COLOR = { mild: 'var(--success)', moderate: 'var(--warning)', severe: 'var(--error)' }
   const SEVERITY_LABEL = { mild: 'Leve', moderate: 'Moderada', severe: 'Grave' }

@@ -36,8 +36,6 @@ function useWeeklyStats(athletes) {
 const COLORS = ['#F59E0B','#10B981','#3B82F6','#EC4899','#8B5CF6','#EF4444','#14B8A6','#F97316']
 const STATUS_OPTS = [{ value: 'active', label: 'Activo' }, { value: 'injured', label: 'Lesionado' }, { value: 'inactive', label: 'Baja' }]
 const emptyForm = { name: '', email: '', phone: '', dob: '', sport: 'Híbrido', color: COLORS[0], status: 'active', notes: '', gender: '' }
-const getGender = (id) => localStorage.getItem(`ns_gender_${id}`) || ''
-const setGenderLS = (id, g) => localStorage.setItem(`ns_gender_${id}`, g)
 
 export default function Athletes() {
   const toast = useToast()
@@ -80,18 +78,16 @@ export default function Athletes() {
   )
 
   const openNew = () => { setForm(emptyForm); setEditing(null); setSheet('form') }
-  const openEdit = (a) => { setForm({ ...a, gender: getGender(a.id) }); setEditing(a.id); setSheet('form') }
+  const openEdit = (a) => { setForm({ ...a, gender: a.gender || '' }); setEditing(a.id); setSheet('form') }
   const openDetail = (a) => { setSheet({ ...a }); setDetailTab('profile') }
 
   const save = async () => {
     if (!form.name.trim()) return
     setSaving(true)
     try {
-      const { gender, ...dbForm } = form
       let savedId = editing
-      if (editing) await DB.update(editing, dbForm)
-      else { const created = await DB.create(dbForm); savedId = created?.id }
-      if (savedId && gender) setGenderLS(savedId, gender)
+      if (editing) await DB.update(editing, form)
+      else { const created = await DB.create(form); savedId = created?.id }
       await load()
       setSheet(null)
       toast(editing ? 'Deportista actualizada' : 'Deportista añadida')
@@ -266,7 +262,7 @@ export default function Athletes() {
                       <span className={`badge ${statusBadge(sheet.status)}`}>{statusLabel(sheet.status)}</span>
                     </div>
                   </div>
-                  {getGender(sheet.id) === 'female' && <CyclePhaseCoach athleteId={sheet.id} />}
+                  {sheet.gender === 'female' && <CyclePhaseCoach athleteId={sheet.id} />}
                   <WeeklyAdherence athleteId={sheet.id} color={sheet.color} />
                   <div style={{ marginBottom: 16 }}>
                     <WellnessTodayCoach athleteId={sheet.id} athleteName={sheet.name} />
