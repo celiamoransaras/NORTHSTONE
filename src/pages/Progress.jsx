@@ -1,10 +1,356 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { Records, Goals, Wellness } from '../lib/db'
 import { supabase } from '../lib/supabase'
 import ConfirmSheet from '../components/ConfirmSheet'
 import { useToast } from '../contexts/ToastContext'
 import { haptic } from '../lib/haptic'
 import { sendPushToCoach } from '../lib/pushNotifications'
+
+// ─────────────────────────────────────────────
+// INFORME MENSUAL
+// ─────────────────────────────────────────────
+const MONTHS_ES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
+
+export function MonthlyReport({ athleteId, sessions, isFemale }) {
+  const now = new Date()
+  const [monthOffset, setMonthOffset] = useState(0) // 0 = actual, -1 = anterior...
+  const [nutritionLogs, setNutritionLogs] = useState([])
+  const [wellnessData, setWellnessData] = useState([])
+  const [cycles, setCycles] = useState([])
+  const [loading, setLoading] = useState(true)
+
+  const targetDate = useMemo(() => {
+    const d = new Date(now.getFullYear(), now.getMonth() + monthOffset, 1)
+    return { year: d.getFullYear(), month: d.getMonth(), monthNum: d.getMonth() + 1 }
+  }, [monthOffset])
+
+  useEffect(() => {
+    setLoading(true)
+    const { year, monthNum } = targetDate
+    const from = `${year}-${String(monthNum).padStart(2,'0')}-01`
+    const lastDay = new Date(year, monthNum, 0).getDate()
+    const to = `${year}-${String(monthNum).padStart(2,'0')}-${String(lastDay).padStart(2,'0')}`
+
+    Promise.all([
+      supabase.from('nutrition_logs').select('date,adherence').eq('athlete_id', athleteId).gte('date', from).lte('date', to),
+      supabase.from('wellness').select('date,mood,fatigue').eq('athlete_id', athleteId).gte('date', from).lte('date', to),
+      isFemale ? supabase.from('injuries').select('date_start,date_end,notes').eq('athlete_id', athleteId).eq('type','cycle') : Promise.resolve({ data: [] }),
+    ]).then(([nutr, well, cyc]) => {
+      setNutritionLogs(nutr.data || [])
+      setWellnessData(well.data || [])
+      setCycles(cyc.data || [])
+      setLoading(false)
+    })
+  }, [athleteId, targetDate, isFemale])
+
+  const { year, month, monthNum } = targetDate
+  const monthSessions = useMemo(() =>
+    sessions.filter(s => {
+      const d = new Date(s.date + 'T12:00:00')
+      return d.getFullYear() === year && d.getMonth() === month
+    }), [sessions, year, month])
+
+  // RPE promedio del mes
+  const [monthRpe, setMonthRpe] = useState(null)
+  useEffect(() => {
+    if (!monthSessions.length) { setMonthRpe(null); return }
+    const ids = monthSessions.map(s => s.id).filter(Boolean)
+    if (!ids.length) { setMonthRpe(null); return }
+    supabase.from('session_athletes').select('rpe').eq('athlete_id', athleteId).in('session_id', ids).not('rpe','is',null)
+      .then(({ data }) => {
+        if (data?.length) setMonthRpe((data.reduce((a,r) => a + r.rpe, 0) / data.length).toFixed(1))
+        else setMonthRpe(null)
+      })
+  }, [monthSessions, athleteId])
+
+  // Stats calculados
+  const nutritionPct = useMemo(() => {
+    if (!nutritionLogs.length) return null
+    const yes = nutritionLogs.filter(l => l.adherence === 'yes' || l.adherence === 'partial').length
+    return Math.round((yes / nutritionLogs.length) * 100)
+  }, [nutritionLogs])
+
+  const avgMood = useMemo(() => {
+    const valid = wellnessData.filter(w => w.mood)
+    if (!valid.length) return null
+    return (valid.reduce((a, w) => a + w.mood, 0) / valid.length).toFixed(1)
+  }, [wellnessData])
+
+  // Fase predominante del ciclo ese mes
+  const dominantPhase = useMemo(() => {
+    if (!isFemale || !cycles.length) return null
+    const monthStart = new Date(year, month, 1)
+    const monthEnd = new Date(year, month + 1, 0)
+    const phaseCounts = {}
+    cycles.forEach(c => {
+      const start = new Date(c.date_start)
+      const end = c.date_end ? new Date(c.date_end) : new Date()
+      if (end < monthStart || start > monthEnd) return
+      const cycleLen = c.cycle_length || 28
+      // Estimar fase por día del ciclo
+      const dayNum = Math.floor((monthStart - start) / 86400000) + 1
+      const phase = dayNum <= 5 ? 'Menstrual' : dayNum <= 13 ? 'Folicular' : dayNum <= 16 ? 'Ovulación' : 'Lútea'
+      phaseCounts[phase] = (phaseCounts[phase] || 0) + 1
+    })
+    const entries = Object.entries(phaseCounts)
+    if (!entries.length) return null
+    return entries.sort((a,b) => b[1]-a[1])[0][0]
+  }, [cycles, isFemale, year, month])
+
+  // Puntuación global del mes (0-100)
+  const score = useMemo(() => {
+    let points = 0, factors = 0
+    if (monthSessions.length > 0) { points += Math.min(monthSessions.length / 12 * 40, 40); factors++ }
+    if (nutritionPct !== null) { points += nutritionPct * 0.35; factors++ }
+    if (avgMood !== null) { points += ((parseFloat(avgMood) - 1) / 4) * 25; factors++ }
+    return factors > 0 ? Math.round(points) : null
+  }, [monthSessions, nutritionPct, avgMood])
+
+  const scoreLabel = score === null ? null : score >= 80 ? { text: '🏆 Mes excelente', color: '#059669' }
+    : score >= 60 ? { text: '💪 Buen mes', color: '#2563EB' }
+    : score >= 40 ? { text: '📈 Mes de trabajo', color: '#D97706' }
+    : { text: '🔄 Mes de recuperación', color: '#6B7280' }
+
+  const isCurrentMonth = monthOffset === 0
+
+  return (
+    <div className="card" style={{ padding: '20px 18px', marginBottom: 10 }}>
+      {/* Header con navegación */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+        <div>
+          <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 900, fontSize: 18, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+            Informe mensual
+          </div>
+          <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 1 }}>
+            {MONTHS_ES[month]} {year}
+          </div>
+        </div>
+        <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+          <button onClick={() => setMonthOffset(o => o - 1)}
+            style={{ width: 32, height: 32, borderRadius: 8, border: '1.5px solid var(--border)', background: 'var(--bg)', cursor: 'pointer', fontSize: 14, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>‹</button>
+          <button onClick={() => setMonthOffset(o => Math.min(o + 1, 0))} disabled={isCurrentMonth}
+            style={{ width: 32, height: 32, borderRadius: 8, border: '1.5px solid var(--border)', background: 'var(--bg)', cursor: isCurrentMonth ? 'default' : 'pointer', opacity: isCurrentMonth ? 0.3 : 1, fontSize: 14, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>›</button>
+        </div>
+      </div>
+
+      {loading ? (
+        <div style={{ textAlign: 'center', padding: '16px 0', color: 'var(--text-muted)', fontSize: 13 }}>Cargando...</div>
+      ) : (
+        <>
+          {/* Puntuación global */}
+          {scoreLabel && (
+            <div style={{ background: `${scoreLabel.color}15`, border: `1.5px solid ${scoreLabel.color}30`, borderRadius: 12, padding: '10px 14px', marginBottom: 14, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 800, fontSize: 15, color: scoreLabel.color }}>{scoreLabel.text}</span>
+              <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 900, fontSize: 22, color: scoreLabel.color }}>{score}<span style={{ fontSize: 12, fontWeight: 600 }}>/100</span></span>
+            </div>
+          )}
+
+          {/* Grid de stats */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: isFemale && dominantPhase ? 12 : 0 }}>
+            {[
+              { icon: '📅', label: 'Sesiones', value: monthSessions.length, sub: 'este mes', color: '#2563EB' },
+              { icon: '🥗', label: 'Nutrición', value: nutritionPct !== null ? `${nutritionPct}%` : '—', sub: 'adherencia', color: '#059669' },
+              { icon: '💪', label: 'RPE medio', value: monthRpe ?? '—', sub: 'intensidad', color: '#EF4444' },
+              { icon: '😊', label: 'Ánimo', value: avgMood ? `${avgMood}/5` : '—', sub: 'bienestar', color: '#8B5CF6' },
+            ].map(({ icon, label, value, sub, color }) => (
+              <div key={label} style={{ background: 'var(--bg)', borderRadius: 12, padding: '12px 14px', border: '1px solid var(--border)' }}>
+                <div style={{ fontSize: 18, marginBottom: 4 }}>{icon}</div>
+                <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 900, fontSize: 24, color, lineHeight: 1 }}>{value}</div>
+                <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700, fontSize: 11, color: 'var(--text)', textTransform: 'uppercase', letterSpacing: '0.5px', marginTop: 2 }}>{label}</div>
+                <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 1 }}>{sub}</div>
+              </div>
+            ))}
+          </div>
+
+          {/* Fase del ciclo */}
+          {isFemale && dominantPhase && (
+            <div style={{ marginTop: 12, background: '#FDF2F8', border: '1px solid #FCE7F3', borderRadius: 10, padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 10 }}>
+              <span style={{ fontSize: 20 }}>🌸</span>
+              <div>
+                <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 800, fontSize: 13, color: '#9D174D' }}>Fase predominante: {dominantPhase}</div>
+                <div style={{ fontSize: 11, color: '#BE185D', marginTop: 1 }}>
+                  {dominantPhase === 'Menstrual' && 'Semana de descanso activo y recuperación'}
+                  {dominantPhase === 'Folicular' && 'Semana ideal para intensidad alta'}
+                  {dominantPhase === 'Ovulación' && 'Pico de rendimiento y fuerza'}
+                  {dominantPhase === 'Lútea' && 'Semana de técnica y resistencia moderada'}
+                </div>
+              </div>
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  )
+}
+
+// ─────────────────────────────────────────────
+// TENDENCIAS: RPE + NUTRICIÓN
+// ─────────────────────────────────────────────
+function TrendsDashboard({ athleteId, sessions, isFemale }) {
+  const [rpeData, setRpeData] = useState([])
+  const [nutritionLogs, setNutritionLogs] = useState([])
+
+  useEffect(() => {
+    // RPE últimas 20 sesiones con fecha
+    const sessionMap = Object.fromEntries(sessions.map(s => [s.id, s.date]))
+    supabase.from('session_athletes').select('session_id, rpe').eq('athlete_id', athleteId).not('rpe','is',null).order('session_id', { ascending: false }).limit(30)
+      .then(({ data }) => {
+        const withDate = (data || [])
+          .map(r => ({ rpe: r.rpe, date: sessionMap[r.session_id] }))
+          .filter(r => r.date)
+          .sort((a,b) => a.date.localeCompare(b.date))
+          .slice(-20)
+        setRpeData(withDate)
+      })
+    // Nutrición últimos 60 días
+    const from = new Date(); from.setDate(from.getDate() - 59)
+    supabase.from('nutrition_logs').select('date,adherence').eq('athlete_id', athleteId).gte('date', from.toISOString().slice(0,10))
+      .then(({ data }) => setNutritionLogs(data || []))
+  }, [athleteId, sessions])
+
+  // Calcular racha actual de nutrición
+  const nutritionStreak = useMemo(() => {
+    if (!nutritionLogs.length) return 0
+    const logSet = new Set(nutritionLogs.filter(l => l.adherence !== 'no').map(l => l.date))
+    let streak = 0
+    const d = new Date()
+    while (true) {
+      const key = d.toISOString().slice(0,10)
+      if (logSet.has(key)) { streak++; d.setDate(d.getDate() - 1) }
+      else break
+      if (streak > 60) break
+    }
+    return streak
+  }, [nutritionLogs])
+
+  // Grid 30 días nutrición (como GitHub contributions)
+  const last30Days = useMemo(() => {
+    const days = []
+    const logMap = Object.fromEntries(nutritionLogs.map(l => [l.date, l.adherence]))
+    for (let i = 29; i >= 0; i--) {
+      const d = new Date(); d.setDate(d.getDate() - i)
+      const key = d.toISOString().slice(0,10)
+      days.push({ key, adherence: logMap[key] || null, day: d.getDate(), isToday: i === 0 })
+    }
+    return days
+  }, [nutritionLogs])
+
+  // Tendencia RPE (últimos 5 vs anteriores)
+  const rpeTrend = useMemo(() => {
+    if (rpeData.length < 6) return null
+    const recent = rpeData.slice(-5).reduce((a,r) => a + r.rpe, 0) / 5
+    const prev = rpeData.slice(-10,-5).reduce((a,r) => a + r.rpe, 0) / 5
+    const diff = recent - prev
+    if (Math.abs(diff) < 0.3) return null
+    return diff > 0 ? { dir: 'up', text: 'Subiendo intensidad', color: '#EF4444', icon: '↗' }
+      : { dir: 'down', text: 'Bajando intensidad', color: '#059669', icon: '↘' }
+  }, [rpeData])
+
+  const adherenceColor = (a) => a === 'yes' ? '#059669' : a === 'partial' ? '#D97706' : a === 'no' ? '#EF444440' : 'var(--border)'
+
+  return (
+    <>
+      {/* RPE Sparkline */}
+      {rpeData.length >= 3 && (
+        <div className="card" style={{ padding: '16px 18px', marginBottom: 10 }}>
+          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 12 }}>
+            <div>
+              <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 800, fontSize: 16, textTransform: 'uppercase' }}>Tendencia RPE</div>
+              <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 1 }}>Intensidad percibida · últimas {rpeData.length} sesiones</div>
+            </div>
+            {rpeTrend && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 4, background: `${rpeTrend.color}15`, borderRadius: 20, padding: '4px 10px' }}>
+                <span style={{ fontSize: 14, color: rpeTrend.color }}>{rpeTrend.icon}</span>
+                <span style={{ fontSize: 11, fontWeight: 700, color: rpeTrend.color }}>{rpeTrend.text}</span>
+              </div>
+            )}
+          </div>
+          <RpeSparkline data={rpeData} />
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6 }}>
+            <span style={{ fontSize: 10, color: 'var(--text-dim)' }}>{rpeData[0]?.date && new Date(rpeData[0].date+'T12:00:00').toLocaleDateString('es-ES',{day:'numeric',month:'short'})}</span>
+            <span style={{ fontSize: 10, color: 'var(--text-dim)', fontWeight: 700 }}>Hoy</span>
+          </div>
+        </div>
+      )}
+
+      {/* Nutrición */}
+      {nutritionLogs.length > 0 && (
+        <div className="card" style={{ padding: '16px 18px', marginBottom: 10 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+            <div>
+              <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 800, fontSize: 16, textTransform: 'uppercase' }}>Adherencia nutricional</div>
+              <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 1 }}>Últimos 30 días</div>
+            </div>
+            {nutritionStreak > 1 && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 5, background: '#FFF7ED', border: '1px solid #FED7AA', borderRadius: 20, padding: '5px 12px' }}>
+                <span style={{ fontSize: 16 }}>🔥</span>
+                <div style={{ textAlign: 'right' }}>
+                  <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 900, fontSize: 18, color: '#EA580C', lineHeight: 1 }}>{nutritionStreak}</div>
+                  <div style={{ fontSize: 9, color: '#C2410C', fontWeight: 700 }}>DÍAS</div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Grid 30 días */}
+          <div style={{ display: 'flex', gap: 3, flexWrap: 'wrap' }}>
+            {last30Days.map(d => (
+              <div key={d.key} title={d.key}
+                style={{ width: 'calc((100% - 87px) / 30)', aspectRatio: '1', minWidth: 8, borderRadius: 3, background: adherenceColor(d.adherence), border: d.isToday ? '2px solid var(--accent)' : 'none', transition: 'all 0.2s' }} />
+            ))}
+          </div>
+
+          {/* Leyenda */}
+          <div style={{ display: 'flex', gap: 14, marginTop: 10, flexWrap: 'wrap' }}>
+            {[['#059669','Cumplido'],['#D97706','Parcial'],['#EF444440','No cumplido'],['var(--border)','Sin datos']].map(([color, label]) => (
+              <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                <div style={{ width: 10, height: 10, borderRadius: 2, background: color }} />
+                <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>{label}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </>
+  )
+}
+
+// SVG Sparkline para RPE
+function RpeSparkline({ data }) {
+  const W = 300, H = 70
+  const minRpe = 1, maxRpe = 10
+  const toX = i => (i / Math.max(data.length - 1, 1)) * W
+  const toY = v => H - ((v - minRpe) / (maxRpe - minRpe)) * H
+
+  const points = data.map((d, i) => ({ x: toX(i), y: toY(d.rpe), rpe: d.rpe }))
+  const pathD = 'M ' + points.map(p => `${p.x},${p.y}`).join(' L ')
+
+  // Zona de referencia 5-7 (intensidad óptima)
+  const y5 = toY(5), y7 = toY(7)
+
+  const colorForRpe = v => v <= 4 ? '#3B82F6' : v <= 6 ? '#059669' : v <= 8 ? '#D97706' : '#EF4444'
+
+  return (
+    <svg width="100%" viewBox={`0 0 ${W} ${H}`} style={{ overflow: 'visible' }}>
+      {/* Zona óptima */}
+      <rect x={0} y={y7} width={W} height={y5 - y7} fill="#05966915" rx={2} />
+      <text x={W + 4} y={y5 - 2} fontSize={8} fill="#059669" opacity={0.7}>5</text>
+      <text x={W + 4} y={y7 + 8} fontSize={8} fill="#059669" opacity={0.7}>7</text>
+      {/* Línea */}
+      <path d={pathD} fill="none" stroke="#94A3B8" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" strokeDasharray="0" />
+      {/* Puntos */}
+      {points.map((p, i) => (
+        <circle key={i} cx={p.x} cy={p.y} r={i === points.length - 1 ? 5 : 3.5}
+          fill={colorForRpe(p.rpe)} stroke="var(--surface)" strokeWidth={i === points.length - 1 ? 2 : 1} />
+      ))}
+      {/* Valor último punto */}
+      {points.length > 0 && (
+        <text x={points[points.length-1].x} y={points[points.length-1].y - 8}
+          fontSize={10} fontWeight={800} fill={colorForRpe(points[points.length-1].rpe)} textAnchor="middle">{points[points.length-1].rpe}</text>
+      )}
+    </svg>
+  )
+}
 
 // ---- Check-in diario ----
 function WellnessCheckin({ athleteId }) {
@@ -828,7 +1174,7 @@ function RecordsSection({ athleteId, canEdit }) {
 }
 
 // ---- Página principal ----
-export default function Progress({ athleteId, sessions = [], isCoach = false }) {
+export default function Progress({ athleteId, sessions = [], isCoach = false, isFemale = false }) {
   return (
     <div className="page fade-in">
       {!isCoach && <div className="page-header"><h2>Mi Progreso</h2></div>}
@@ -836,6 +1182,12 @@ export default function Progress({ athleteId, sessions = [], isCoach = false }) 
 
         {/* Check-in diario — solo para el deportista */}
         {!isCoach && <WellnessCheckin athleteId={athleteId} />}
+
+        {/* Informe mensual */}
+        <MonthlyReport athleteId={athleteId} sessions={sessions} isFemale={isFemale} />
+
+        {/* Tendencias RPE + Nutrición */}
+        {!isCoach && <TrendsDashboard athleteId={athleteId} sessions={sessions} isFemale={isFemale} />}
 
         {/* Stats 2x2 */}
         {!isCoach && <StatsGrid athleteId={athleteId} sessions={sessions} />}

@@ -3,7 +3,7 @@ import { useLocation } from 'react-router-dom'
 import { Athletes as DB, Sessions, Storage, Cycle, Nutrition } from '../lib/db'
 import { supabase } from '../lib/supabase'
 import Training from './Training'
-import { GoalsSection, RecordsSection, LoadChart, WellnessTodayCoach, WellnessHistory } from './Progress'
+import { GoalsSection, RecordsSection, LoadChart, WellnessTodayCoach, WellnessHistory, MonthlyReport } from './Progress'
 import { useToast } from '../contexts/ToastContext'
 
 function getWeekRange() {
@@ -286,7 +286,7 @@ export default function Athletes() {
                 <Training athleteId={sheet.id} coachView embedded />
               )}
               {detailTab === 'progress' && (
-                <AthleteProgress athleteId={sheet.id} />
+                <AthleteProgress athleteId={sheet.id} isFemale={sheet.gender === 'female'} />
               )}
             </div>
           </div>
@@ -741,11 +741,12 @@ function WeeklyAdherence({ athleteId, color }) {
   )
 }
 
-function AthleteProgress({ athleteId }) {
+function AthleteProgress({ athleteId, isFemale }) {
   const [sessions, setSessions] = useState([])
   useEffect(() => { Sessions.getByAthlete(athleteId).then(setSessions) }, [athleteId])
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+      <MonthlyReport athleteId={athleteId} sessions={sessions} isFemale={isFemale} />
       <WellnessTodayCoach athleteId={athleteId} />
       <WellnessHistory athleteId={athleteId} />
       <LoadChart sessions={sessions} />

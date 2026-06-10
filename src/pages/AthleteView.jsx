@@ -119,6 +119,8 @@ export default function AthleteView() {
 
   const ONBOARDING_STEPS = [
     { icon: '📅', title: 'Tus entrenos', text: 'En "Entrenos" verás todas las sesiones que Celia te prepare. Puedes confirmar asistencia y valorar cada sesión.' },
+    { icon: '🥗', title: 'Tu nutrición', text: 'En "Nutrición" encontrarás tu plan semanal personalizado. Cada día verás qué comer y podrás marcar cómo lo has seguido.' },
+    ...(athlete?.gender === 'female' ? [{ icon: '🌸', title: 'Tu ciclo menstrual', text: 'En "Salud" registra tu ciclo. Celia adaptará tus entrenos y nutrición según tu fase para sacar el máximo rendimiento.' }] : []),
     { icon: '📈', title: 'Tu progreso', text: 'En "Progreso" registra cómo te sientes cada día. Celia verá tu estado de forma y podrá adaptar los entrenos.' },
     { icon: '💬', title: 'Chat directo', text: 'Habla con Celia y con el resto del equipo en "Chat". Recibirás notificaciones cuando te escriba.' },
   ]
@@ -172,7 +174,7 @@ export default function AthleteView() {
         {tab === 'training'  && <AthleteTrainingWithRPE athleteId={athleteId} />}
         {tab === 'health'    && <AthleteHealth athleteId={athleteId} />}
         {tab === 'nutrition' && <AthleteNutrition athleteId={athleteId} />}
-        {tab === 'progress'  && <AthleteProgressTab athleteId={athleteId} />}
+        {tab === 'progress'  && <AthleteProgressTab athleteId={athleteId} isFemale={athlete?.gender === 'female'} />}
         {tab === 'payments'  && <AthletePayments athleteId={athleteId} />}
         {tab === 'messages'  && <Messages />}
       </main>
@@ -835,10 +837,10 @@ function AthletePayments({ athleteId }) {
 }
 
 // ---- Tab Progreso ----
-function AthleteProgressTab({ athleteId }) {
+function AthleteProgressTab({ athleteId, isFemale }) {
   const [sessions, setSessions] = useState([])
   useEffect(() => { Sessions.getByAthlete(athleteId).then(setSessions) }, [athleteId])
-  return <Progress athleteId={athleteId} sessions={sessions} isCoach={false} />
+  return <Progress athleteId={athleteId} sessions={sessions} isCoach={false} isFemale={isFemale} />
 }
 
 // ---- Entrenos con RPE ----
