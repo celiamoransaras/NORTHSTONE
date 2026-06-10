@@ -474,18 +474,30 @@ export const RPE = {
 }
 
 // ---- NUTRITION ----
+const DAYS_ES = ['monday','tuesday','wednesday','thursday','friday','saturday','sunday']
 export const Nutrition = {
-  getPlan: async (athleteId) => {
-    const { data } = await supabase.from('nutrition_plans').select('*').eq('athlete_id', athleteId).single()
+  DAYS: DAYS_ES,
+  DAY_LABELS: { monday:'Lunes', tuesday:'Martes', wednesday:'Miércoles', thursday:'Jueves', friday:'Viernes', saturday:'Sábado', sunday:'Domingo' },
+  DAY_SHORT:  { monday:'L', tuesday:'M', wednesday:'X', thursday:'J', friday:'V', saturday:'S', sunday:'D' },
+  getTodayKey: () => {
+    const d = new Date().getDay() // 0=dom,1=lun...
+    return DAYS_ES[d === 0 ? 6 : d - 1]
+  },
+  getPlan: async (athleteId, month, year) => {
+    const { data } = await supabase.from('nutrition_plans').select('*')
+      .eq('athlete_id', athleteId).eq('month', month).eq('year', year).single()
     return data || null
   },
-  savePlan: async (athleteId, plan) => {
-    const { data: existing } = await supabase.from('nutrition_plans').select('id').eq('athlete_id', athleteId).single()
-    if (existing) {
-      await supabase.from('nutrition_plans').update({ ...plan, updated_at: new Date().toISOString() }).eq('athlete_id', athleteId)
-    } else {
-      await supabase.from('nutrition_plans').insert({ ...plan, athlete_id: athleteId })
-    }
+  getLatestPlan: async (athleteId) => {
+    const { data } = await supabase.from('nutrition_plans').select('*')
+      .eq('athlete_id', athleteId).order('year', { ascending: false }).order('month', { ascending: false }).limit(1).single()
+    return data || null
+  },
+  savePlan: async (athleteId, month, year, days, notes) => {
+    await supabase.from('nutrition_plans').upsert(
+      { athlete_id: athleteId, month, year, days, notes, updated_at: new Date().toISOString() },
+      { onConflict: 'athlete_id,month,year' }
+    )
   },
   getLogs: async (athleteId) => {
     const since = new Date(); since.setDate(since.getDate() - 30)

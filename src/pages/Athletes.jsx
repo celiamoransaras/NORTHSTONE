@@ -514,105 +514,153 @@ function InfoRow({ icon, label, val }) {
 
 function NutritionCoach({ athleteId }) {
   const toast = useToast()
+  const now = new Date()
   const [plan, setPlan] = useState(null)
   const [logs, setLogs] = useState([])
   const [editing, setEditing] = useState(false)
   const [saving, setSaving] = useState(false)
-  const [form, setForm] = useState({
-    proteins: '', carbs: '', fats: '',
-    breakfast: '', mid_morning: '', lunch: '', snack: '', dinner: '',
-    pre_workout: '', post_workout: '', notes: ''
-  })
+  const [activeDay, setActiveDay] = useState(Nutrition.getTodayKey())
+  const [days, setDays] = useState(() => Object.fromEntries(Nutrition.DAYS.map(d => [d, []])))
+  const [notes, setNotes] = useState('')
+  const month = now.getMonth() + 1
+  const year = now.getFullYear()
+  const MONTHS = ['','Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
 
-  useEffect(() => {
-    Nutrition.getPlan(athleteId).then(p => {
-      if (p) { setPlan(p); setForm({ proteins: p.proteins||'', carbs: p.carbs||'', fats: p.fats||'', breakfast: p.breakfast||'', mid_morning: p.mid_morning||'', lunch: p.lunch||'', snack: p.snack||'', dinner: p.dinner||'', pre_workout: p.pre_workout||'', post_workout: p.post_workout||'', notes: p.notes||'' }) }
-    })
-    Nutrition.getLogs(athleteId).then(setLogs)
-  }, [athleteId])
+  const load = async () => {
+    const [p, l] = await Promise.all([Nutrition.getPlan(athleteId, month, year), Nutrition.getLogs(athleteId)])
+    setPlan(p)
+    setLogs(l)
+    if (p?.days) setDays(p.days)
+    if (p?.notes) setNotes(p.notes)
+  }
+
+  useEffect(() => { load() }, [athleteId])
+
+  const startEdit = () => {
+    if (plan?.days) setDays(plan.days)
+    if (plan?.notes) setNotes(plan.notes || '')
+    setEditing(true)
+  }
+
+  const addMeal = () => setDays(d => ({ ...d, [activeDay]: [...(d[activeDay]||[]), { name: '', content: '' }] }))
+  const removeMeal = (idx) => setDays(d => ({ ...d, [activeDay]: d[activeDay].filter((_,i) => i !== idx) }))
+  const updateMeal = (idx, field, val) => setDays(d => ({ ...d, [activeDay]: d[activeDay].map((m,i) => i===idx ? {...m,[field]:val} : m) }))
+
+  const copyDay = (fromDay) => {
+    setDays(d => ({ ...d, [activeDay]: JSON.parse(JSON.stringify(d[fromDay]||[])) }))
+    toast(`Copiado desde ${Nutrition.DAY_LABELS[fromDay]}`)
+  }
 
   const save = async () => {
     setSaving(true)
     try {
-      await Nutrition.savePlan(athleteId, {
-        proteins: form.proteins ? parseInt(form.proteins) : null,
-        carbs: form.carbs ? parseInt(form.carbs) : null,
-        fats: form.fats ? parseInt(form.fats) : null,
-        breakfast: form.breakfast || null, mid_morning: form.mid_morning || null,
-        lunch: form.lunch || null, snack: form.snack || null, dinner: form.dinner || null,
-        pre_workout: form.pre_workout || null, post_workout: form.post_workout || null,
-        notes: form.notes || null
-      })
-      const updated = await Nutrition.getPlan(athleteId)
-      setPlan(updated)
+      await Nutrition.savePlan(athleteId, month, year, days, notes)
+      await load()
       setEditing(false)
-      toast('Plan nutricional guardado')
+      toast('Plan guardado')
     } catch { toast('Error al guardar', 'error') }
     finally { setSaving(false) }
   }
 
   const adherenceIcon = (a) => a === 'yes' ? '✅' : a === 'partial' ? '🟡' : '❌'
   const adherenceLabel = (a) => a === 'yes' ? 'Sí' : a === 'partial' ? 'Parcial' : 'No'
+  const activeMeals = days[activeDay] || []
+  const planDays = plan?.days || {}
 
   return (
     <div style={{ marginBottom: 16 }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-        <div style={{ fontSize: 11, fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.8px' }}>🥗 Nutrición</div>
-        <button onClick={() => setEditing(e => !e)} style={{ background: 'var(--accent-dim)', color: 'var(--accent)', border: 'none', borderRadius: 8, padding: '4px 12px', fontWeight: 700, fontSize: 12, cursor: 'pointer' }}>
-          {editing ? 'Cancelar' : plan ? '✏️ Editar' : '+ Crear plan'}
-        </button>
+        <div style={{ fontSize: 11, fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.8px' }}>🥗 Nutrición · {MONTHS[month]} {year}</div>
+        {!editing
+          ? <button onClick={startEdit} style={{ background: 'var(--accent-dim)', color: 'var(--accent)', border: 'none', borderRadius: 8, padding: '4px 12px', fontWeight: 700, fontSize: 12, cursor: 'pointer' }}>
+              {plan ? '✏️ Editar' : '+ Crear plan'}
+            </button>
+          : <button onClick={() => setEditing(false)} style={{ background: 'var(--bg)', color: 'var(--text-muted)', border: '1px solid var(--border)', borderRadius: 8, padding: '4px 12px', fontWeight: 700, fontSize: 12, cursor: 'pointer' }}>Cancelar</button>
+        }
+      </div>
+
+      {/* Tabs días */}
+      <div style={{ display: 'flex', gap: 4, marginBottom: 10, overflowX: 'auto' }}>
+        {Nutrition.DAYS.map(d => {
+          const hasMeals = (editing ? days[d] : planDays[d])?.filter(m => m.content).length > 0
+          const isActive = activeDay === d
+          return (
+            <button key={d} onClick={() => setActiveDay(d)} style={{
+              flexShrink: 0, width: 34, height: 34, borderRadius: 10, border: 'none', cursor: 'pointer', fontWeight: 800, fontSize: 12,
+              background: isActive ? 'var(--accent)' : 'var(--card)',
+              color: isActive ? '#fff' : hasMeals ? 'var(--accent)' : 'var(--text-muted)',
+              boxShadow: isActive ? '0 2px 8px var(--accent-dim)' : 'none',
+              position: 'relative'
+            }}>
+              {Nutrition.DAY_SHORT[d]}
+              {hasMeals && !isActive && <span style={{ position:'absolute', top:3, right:3, width:5, height:5, borderRadius:'50%', background:'var(--accent)' }} />}
+            </button>
+          )
+        })}
       </div>
 
       {editing ? (
-        <div style={{ background: 'var(--card)', borderRadius: 16, padding: 16, border: '1px solid var(--border)' }}>
-          {/* Macros */}
-          <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.4px', marginBottom: 8 }}>Macros orientativos (g/día)</div>
-          <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
-            {[['proteins','🥩 Proteínas'],['carbs','🍞 Carbos'],['fats','🥑 Grasas']].map(([k,label]) => (
-              <div key={k} style={{ flex: 1 }}>
-                <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 4 }}>{label}</div>
-                <input className="input" type="number" min="0" placeholder="g" value={form[k]} onChange={e => setForm(f=>({...f,[k]:e.target.value}))} style={{ textAlign: 'center' }} />
-              </div>
-            ))}
+        <div style={{ background: 'var(--card)', borderRadius: 16, padding: 14, border: '1px solid var(--border)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+            <div style={{ fontWeight: 700, fontSize: 14 }}>{Nutrition.DAY_LABELS[activeDay]}</div>
+            <div style={{ display: 'flex', gap: 6 }}>
+              {/* Copiar de otro día */}
+              <select onChange={e => e.target.value && copyDay(e.target.value)} value=""
+                style={{ fontSize: 11, padding: '3px 6px', borderRadius: 6, border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text-muted)', cursor: 'pointer' }}>
+                <option value="">Copiar de...</option>
+                {Nutrition.DAYS.filter(d => d !== activeDay && (days[d]||[]).length > 0).map(d => (
+                  <option key={d} value={d}>{Nutrition.DAY_LABELS[d]}</option>
+                ))}
+              </select>
+              <button onClick={addMeal} style={{ background: 'var(--accent-dim)', color: 'var(--accent)', border: 'none', borderRadius: 8, padding: '4px 10px', fontWeight: 700, fontSize: 12, cursor: 'pointer' }}>+ Comida</button>
+            </div>
           </div>
-          {/* Comidas */}
-          <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.4px', marginBottom: 8 }}>Distribución de comidas</div>
-          {[['breakfast','🌅 Desayuno'],['mid_morning','☕ Media mañana'],['lunch','🍽️ Comida'],['snack','🍎 Merienda'],['dinner','🌙 Cena'],['pre_workout','⚡ Pre-entreno'],['post_workout','💪 Post-entreno']].map(([k,label]) => (
-            <div key={k} style={{ marginBottom: 8 }}>
-              <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 3 }}>{label}</div>
-              <textarea className="input" rows={2} placeholder="Ej: Avena con fruta, yogur proteico..." value={form[k]} onChange={e => setForm(f=>({...f,[k]:e.target.value}))} style={{ resize: 'vertical', fontSize: 13 }} />
+
+          {activeMeals.length === 0 && (
+            <div style={{ textAlign: 'center', padding: '16px 0', color: 'var(--text-muted)', fontSize: 13 }}>Sin comidas — pulsa "+ Comida" para añadir</div>
+          )}
+
+          {activeMeals.map((meal, idx) => (
+            <div key={idx} style={{ marginBottom: 8, padding: '10px 12px', background: 'var(--bg)', borderRadius: 10, border: '1px solid var(--border)' }}>
+              <div style={{ display: 'flex', gap: 6, marginBottom: 6 }}>
+                <input className="input" placeholder="Nombre (ej: Desayuno, Comida...)" value={meal.name}
+                  onChange={e => updateMeal(idx,'name',e.target.value)}
+                  style={{ flex: 1, fontSize: 13, fontWeight: 600 }} />
+                <button onClick={() => removeMeal(idx)} style={{ background: 'none', border: 'none', color: 'var(--error)', cursor: 'pointer', fontSize: 16, padding: '0 4px' }}>✕</button>
+              </div>
+              <textarea className="input" rows={2} placeholder="Qué comer..." value={meal.content}
+                onChange={e => updateMeal(idx,'content',e.target.value)}
+                style={{ resize: 'vertical', fontSize: 13 }} />
             </div>
           ))}
-          {/* Notas generales */}
-          <div style={{ marginBottom: 12 }}>
-            <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 3 }}>📝 Notas generales y recomendaciones</div>
-            <textarea className="input" rows={3} placeholder="Hidratación, suplementación, observaciones..." value={form.notes} onChange={e => setForm(f=>({...f,notes:e.target.value}))} style={{ resize: 'vertical', fontSize: 13 }} />
-          </div>
-          <button className="btn btn-primary btn-full" onClick={save} disabled={saving}>{saving ? 'Guardando...' : 'Guardar plan'}</button>
-        </div>
-      ) : plan ? (
-        <div style={{ background: 'var(--card)', borderRadius: 16, padding: 16, border: '1px solid var(--border)' }}>
-          {/* Macros */}
-          {(plan.proteins || plan.carbs || plan.fats) && (
-            <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
-              {[['proteins','🥩','Prot.','#DC2626'],['carbs','🍞','Carbos','#D97706'],['fats','🥑','Grasas','#059669']].map(([k,emoji,label,color]) => plan[k] ? (
-                <div key={k} style={{ flex: 1, background: color+'12', border: `1px solid ${color}30`, borderRadius: 12, padding: '10px 8px', textAlign: 'center' }}>
-                  <div style={{ fontSize: 18 }}>{emoji}</div>
-                  <div style={{ fontWeight: 900, fontSize: 18, color, fontFamily: "'Barlow Condensed', sans-serif" }}>{plan[k]}g</div>
-                  <div style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 600 }}>{label}</div>
-                </div>
-              ) : null)}
+
+          {/* Notas generales (solo en lunes) */}
+          {activeDay === 'monday' && (
+            <div style={{ marginTop: 8 }}>
+              <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 4 }}>📝 Notas generales del plan</div>
+              <textarea className="input" rows={2} placeholder="Hidratación, observaciones..." value={notes}
+                onChange={e => setNotes(e.target.value)} style={{ resize: 'vertical', fontSize: 13 }} />
             </div>
           )}
-          {/* Comidas */}
-          {[['breakfast','🌅 Desayuno'],['mid_morning','☕ Media mañana'],['lunch','🍽️ Comida'],['snack','🍎 Merienda'],['dinner','🌙 Cena'],['pre_workout','⚡ Pre-entreno'],['post_workout','💪 Post-entreno']].filter(([k]) => plan[k]).map(([k,label]) => (
-            <div key={k} style={{ marginBottom: 8, padding: '8px 12px', background: 'var(--bg)', borderRadius: 10 }}>
-              <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', marginBottom: 2 }}>{label}</div>
-              <div style={{ fontSize: 13 }}>{plan[k]}</div>
-            </div>
-          ))}
+
+          <button className="btn btn-primary btn-full" onClick={save} disabled={saving} style={{ marginTop: 12 }}>
+            {saving ? 'Guardando...' : 'Guardar plan'}
+          </button>
+        </div>
+      ) : plan ? (
+        <div style={{ background: 'var(--card)', borderRadius: 16, padding: 14, border: '1px solid var(--border)' }}>
+          <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 10 }}>{Nutrition.DAY_LABELS[activeDay]}</div>
+          {(planDays[activeDay]||[]).filter(m => m.content).length === 0
+            ? <div style={{ fontSize: 13, color: 'var(--text-muted)', padding: '8px 0' }}>Sin comidas para este día</div>
+            : (planDays[activeDay]||[]).filter(m => m.content).map((meal,i) => (
+                <div key={i} style={{ marginBottom: 8, padding: '8px 12px', background: 'var(--bg)', borderRadius: 10 }}>
+                  {meal.name && <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', marginBottom: 2 }}>{meal.name}</div>}
+                  <div style={{ fontSize: 13 }}>{meal.content}</div>
+                </div>
+              ))
+          }
           {plan.notes && (
-            <div style={{ marginTop: 8, padding: '10px 12px', background: 'var(--accent-dim)', borderRadius: 10, borderLeft: '3px solid var(--accent)' }}>
+            <div style={{ marginTop: 8, padding: '8px 12px', background: 'var(--accent-dim)', borderRadius: 10, borderLeft: '3px solid var(--accent)' }}>
               <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--accent)', marginBottom: 2 }}>📝 Notas</div>
               <div style={{ fontSize: 13 }}>{plan.notes}</div>
             </div>
@@ -621,11 +669,11 @@ function NutritionCoach({ athleteId }) {
       ) : (
         <div style={{ textAlign: 'center', padding: '20px', color: 'var(--text-muted)', background: 'var(--card)', borderRadius: 16, border: '1px dashed var(--border)' }}>
           <div style={{ fontSize: 32, marginBottom: 8, opacity: 0.4 }}>🥗</div>
-          <div style={{ fontSize: 13 }}>Sin plan nutricional asignado</div>
+          <div style={{ fontSize: 13 }}>Sin plan para {MONTHS[month]}</div>
         </div>
       )}
 
-      {/* Historial adherencia últimos 30 días */}
+      {/* Historial adherencia */}
       {logs.length > 0 && (
         <div style={{ marginTop: 12 }}>
           <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.4px', marginBottom: 8 }}>Adherencia últimos 30 días</div>

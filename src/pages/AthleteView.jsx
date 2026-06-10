@@ -1309,20 +1309,26 @@ function ScaleRow({ label, value, onChange, colors, labels }) {
 // ---- Nutrición (vista deportista) ----
 function AthleteNutrition({ athleteId }) {
   const toast = useToast()
+  const now = new Date()
+  const month = now.getMonth() + 1
+  const year = now.getFullYear()
+  const todayKey = Nutrition.getTodayKey()
   const [plan, setPlan] = useState(null)
   const [logs, setLogs] = useState([])
   const [todayLog, setTodayLog] = useState(null)
   const [comment, setComment] = useState('')
   const [saving, setSaving] = useState(false)
   const [loading, setLoading] = useState(true)
+  const [activeDay, setActiveDay] = useState(todayKey)
 
   const load = async () => {
     const [p, l, t] = await Promise.all([
-      Nutrition.getPlan(athleteId),
+      Nutrition.getPlan(athleteId, month, year),
       Nutrition.getLogs(athleteId),
       Nutrition.getTodayLog(athleteId)
     ])
-    setPlan(p)
+    // Si no hay plan este mes, intenta coger el último disponible
+    setPlan(p || await Nutrition.getLatestPlan(athleteId))
     setLogs(l)
     setTodayLog(t)
     if (t) setComment(t.comment || '')
@@ -1333,7 +1339,7 @@ function AthleteNutrition({ athleteId }) {
 
   const saveLog = async (adherence) => {
     setSaving(true)
-    const today = new Date().toISOString().slice(0,10)
+    const today = now.toISOString().slice(0,10)
     try {
       await Nutrition.saveLog(athleteId, today, adherence, comment)
       await load()
@@ -1345,6 +1351,7 @@ function AthleteNutrition({ athleteId }) {
 
   const adherenceIcon = (a) => a === 'yes' ? '✅' : a === 'partial' ? '🟡' : '❌'
   const adherenceLabel = (a) => a === 'yes' ? 'Sí' : a === 'partial' ? 'Parcial' : 'No'
+  const MONTHS = ['','Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
 
   if (loading) return (
     <div className="page"><div className="page-content">
@@ -1353,6 +1360,10 @@ function AthleteNutrition({ athleteId }) {
     </div></div>
   )
 
+  const planDays = plan?.days || {}
+  const todayMeals = (planDays[todayKey] || []).filter(m => m.content)
+  const activeMeals = (planDays[activeDay] || []).filter(m => m.content)
+
   return (
     <div className="page fade-in">
       <div className="page-header"><h2>🥗 Nutrición</h2></div>
@@ -1360,9 +1371,7 @@ function AthleteNutrition({ athleteId }) {
 
         {/* Check diario */}
         <div style={{ background: 'var(--card)', borderRadius: 16, padding: 16, border: '1px solid var(--border)', marginBottom: 8 }}>
-          <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 12 }}>
-            ¿Has seguido el plan hoy?
-          </div>
+          <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 10 }}>¿Has seguido el plan hoy?</div>
           {todayLog ? (
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', background: 'var(--bg)', borderRadius: 12, marginBottom: 8 }}>
@@ -1376,57 +1385,61 @@ function AthleteNutrition({ athleteId }) {
             </div>
           ) : (
             <div>
-              <textarea
-                className="input"
-                rows={2}
-                placeholder="Comentario opcional (ej: salté la merienda, viaje...)"
-                value={comment}
-                onChange={e => setComment(e.target.value)}
-                style={{ marginBottom: 10, resize: 'none', fontSize: 14 }}
-              />
+              <textarea className="input" rows={2} placeholder="Comentario opcional (ej: salté la merienda, viaje...)"
+                value={comment} onChange={e => setComment(e.target.value)} style={{ marginBottom: 10, resize: 'none', fontSize: 14 }} />
               <div style={{ display: 'flex', gap: 8 }}>
                 <button onClick={() => saveLog('yes')} disabled={saving}
-                  style={{ flex: 1, padding: '12px 8px', borderRadius: 12, border: '2px solid var(--success)', background: 'var(--success-dim)', color: 'var(--success)', fontWeight: 800, fontSize: 14, cursor: 'pointer' }}>
-                  ✅ Sí
-                </button>
+                  style={{ flex: 1, padding: '12px 8px', borderRadius: 12, border: '2px solid var(--success)', background: 'var(--success-dim)', color: 'var(--success)', fontWeight: 800, fontSize: 14, cursor: 'pointer' }}>✅ Sí</button>
                 <button onClick={() => saveLog('partial')} disabled={saving}
-                  style={{ flex: 1, padding: '12px 8px', borderRadius: 12, border: '2px solid #D97706', background: '#D9780612', color: '#D97706', fontWeight: 800, fontSize: 14, cursor: 'pointer' }}>
-                  🟡 Parcial
-                </button>
+                  style={{ flex: 1, padding: '12px 8px', borderRadius: 12, border: '2px solid #D97706', background: '#D9780612', color: '#D97706', fontWeight: 800, fontSize: 14, cursor: 'pointer' }}>🟡 Parcial</button>
                 <button onClick={() => saveLog('no')} disabled={saving}
-                  style={{ flex: 1, padding: '12px 8px', borderRadius: 12, border: '2px solid var(--error)', background: 'var(--error-dim)', color: 'var(--error)', fontWeight: 800, fontSize: 14, cursor: 'pointer' }}>
-                  ❌ No
-                </button>
+                  style={{ flex: 1, padding: '12px 8px', borderRadius: 12, border: '2px solid var(--error)', background: 'var(--error-dim)', color: 'var(--error)', fontWeight: 800, fontSize: 14, cursor: 'pointer' }}>❌ No</button>
               </div>
             </div>
           )}
         </div>
 
-        {/* Plan nutricional */}
+        {/* Plan */}
         {plan ? (
-          <div style={{ background: 'var(--card)', borderRadius: 16, padding: 16, border: '1px solid var(--border)' }}>
-            <div style={{ fontSize: 11, fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: 12 }}>Tu plan</div>
+          <div style={{ background: 'var(--card)', borderRadius: 16, padding: 14, border: '1px solid var(--border)' }}>
+            <div style={{ fontSize: 11, fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: 10 }}>
+              Tu plan · {MONTHS[plan.month]} {plan.year}
+            </div>
 
-            {/* Macros */}
-            {(plan.proteins || plan.carbs || plan.fats) && (
-              <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
-                {[['proteins','🥩','Prot.','#DC2626'],['carbs','🍞','Carbos','#D97706'],['fats','🥑','Grasas','#059669']].map(([k,emoji,label,color]) => plan[k] ? (
-                  <div key={k} style={{ flex: 1, background: color+'12', border: `1px solid ${color}30`, borderRadius: 12, padding: '10px 8px', textAlign: 'center' }}>
-                    <div style={{ fontSize: 18 }}>{emoji}</div>
-                    <div style={{ fontWeight: 900, fontSize: 20, color, fontFamily: "'Barlow Condensed', sans-serif" }}>{plan[k]}g</div>
-                    <div style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 600 }}>{label}</div>
+            {/* Tabs días */}
+            <div style={{ display: 'flex', gap: 4, marginBottom: 12, overflowX: 'auto' }}>
+              {Nutrition.DAYS.map(d => {
+                const hasMeals = (planDays[d]||[]).filter(m=>m.content).length > 0
+                const isActive = activeDay === d
+                const isToday = d === todayKey
+                return (
+                  <button key={d} onClick={() => setActiveDay(d)} style={{
+                    flexShrink: 0, minWidth: 36, height: 36, borderRadius: 10, border: isToday ? '2px solid var(--accent)' : 'none',
+                    cursor: 'pointer', fontWeight: 800, fontSize: 12,
+                    background: isActive ? 'var(--accent)' : 'var(--bg)',
+                    color: isActive ? '#fff' : hasMeals ? 'var(--text)' : 'var(--text-muted)',
+                    position: 'relative', padding: '0 6px'
+                  }}>
+                    {Nutrition.DAY_SHORT[d]}
+                    {isToday && !isActive && <span style={{ position:'absolute', bottom:3, left:'50%', transform:'translateX(-50%)', width:4, height:4, borderRadius:'50%', background:'var(--accent)' }} />}
+                  </button>
+                )
+              })}
+            </div>
+
+            <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 8, color: activeDay === todayKey ? 'var(--accent)' : 'var(--text)' }}>
+              {Nutrition.DAY_LABELS[activeDay]} {activeDay === todayKey ? '· Hoy' : ''}
+            </div>
+
+            {activeMeals.length === 0
+              ? <div style={{ fontSize: 13, color: 'var(--text-muted)', padding: '8px 0' }}>Sin comidas para este día</div>
+              : activeMeals.map((meal, i) => (
+                  <div key={i} style={{ marginBottom: 8, padding: '10px 12px', background: 'var(--bg)', borderRadius: 10 }}>
+                    {meal.name && <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', marginBottom: 3, textTransform: 'uppercase', letterSpacing: '0.3px' }}>{meal.name}</div>}
+                    <div style={{ fontSize: 14 }}>{meal.content}</div>
                   </div>
-                ) : null)}
-              </div>
-            )}
-
-            {/* Comidas */}
-            {[['breakfast','🌅 Desayuno'],['mid_morning','☕ Media mañana'],['lunch','🍽️ Comida'],['snack','🍎 Merienda'],['dinner','🌙 Cena'],['pre_workout','⚡ Pre-entreno'],['post_workout','💪 Post-entreno']].filter(([k]) => plan[k]).map(([k,label]) => (
-              <div key={k} style={{ marginBottom: 8, padding: '10px 12px', background: 'var(--bg)', borderRadius: 10 }}>
-                <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', marginBottom: 3 }}>{label}</div>
-                <div style={{ fontSize: 14 }}>{plan[k]}</div>
-              </div>
-            ))}
+                ))
+            }
 
             {plan.notes && (
               <div style={{ marginTop: 8, padding: '10px 14px', background: 'var(--accent-dim)', borderRadius: 10, borderLeft: '3px solid var(--accent)' }}>
