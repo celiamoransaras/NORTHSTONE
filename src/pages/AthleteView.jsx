@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useAuth } from '../contexts/AuthContext'
-import { Sessions, Injuries, Payments, Storage, RPE, Athletes as AthletesDB, Cycle } from '../lib/db'
+import { Sessions, Injuries, Payments, Storage, RPE, Athletes as AthletesDB, Cycle, Nutrition } from '../lib/db'
 import { supabase } from '../lib/supabase'
 import Messages from './Messages'
 import DocsPage from './Documents'
@@ -15,14 +15,15 @@ const TYPE_ICONS  = { run:'🏃', fuerza:'💪', series:'⚡', endurance:'🫁',
 const TYPE_COLORS = { run:'#10B981', fuerza:'#F59E0B', series:'#EF4444', endurance:'#3B82F6', especifico:'#8B5CF6', ergometros:'#14B8A6', cardio:'#EC4899', rest_day:'#9CA3AF', strength:'#F59E0B', flexibility:'#10B981', mixed:'#9CA3AF' }
 const TYPE_LABELS = { run:'Run', fuerza:'Fuerza', series:'Series', endurance:'Endurance', especifico:'Específico', ergometros:'Ergómetros', cardio:'Cardio', rest_day:'Rest Day', strength:'Fuerza', flexibility:'Flexibilidad', mixed:'Mixta' }
 
-// 6 tabs — Docs se mueve dentro de Salud
+// 7 tabs
 const NAV = [
-  { id: 'home',     icon: '⊞',  label: 'Inicio' },
-  { id: 'training', icon: '📅', label: 'Entrenos' },
-  { id: 'health',   icon: '🩺', label: 'Salud' },
-  { id: 'progress', icon: '📈', label: 'Progreso' },
-  { id: 'payments', icon: '💳', label: 'Pagos' },
-  { id: 'messages', icon: '💬', label: 'Chat' },
+  { id: 'home',      icon: '⊞',  label: 'Inicio' },
+  { id: 'training',  icon: '📅', label: 'Entrenos' },
+  { id: 'health',    icon: '🩺', label: 'Salud' },
+  { id: 'nutrition', icon: '🥗', label: 'Nutrición' },
+  { id: 'progress',  icon: '📈', label: 'Progreso' },
+  { id: 'payments',  icon: '💳', label: 'Pagos' },
+  { id: 'messages',  icon: '💬', label: 'Chat' },
 ]
 
 export default function AthleteView() {
@@ -167,12 +168,13 @@ export default function AthleteView() {
 
       {/* Content */}
       <main style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-        {tab === 'home'     && <AthleteHome athlete={athlete} athleteId={athleteId} />}
-        {tab === 'training' && <AthleteTrainingWithRPE athleteId={athleteId} />}
-        {tab === 'health'   && <AthleteHealth athleteId={athleteId} />}
-        {tab === 'progress' && <AthleteProgressTab athleteId={athleteId} />}
-        {tab === 'payments' && <AthletePayments athleteId={athleteId} />}
-        {tab === 'messages' && <Messages />}
+        {tab === 'home'      && <AthleteHome athlete={athlete} athleteId={athleteId} />}
+        {tab === 'training'  && <AthleteTrainingWithRPE athleteId={athleteId} />}
+        {tab === 'health'    && <AthleteHealth athleteId={athleteId} />}
+        {tab === 'nutrition' && <AthleteNutrition athleteId={athleteId} />}
+        {tab === 'progress'  && <AthleteProgressTab athleteId={athleteId} />}
+        {tab === 'payments'  && <AthletePayments athleteId={athleteId} />}
+        {tab === 'messages'  && <Messages />}
       </main>
 
       {/* Bottom nav — 6 tabs, iconos más grandes */}
@@ -1300,6 +1302,165 @@ function ScaleRow({ label, value, onChange, colors, labels }) {
           {labels[value]}
         </div>
       )}
+    </div>
+  )
+}
+
+// ---- Nutrición (vista deportista) ----
+function AthleteNutrition({ athleteId }) {
+  const toast = useToast()
+  const [plan, setPlan] = useState(null)
+  const [logs, setLogs] = useState([])
+  const [todayLog, setTodayLog] = useState(null)
+  const [comment, setComment] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [loading, setLoading] = useState(true)
+
+  const load = async () => {
+    const [p, l, t] = await Promise.all([
+      Nutrition.getPlan(athleteId),
+      Nutrition.getLogs(athleteId),
+      Nutrition.getTodayLog(athleteId)
+    ])
+    setPlan(p)
+    setLogs(l)
+    setTodayLog(t)
+    if (t) setComment(t.comment || '')
+    setLoading(false)
+  }
+
+  useEffect(() => { load() }, [athleteId])
+
+  const saveLog = async (adherence) => {
+    setSaving(true)
+    const today = new Date().toISOString().slice(0,10)
+    try {
+      await Nutrition.saveLog(athleteId, today, adherence, comment)
+      await load()
+      toast('Registro guardado')
+      haptic('success')
+    } catch { toast('Error al guardar', 'error') }
+    finally { setSaving(false) }
+  }
+
+  const adherenceIcon = (a) => a === 'yes' ? '✅' : a === 'partial' ? '🟡' : '❌'
+  const adherenceLabel = (a) => a === 'yes' ? 'Sí' : a === 'partial' ? 'Parcial' : 'No'
+
+  if (loading) return (
+    <div className="page"><div className="page-content">
+      <div className="skeleton" style={{ height: 80, borderRadius: 16 }} />
+      <div className="skeleton" style={{ height: 200, borderRadius: 16 }} />
+    </div></div>
+  )
+
+  return (
+    <div className="page fade-in">
+      <div className="page-header"><h2>🥗 Nutrición</h2></div>
+      <div className="page-content">
+
+        {/* Check diario */}
+        <div style={{ background: 'var(--card)', borderRadius: 16, padding: 16, border: '1px solid var(--border)', marginBottom: 8 }}>
+          <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 12 }}>
+            ¿Has seguido el plan hoy?
+          </div>
+          {todayLog ? (
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', background: 'var(--bg)', borderRadius: 12, marginBottom: 8 }}>
+                <span style={{ fontSize: 24 }}>{adherenceIcon(todayLog.adherence)}</span>
+                <div>
+                  <div style={{ fontWeight: 700, fontSize: 15, color: todayLog.adherence === 'yes' ? 'var(--success)' : todayLog.adherence === 'partial' ? '#D97706' : 'var(--error)' }}>{adherenceLabel(todayLog.adherence)}</div>
+                  {todayLog.comment && <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 2 }}>"{todayLog.comment}"</div>}
+                </div>
+              </div>
+              <button onClick={() => setTodayLog(null)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: 12, cursor: 'pointer', padding: 0 }}>✏️ Cambiar respuesta</button>
+            </div>
+          ) : (
+            <div>
+              <textarea
+                className="input"
+                rows={2}
+                placeholder="Comentario opcional (ej: salté la merienda, viaje...)"
+                value={comment}
+                onChange={e => setComment(e.target.value)}
+                style={{ marginBottom: 10, resize: 'none', fontSize: 14 }}
+              />
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button onClick={() => saveLog('yes')} disabled={saving}
+                  style={{ flex: 1, padding: '12px 8px', borderRadius: 12, border: '2px solid var(--success)', background: 'var(--success-dim)', color: 'var(--success)', fontWeight: 800, fontSize: 14, cursor: 'pointer' }}>
+                  ✅ Sí
+                </button>
+                <button onClick={() => saveLog('partial')} disabled={saving}
+                  style={{ flex: 1, padding: '12px 8px', borderRadius: 12, border: '2px solid #D97706', background: '#D9780612', color: '#D97706', fontWeight: 800, fontSize: 14, cursor: 'pointer' }}>
+                  🟡 Parcial
+                </button>
+                <button onClick={() => saveLog('no')} disabled={saving}
+                  style={{ flex: 1, padding: '12px 8px', borderRadius: 12, border: '2px solid var(--error)', background: 'var(--error-dim)', color: 'var(--error)', fontWeight: 800, fontSize: 14, cursor: 'pointer' }}>
+                  ❌ No
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Plan nutricional */}
+        {plan ? (
+          <div style={{ background: 'var(--card)', borderRadius: 16, padding: 16, border: '1px solid var(--border)' }}>
+            <div style={{ fontSize: 11, fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: 12 }}>Tu plan</div>
+
+            {/* Macros */}
+            {(plan.proteins || plan.carbs || plan.fats) && (
+              <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
+                {[['proteins','🥩','Prot.','#DC2626'],['carbs','🍞','Carbos','#D97706'],['fats','🥑','Grasas','#059669']].map(([k,emoji,label,color]) => plan[k] ? (
+                  <div key={k} style={{ flex: 1, background: color+'12', border: `1px solid ${color}30`, borderRadius: 12, padding: '10px 8px', textAlign: 'center' }}>
+                    <div style={{ fontSize: 18 }}>{emoji}</div>
+                    <div style={{ fontWeight: 900, fontSize: 20, color, fontFamily: "'Barlow Condensed', sans-serif" }}>{plan[k]}g</div>
+                    <div style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 600 }}>{label}</div>
+                  </div>
+                ) : null)}
+              </div>
+            )}
+
+            {/* Comidas */}
+            {[['breakfast','🌅 Desayuno'],['mid_morning','☕ Media mañana'],['lunch','🍽️ Comida'],['snack','🍎 Merienda'],['dinner','🌙 Cena'],['pre_workout','⚡ Pre-entreno'],['post_workout','💪 Post-entreno']].filter(([k]) => plan[k]).map(([k,label]) => (
+              <div key={k} style={{ marginBottom: 8, padding: '10px 12px', background: 'var(--bg)', borderRadius: 10 }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', marginBottom: 3 }}>{label}</div>
+                <div style={{ fontSize: 14 }}>{plan[k]}</div>
+              </div>
+            ))}
+
+            {plan.notes && (
+              <div style={{ marginTop: 8, padding: '10px 14px', background: 'var(--accent-dim)', borderRadius: 10, borderLeft: '3px solid var(--accent)' }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--accent)', marginBottom: 2 }}>📝 Notas de tu entrenadora</div>
+                <div style={{ fontSize: 14 }}>{plan.notes}</div>
+              </div>
+            )}
+          </div>
+        ) : (
+          <div style={{ textAlign: 'center', padding: '32px 20px', color: 'var(--text-muted)', background: 'var(--card)', borderRadius: 16, border: '1px dashed var(--border)' }}>
+            <div style={{ fontSize: 48, marginBottom: 12, opacity: 0.4 }}>🥗</div>
+            <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 800, fontSize: 18, textTransform: 'uppercase', marginBottom: 6 }}>Sin plan asignado</div>
+            <div style={{ fontSize: 13, lineHeight: 1.6 }}>Tu entrenadora te asignará pronto un plan nutricional personalizado</div>
+          </div>
+        )}
+
+        {/* Historial últimos 30 días */}
+        {logs.length > 0 && (
+          <div style={{ marginTop: 8 }}>
+            <div style={{ fontSize: 11, fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: 8 }}>Mis últimos 30 días</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+              {logs.map(l => (
+                <div key={l.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', background: 'var(--card)', borderRadius: 10 }}>
+                  <span style={{ fontSize: 18 }}>{adherenceIcon(l.adherence)}</span>
+                  <span style={{ fontSize: 12, color: 'var(--text-muted)', minWidth: 90 }}>{new Date(l.date+'T12:00:00').toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric', month: 'short' })}</span>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: l.adherence === 'yes' ? 'var(--success)' : l.adherence === 'partial' ? '#D97706' : 'var(--error)' }}>{adherenceLabel(l.adherence)}</span>
+                  {l.comment && <span style={{ fontSize: 12, color: 'var(--text-muted)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>· {l.comment}</span>}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+      </div>
     </div>
   )
 }

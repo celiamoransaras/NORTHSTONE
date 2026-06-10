@@ -472,3 +472,38 @@ export const RPE = {
     return data
   }
 }
+
+// ---- NUTRITION ----
+export const Nutrition = {
+  getPlan: async (athleteId) => {
+    const { data } = await supabase.from('nutrition_plans').select('*').eq('athlete_id', athleteId).single()
+    return data || null
+  },
+  savePlan: async (athleteId, plan) => {
+    const { data: existing } = await supabase.from('nutrition_plans').select('id').eq('athlete_id', athleteId).single()
+    if (existing) {
+      await supabase.from('nutrition_plans').update({ ...plan, updated_at: new Date().toISOString() }).eq('athlete_id', athleteId)
+    } else {
+      await supabase.from('nutrition_plans').insert({ ...plan, athlete_id: athleteId })
+    }
+  },
+  getLogs: async (athleteId) => {
+    const since = new Date(); since.setDate(since.getDate() - 30)
+    const { data } = await supabase.from('nutrition_logs').select('*')
+      .eq('athlete_id', athleteId)
+      .gte('date', since.toISOString().slice(0,10))
+      .order('date', { ascending: false })
+    return data || []
+  },
+  saveLog: async (athleteId, date, adherence, comment) => {
+    await supabase.from('nutrition_logs').upsert(
+      { athlete_id: athleteId, date, adherence, comment },
+      { onConflict: 'athlete_id,date' }
+    )
+  },
+  getTodayLog: async (athleteId) => {
+    const today = new Date().toISOString().slice(0,10)
+    const { data } = await supabase.from('nutrition_logs').select('*').eq('athlete_id', athleteId).eq('date', today).single()
+    return data || null
+  }
+}

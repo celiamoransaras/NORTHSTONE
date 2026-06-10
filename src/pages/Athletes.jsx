@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useLocation } from 'react-router-dom'
-import { Athletes as DB, Sessions, Storage, Cycle } from '../lib/db'
+import { Athletes as DB, Sessions, Storage, Cycle, Nutrition } from '../lib/db'
 import { supabase } from '../lib/supabase'
 import Training from './Training'
 import { GoalsSection, RecordsSection, LoadChart, WellnessTodayCoach, WellnessHistory } from './Progress'
@@ -274,6 +274,8 @@ export default function Athletes() {
                   <InfoRow icon="🏋️" label="Deporte" val={sheet.sport || '—'} />
                   {sheet.notes && <><div className="divider" /><div style={{ color: 'var(--text-muted)', fontSize: 14 }}>{sheet.notes}</div></>}
                   <div className="divider" />
+                  <NutritionCoach athleteId={sheet.id} />
+                  <div className="divider" />
                   {sheet.status === 'inactive'
                     ? <button className="btn btn-primary btn-full" onClick={() => reactivate(sheet.id)}>✅ Reactivar deportista</button>
                     : <button className="btn btn-danger btn-full" onClick={() => setConfirmDelete(sheet.id)}>⛔ Dar de baja</button>
@@ -506,6 +508,139 @@ function InfoRow({ icon, label, val }) {
         <div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.4px' }}>{label}</div>
         <div style={{ fontSize: 15, marginTop: 2 }}>{val}</div>
       </div>
+    </div>
+  )
+}
+
+function NutritionCoach({ athleteId }) {
+  const toast = useToast()
+  const [plan, setPlan] = useState(null)
+  const [logs, setLogs] = useState([])
+  const [editing, setEditing] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [form, setForm] = useState({
+    proteins: '', carbs: '', fats: '',
+    breakfast: '', mid_morning: '', lunch: '', snack: '', dinner: '',
+    pre_workout: '', post_workout: '', notes: ''
+  })
+
+  useEffect(() => {
+    Nutrition.getPlan(athleteId).then(p => {
+      if (p) { setPlan(p); setForm({ proteins: p.proteins||'', carbs: p.carbs||'', fats: p.fats||'', breakfast: p.breakfast||'', mid_morning: p.mid_morning||'', lunch: p.lunch||'', snack: p.snack||'', dinner: p.dinner||'', pre_workout: p.pre_workout||'', post_workout: p.post_workout||'', notes: p.notes||'' }) }
+    })
+    Nutrition.getLogs(athleteId).then(setLogs)
+  }, [athleteId])
+
+  const save = async () => {
+    setSaving(true)
+    try {
+      await Nutrition.savePlan(athleteId, {
+        proteins: form.proteins ? parseInt(form.proteins) : null,
+        carbs: form.carbs ? parseInt(form.carbs) : null,
+        fats: form.fats ? parseInt(form.fats) : null,
+        breakfast: form.breakfast || null, mid_morning: form.mid_morning || null,
+        lunch: form.lunch || null, snack: form.snack || null, dinner: form.dinner || null,
+        pre_workout: form.pre_workout || null, post_workout: form.post_workout || null,
+        notes: form.notes || null
+      })
+      const updated = await Nutrition.getPlan(athleteId)
+      setPlan(updated)
+      setEditing(false)
+      toast('Plan nutricional guardado')
+    } catch { toast('Error al guardar', 'error') }
+    finally { setSaving(false) }
+  }
+
+  const adherenceIcon = (a) => a === 'yes' ? '✅' : a === 'partial' ? '🟡' : '❌'
+  const adherenceLabel = (a) => a === 'yes' ? 'Sí' : a === 'partial' ? 'Parcial' : 'No'
+
+  return (
+    <div style={{ marginBottom: 16 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+        <div style={{ fontSize: 11, fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.8px' }}>🥗 Nutrición</div>
+        <button onClick={() => setEditing(e => !e)} style={{ background: 'var(--accent-dim)', color: 'var(--accent)', border: 'none', borderRadius: 8, padding: '4px 12px', fontWeight: 700, fontSize: 12, cursor: 'pointer' }}>
+          {editing ? 'Cancelar' : plan ? '✏️ Editar' : '+ Crear plan'}
+        </button>
+      </div>
+
+      {editing ? (
+        <div style={{ background: 'var(--card)', borderRadius: 16, padding: 16, border: '1px solid var(--border)' }}>
+          {/* Macros */}
+          <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.4px', marginBottom: 8 }}>Macros orientativos (g/día)</div>
+          <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
+            {[['proteins','🥩 Proteínas'],['carbs','🍞 Carbos'],['fats','🥑 Grasas']].map(([k,label]) => (
+              <div key={k} style={{ flex: 1 }}>
+                <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 4 }}>{label}</div>
+                <input className="input" type="number" min="0" placeholder="g" value={form[k]} onChange={e => setForm(f=>({...f,[k]:e.target.value}))} style={{ textAlign: 'center' }} />
+              </div>
+            ))}
+          </div>
+          {/* Comidas */}
+          <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.4px', marginBottom: 8 }}>Distribución de comidas</div>
+          {[['breakfast','🌅 Desayuno'],['mid_morning','☕ Media mañana'],['lunch','🍽️ Comida'],['snack','🍎 Merienda'],['dinner','🌙 Cena'],['pre_workout','⚡ Pre-entreno'],['post_workout','💪 Post-entreno']].map(([k,label]) => (
+            <div key={k} style={{ marginBottom: 8 }}>
+              <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 3 }}>{label}</div>
+              <textarea className="input" rows={2} placeholder="Ej: Avena con fruta, yogur proteico..." value={form[k]} onChange={e => setForm(f=>({...f,[k]:e.target.value}))} style={{ resize: 'vertical', fontSize: 13 }} />
+            </div>
+          ))}
+          {/* Notas generales */}
+          <div style={{ marginBottom: 12 }}>
+            <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 3 }}>📝 Notas generales y recomendaciones</div>
+            <textarea className="input" rows={3} placeholder="Hidratación, suplementación, observaciones..." value={form.notes} onChange={e => setForm(f=>({...f,notes:e.target.value}))} style={{ resize: 'vertical', fontSize: 13 }} />
+          </div>
+          <button className="btn btn-primary btn-full" onClick={save} disabled={saving}>{saving ? 'Guardando...' : 'Guardar plan'}</button>
+        </div>
+      ) : plan ? (
+        <div style={{ background: 'var(--card)', borderRadius: 16, padding: 16, border: '1px solid var(--border)' }}>
+          {/* Macros */}
+          {(plan.proteins || plan.carbs || plan.fats) && (
+            <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
+              {[['proteins','🥩','Prot.','#DC2626'],['carbs','🍞','Carbos','#D97706'],['fats','🥑','Grasas','#059669']].map(([k,emoji,label,color]) => plan[k] ? (
+                <div key={k} style={{ flex: 1, background: color+'12', border: `1px solid ${color}30`, borderRadius: 12, padding: '10px 8px', textAlign: 'center' }}>
+                  <div style={{ fontSize: 18 }}>{emoji}</div>
+                  <div style={{ fontWeight: 900, fontSize: 18, color, fontFamily: "'Barlow Condensed', sans-serif" }}>{plan[k]}g</div>
+                  <div style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 600 }}>{label}</div>
+                </div>
+              ) : null)}
+            </div>
+          )}
+          {/* Comidas */}
+          {[['breakfast','🌅 Desayuno'],['mid_morning','☕ Media mañana'],['lunch','🍽️ Comida'],['snack','🍎 Merienda'],['dinner','🌙 Cena'],['pre_workout','⚡ Pre-entreno'],['post_workout','💪 Post-entreno']].filter(([k]) => plan[k]).map(([k,label]) => (
+            <div key={k} style={{ marginBottom: 8, padding: '8px 12px', background: 'var(--bg)', borderRadius: 10 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', marginBottom: 2 }}>{label}</div>
+              <div style={{ fontSize: 13 }}>{plan[k]}</div>
+            </div>
+          ))}
+          {plan.notes && (
+            <div style={{ marginTop: 8, padding: '10px 12px', background: 'var(--accent-dim)', borderRadius: 10, borderLeft: '3px solid var(--accent)' }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--accent)', marginBottom: 2 }}>📝 Notas</div>
+              <div style={{ fontSize: 13 }}>{plan.notes}</div>
+            </div>
+          )}
+        </div>
+      ) : (
+        <div style={{ textAlign: 'center', padding: '20px', color: 'var(--text-muted)', background: 'var(--card)', borderRadius: 16, border: '1px dashed var(--border)' }}>
+          <div style={{ fontSize: 32, marginBottom: 8, opacity: 0.4 }}>🥗</div>
+          <div style={{ fontSize: 13 }}>Sin plan nutricional asignado</div>
+        </div>
+      )}
+
+      {/* Historial adherencia últimos 30 días */}
+      {logs.length > 0 && (
+        <div style={{ marginTop: 12 }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.4px', marginBottom: 8 }}>Adherencia últimos 30 días</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            {logs.map(l => (
+              <div key={l.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '7px 10px', background: 'var(--card)', borderRadius: 8 }}>
+                <span style={{ fontSize: 16 }}>{adherenceIcon(l.adherence)}</span>
+                <span style={{ fontSize: 12, color: 'var(--text-muted)', minWidth: 80 }}>{new Date(l.date+'T12:00:00').toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric', month: 'short' })}</span>
+                <span style={{ fontSize: 12, fontWeight: 700, color: l.adherence === 'yes' ? 'var(--success)' : l.adherence === 'partial' ? '#D97706' : 'var(--error)' }}>{adherenceLabel(l.adherence)}</span>
+                {l.comment && <span style={{ fontSize: 12, color: 'var(--text-muted)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>· {l.comment}</span>}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   )
 }
