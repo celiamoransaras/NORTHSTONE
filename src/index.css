@@ -12,12 +12,12 @@
   --border: #E2E0DC;
   --border-light: #ECEAE7;
 
-  --accent: #2563EB;
-  --accent-2: #4F46E5;
-  --accent-dim: rgba(37, 99, 235, 0.1);
-  --accent-hover: #1D4ED8;
-  --accent-gradient: linear-gradient(135deg, #2563EB 0%, #4F46E5 100%);
-  --accent-glow: 0 8px 24px rgba(37, 99, 235, 0.35);
+  --accent: #0C4A6E;
+  --accent-2: #0369A1;
+  --accent-dim: rgba(12, 74, 110, 0.1);
+  --accent-hover: #0a3d5c;
+  --accent-gradient: linear-gradient(135deg, #0C4A6E 0%, #0369A1 100%);
+  --accent-glow: 0 8px 24px rgba(12, 74, 110, 0.35);
 
   --text: #0F0F0F;
   --text-muted: #808080;
