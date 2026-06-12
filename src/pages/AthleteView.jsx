@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useAuth } from '../contexts/AuthContext'
-import { Sessions, Injuries, Payments, Storage, RPE, Athletes as AthletesDB, Cycle, Nutrition } from '../lib/db'
+import { Sessions, Injuries, Payments, Storage, RPE, Athletes as AthletesDB, Cycle, Nutrition, Documents } from '../lib/db'
 import { supabase } from '../lib/supabase'
 import Messages from './Messages'
 import DocsPage from './Documents'
@@ -19,11 +19,10 @@ const TYPE_LABELS = { run:'Run', fuerza:'Fuerza', series:'Series', endurance:'En
 const NAV = [
   { id: 'home',      icon: '⊞',  label: 'Inicio' },
   { id: 'training',  icon: '📅', label: 'Entrenos' },
-  { id: 'health',    icon: '🩺', label: 'Salud' },
   { id: 'nutrition', icon: '🥗', label: 'Nutrición' },
   { id: 'progress',  icon: '📈', label: 'Progreso' },
-  { id: 'payments',  icon: '💳', label: 'Pagos' },
   { id: 'messages',  icon: '💬', label: 'Chat' },
+  { id: 'more',      icon: '⋯',  label: 'Más' },
 ]
 
 export default function AthleteView() {
@@ -43,6 +42,7 @@ export default function AthleteView() {
   const [uploadingAvatar, setUploadingAvatar] = useState(false)
   const [onboarding, setOnboarding] = useState(() => !localStorage.getItem('ns_onboarding_done'))
   const [onboardingStep, setOnboardingStep] = useState(0)
+  const [moreOpen, setMoreOpen] = useState(false)
 
   // Mensajes no leídos
   useEffect(() => {
@@ -118,6 +118,7 @@ export default function AthleteView() {
   }
 
   const ONBOARDING_STEPS = [
+    { icon: null, title: `¡Hola, ${athlete?.name?.split(' ')[0] || ''}!`, text: 'Bienvenida a Northstone, tu plataforma de entrenamiento personalizado. Celia lo tiene todo preparado para ti.', welcome: true },
     { icon: '📅', title: 'Tus entrenos', text: 'En "Entrenos" verás todas las sesiones que Celia te prepare. Puedes confirmar asistencia y valorar cada sesión.' },
     { icon: '🥗', title: 'Tu nutrición', text: 'En "Nutrición" encontrarás tu plan semanal personalizado. Cada día verás qué comer y podrás marcar cómo lo has seguido.' },
     ...(athlete?.gender === 'female' ? [{ icon: '🌸', title: 'Tu ciclo menstrual', text: 'En "Salud" registra tu ciclo. Celia adaptará tus entrenos y nutrición según tu fase para sacar el máximo rendimiento.' }] : []),
@@ -137,7 +138,10 @@ export default function AthleteView() {
                 <div key={i} style={{ height: 4, borderRadius: 2, width: i === onboardingStep ? 24 : 8, background: i === onboardingStep ? 'var(--accent)' : 'var(--border)', transition: 'all 0.3s' }} />
               ))}
             </div>
-            <div style={{ fontSize: 56, marginBottom: 16 }}>{ONBOARDING_STEPS[onboardingStep].icon}</div>
+            {ONBOARDING_STEPS[onboardingStep].welcome
+              ? <img src="/apple-touch-icon.png" alt="Northstone" style={{ width: 80, height: 80, borderRadius: 20, marginBottom: 20, boxShadow: '0 8px 24px rgba(12,74,110,0.25)' }} />
+              : <div style={{ fontSize: 56, marginBottom: 16 }}>{ONBOARDING_STEPS[onboardingStep].icon}</div>
+            }
             <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 900, fontSize: 26, textTransform: 'uppercase', marginBottom: 10 }}>{ONBOARDING_STEPS[onboardingStep].title}</div>
             <div style={{ fontSize: 15, color: 'var(--text-muted)', lineHeight: 1.5, marginBottom: 32, maxWidth: 300, margin: '0 auto 32px' }}>{ONBOARDING_STEPS[onboardingStep].text}</div>
             {onboardingStep < ONBOARDING_STEPS.length - 1
@@ -176,14 +180,39 @@ export default function AthleteView() {
         {tab === 'nutrition' && <AthleteNutrition athleteId={athleteId} />}
         {tab === 'progress'  && <AthleteProgressTab athleteId={athleteId} isFemale={athlete?.gender === 'female'} />}
         {tab === 'payments'  && <AthletePayments athleteId={athleteId} />}
+        {tab === 'docs'      && <AthleteDocs athleteId={athleteId} />}
         {tab === 'messages'  && <Messages />}
+        {tab === 'home' && moreOpen === false && null /* placeholder */}
       </main>
 
-      {/* Bottom nav — 6 tabs, iconos más grandes */}
+      {/* Sheet "Más" */}
+      {moreOpen && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 200 }} onClick={() => setMoreOpen(false)}>
+          <div style={{ position: 'absolute', bottom: 'calc(var(--nav-height) + env(safe-area-inset-bottom))', left: 0, right: 0, background: 'var(--card)', borderRadius: '20px 20px 0 0', padding: '16px 16px 8px', boxShadow: '0 -4px 24px rgba(0,0,0,0.12)' }} onClick={e => e.stopPropagation()}>
+            <div style={{ width: 36, height: 4, background: 'var(--border)', borderRadius: 2, margin: '0 auto 16px' }} />
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 8 }}>
+              {[
+                { id: 'payments', icon: '💳', label: 'Pagos', desc: 'Tus cuotas y pagos' },
+                { id: 'docs',     icon: '📂', label: 'Documentos', desc: 'Docs de tu entrenadora' },
+                { id: 'health',   icon: '🩺', label: 'Salud', desc: 'Lesiones y ciclo' },
+              ].map(({ id, icon, label, desc }) => (
+                <button key={id} onClick={() => { setTab(id); setMoreOpen(false) }}
+                  style={{ background: tab === id ? 'var(--accent-dim)' : 'var(--bg)', border: `1.5px solid ${tab === id ? 'var(--accent)' : 'var(--border)'}`, borderRadius: 14, padding: '14px 12px', cursor: 'pointer', textAlign: 'left' }}>
+                  <div style={{ fontSize: 24, marginBottom: 6 }}>{icon}</div>
+                  <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 800, fontSize: 14, color: tab === id ? 'var(--accent)' : 'var(--text)', textTransform: 'uppercase' }}>{label}</div>
+                  <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>{desc}</div>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Bottom nav */}
       <nav className="glass-nav" style={{ display: 'flex', height: 'var(--nav-height)', flexShrink: 0, paddingBottom: 'env(safe-area-inset-bottom)' }}>
         {NAV.map(({ id, icon, label }) => (
-          <button key={id} onClick={() => setTab(id)}
-            style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 3, color: tab===id ? 'var(--accent)' : 'var(--text-muted)', fontFamily: "'Barlow Condensed', sans-serif", fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.3px', background: 'none', border: 'none', borderTop: tab===id ? '2px solid var(--accent)' : '2px solid transparent', cursor: 'pointer', transition: 'color 0.15s' }}>
+          <button key={id} onClick={() => id === 'more' ? setMoreOpen(o => !o) : (setTab(id), setMoreOpen(false))}
+            style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 3, color: (id === 'more' ? moreOpen : tab===id) ? 'var(--accent)' : 'var(--text-muted)', fontFamily: "'Barlow Condensed', sans-serif", fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.3px', background: 'none', border: 'none', borderTop: (id === 'more' ? moreOpen : tab===id) ? '2px solid var(--accent)' : '2px solid transparent', cursor: 'pointer', transition: 'color 0.15s' }}>
             <span style={{ fontSize: 22, position: 'relative', display: 'inline-block' }}>
               {icon}
               {id === 'messages' && unreadMessages > 0 && <Badge count={unreadMessages} />}
@@ -257,6 +286,7 @@ function AthleteHome({ athlete, athleteId }) {
   const [allSessions, setAllSessions] = useState([])
   const [activeInjury, setActiveInjury] = useState(null)
   const [streak, setStreak] = useState(0)
+  const [attended, setAttended] = useState(false)
 
   useEffect(() => {
     const load = async () => {
@@ -268,8 +298,14 @@ function AthleteHome({ athlete, athleteId }) {
         ])
         const today = new Date().toISOString().slice(0,10)
         setAllSessions(sessions)
-        setUpcoming(sessions.filter(s => s.date >= today).slice(0,3))
+        const upcomingSessions = sessions.filter(s => s.date >= today).slice(0, 3)
+        setUpcoming(upcomingSessions)
         setActiveInjury(injuries.find(i => !i.date_end || i.date_end > today) || null)
+        const todaySess = upcomingSessions.find(s => s.date === today)
+        if (todaySess) {
+          const { data: sa } = await supabase.from('session_athletes').select('attended').eq('session_id', todaySess.id).eq('athlete_id', athleteId).maybeSingle()
+          setAttended(sa?.attended === true)
+        }
         const s = calculateStreak(sessions)
         setStreak(s)
 
@@ -344,6 +380,22 @@ function AthleteHome({ athlete, athleteId }) {
   // Estado vacío: deportista nuevo sin datos
   const hasAnything = upcoming.length > 0 || allSessions.length > 0 || streak > 0
 
+  const todayStr = now.toISOString().slice(0,10)
+  const todaySession = upcoming.find(s => s.date === todayStr)
+  const nextSessions = upcoming.filter(s => s.date !== todayStr).slice(0, 2)
+
+  // Stats rápidos de la semana
+  const weekStart = new Date(now)
+  weekStart.setDate(now.getDate() - ((now.getDay() + 6) % 7))
+  const weekStr = weekStart.toISOString().slice(0,10)
+  const weekSessions = allSessions.filter(s => s.date >= weekStr && s.date <= todayStr)
+  const weekDone = weekSessions.length
+  const weekTotal = allSessions.filter(s => {
+    const d = new Date(s.date + 'T12:00:00')
+    const wEnd = new Date(weekStart); wEnd.setDate(weekStart.getDate() + 6)
+    return s.date >= weekStr && s.date <= wEnd.toISOString().slice(0,10)
+  }).length
+
   return (
     <div className="page fade-in">
       {/* Hero con fecha — igual que el coach */}
@@ -356,25 +408,90 @@ function AthleteHome({ athlete, athleteId }) {
       </div>
 
       <div className="page-content">
-
         {!hasAnything ? (
-          /* Estado vacío — deportista nuevo */
           <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--text-muted)' }}>
             <div style={{ fontSize: 52, marginBottom: 16, opacity: 0.4 }}>🏋️</div>
-            <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 800, fontSize: 20, textTransform: 'uppercase', color: 'var(--text-dim)', marginBottom: 8 }}>¡Bienvenida!</div>
+            <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 800, fontSize: 20, textTransform: 'uppercase', color: 'var(--text-dim)', marginBottom: 8 }}>{athlete?.gender === 'female' ? '¡Bienvenida!' : '¡Bienvenido!'}</div>
             <div style={{ fontSize: 14, lineHeight: 1.6, maxWidth: 240, margin: '0 auto' }}>
               Tu entrenadora irá añadiendo sesiones y datos. ¡Pronto verás todo aquí!
             </div>
           </div>
         ) : (
           <>
-            {/* Racha */}
-            {streak > 0 && <StreakBadge streak={streak} />}
+            {/* 1. SESIÓN DE HOY — lo más importante */}
+            <div className="section-title">Hoy</div>
+            {todaySession ? (
+              <div className="card" style={{ padding: '16px', borderLeft: `4px solid ${athlete.color}` }}>
+                <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginBottom: 14 }}>
+                  <div style={{ width: 48, height: 48, borderRadius: 14, background: `${athlete.color}18`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24, flexShrink: 0 }}>
+                    {TYPE_ICONS[todaySession.type] || '📅'}
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontWeight: 800, fontSize: 17, lineHeight: 1.2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{todaySession.title}</div>
+                    <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 3 }}>
+                      {todaySession.duration} min{todaySession.type ? ` · ${TYPE_LABELS[todaySession.type] || todaySession.type}` : ''}
+                    </div>
+                  </div>
+                  {attended && <span className="badge badge-green">✓ Hecha</span>}
+                </div>
+                {todaySession.description && (
+                  <div style={{ fontSize: 13, color: 'var(--text-muted)', background: 'var(--bg)', borderRadius: 10, padding: '10px 12px', marginBottom: 14, lineHeight: 1.5 }}>
+                    {todaySession.description}
+                  </div>
+                )}
+                <button
+                  onClick={async () => {
+                    const next = !attended
+                    setAttended(next)
+                    try { await Sessions.toggleAttendance(todaySession.id, athleteId, !next) }
+                    catch { setAttended(!next) }
+                  }}
+                  style={{
+                    width: '100%', padding: '11px', borderRadius: 10, fontFamily: "'Barlow Condensed', sans-serif",
+                    fontWeight: 700, fontSize: 13, textTransform: 'uppercase', letterSpacing: '0.5px', cursor: 'pointer',
+                    border: `1.5px solid ${attended ? 'var(--success)' : athlete.color}`,
+                    background: attended ? 'var(--success-dim)' : `${athlete.color}12`,
+                    color: attended ? 'var(--success)' : athlete.color,
+                    transition: 'all 0.2s'
+                  }}>
+                  {attended ? '✓ Sesión completada' : 'Marcar como realizada'}
+                </button>
+              </div>
+            ) : (
+              <div className="card" style={{ padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
+                <div style={{ width: 48, height: 48, borderRadius: 14, background: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24, flexShrink: 0 }}>😴</div>
+                <div>
+                  <div style={{ fontWeight: 700, fontSize: 15 }}>Día de descanso</div>
+                  <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>Tu cuerpo también entrena recuperándose</div>
+                </div>
+              </div>
+            )}
 
-            {/* Plan semanal */}
+            {/* 2. STATS DE LA SEMANA */}
+            <div className="section-title" style={{ marginTop: 4 }}>Esta semana</div>
+            <div className="card" style={{ padding: '14px 16px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+                <div>
+                  <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 900, fontSize: 32, color: 'var(--text)', lineHeight: 1 }}>{weekDone}</span>
+                  <span style={{ fontSize: 16, color: 'var(--text-muted)', fontWeight: 500 }}>/{weekTotal}</span>
+                  <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>sesiones completadas</div>
+                </div>
+                <div style={{ textAlign: 'right' }}>
+                  <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 900, fontSize: 28, color: weekTotal > 0 && (weekDone/weekTotal) >= 0.8 ? 'var(--success)' : 'var(--text)', lineHeight: 1 }}>
+                    {weekTotal > 0 ? Math.round((weekDone/weekTotal)*100) : 0}<span style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-muted)' }}>%</span>
+                  </div>
+                  <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>adherencia</div>
+                </div>
+              </div>
+              <div style={{ height: 5, background: 'var(--border)', borderRadius: 99 }}>
+                <div style={{ height: '100%', width: weekTotal > 0 ? `${Math.min((weekDone/weekTotal)*100,100)}%` : '0%', background: athlete.color, borderRadius: 99, transition: 'width 0.6s ease' }} />
+              </div>
+            </div>
+
+            {/* 3. CALENDARIO SEMANAL */}
             <WeeklyPlan sessions={allSessions} />
 
-            {/* Lesión activa */}
+            {/* 4. LESIÓN ACTIVA (alerta) */}
             {activeInjury && (
               <div style={{ background: 'var(--error-dim)', border: '1px solid rgba(220,38,38,0.2)', borderRadius: 'var(--radius)', padding: '14px 18px', display: 'flex', alignItems: 'center', gap: 12 }}>
                 <span style={{ fontSize: 22 }}>🩹</span>
@@ -385,25 +502,22 @@ function AthleteHome({ athlete, athleteId }) {
               </div>
             )}
 
-            <div className="divider" style={{ margin: '4px 0' }} />
+            {/* 5. PRÓXIMAS SESIONES (sin hoy) */}
+            {nextSessions.length > 0 && (
+              <>
+                <div className="section-title" style={{ marginTop: 4 }}>Próximamente</div>
+                <div className="card">
+                  {nextSessions.map((s, i) => <AthleteSessionRow key={s.id} session={s} last={i === nextSessions.length - 1} />)}
+                </div>
+              </>
+            )}
 
-            {/* Logros */}
+            {/* 6. LOGROS — al final */}
+            <div className="divider" style={{ margin: '4px 0' }} />
             <AchievementsHomeSection athleteId={athleteId} />
 
-            <div className="divider" style={{ margin: '4px 0' }} />
-
-            {/* Próximas sesiones */}
-            <div className="section-title">Mis próximas sesiones</div>
-            {upcoming.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '24px 0', color: 'var(--text-muted)' }}>
-                <div style={{ fontSize: 36, marginBottom: 8, opacity: 0.4 }}>🌟</div>
-                <div style={{ fontSize: 14 }}>Sin sesiones próximas</div>
-              </div>
-            ) : (
-              <div className="card">
-                {upcoming.map((s, i) => <AthleteSessionRow key={s.id} session={s} last={i === upcoming.length - 1} />)}
-              </div>
-            )}
+            {/* 7. RACHA — integrada al final si existe */}
+            {streak > 0 && <StreakBadge streak={streak} />}
           </>
         )}
       </div>
@@ -608,7 +722,7 @@ function AthleteHealth({ athleteId }) {
                       onChange={e => setSymptomText(e.target.value)}
                       placeholder="Escribe cómo te encuentras hoy: energía, dolor, ánimo..."
                       rows={2}
-                      style={{ width: '100%', resize: 'vertical', padding: '10px 12px', borderRadius: 10, border: '1.5px solid var(--border)', background: 'var(--bg)', color: 'var(--text)', fontSize: 14, fontFamily: 'inherit', boxSizing: 'border-box', outline: 'none' }}
+                      style={{ width: '100%', resize: 'vertical', padding: '10px 12px', borderRadius: 10, background: 'var(--bg)', color: 'var(--text)', fontSize: 14, fontFamily: 'inherit', boxSizing: 'border-box', outline: 'none' }}
                     />
                     <button
                       className="btn btn-primary btn-full"
@@ -748,6 +862,64 @@ function AthleteHealth({ athleteId }) {
               </a>
             ))}
           </>
+        )}
+      </div>
+    </div>
+  )
+}
+
+// ---- Documentos del deportista (del coach + médicos propios) ----
+function AthleteDocs({ athleteId }) {
+  const [docs, setDocs] = useState([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    Documents.getForAthlete(athleteId).then(d => { setDocs(d); setLoading(false) })
+  }, [athleteId])
+
+  const coachDocs = docs.filter(d => !d.athlete_id || d.category === 'general' || !d.category)
+
+  if (loading) return (
+    <div className="page">
+      <div className="page-header"><h2>Documentos</h2></div>
+      <div className="page-content" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 1 }}>
+        <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>Cargando...</div>
+      </div>
+    </div>
+  )
+
+  return (
+    <div className="page">
+      <div className="page-header">
+        <h2>Documentos</h2>
+      </div>
+      <div className="page-content">
+        {docs.length === 0 ? (
+          <div style={{ padding: '40px 20px', textAlign: 'center', background: 'linear-gradient(135deg, #F0FDF4 0%, #DCFCE7 100%)', borderRadius: 16, border: '1.5px solid #BBF7D0', margin: '8px 0' }}>
+            <div style={{ fontSize: 44, marginBottom: 12 }}>📂</div>
+            <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 800, fontSize: 16, textTransform: 'uppercase', color: '#15803D', marginBottom: 6 }}>Sin documentos</div>
+            <div style={{ fontSize: 13, color: '#16A34A' }}>Tu entrenadora aún no ha compartido ningún documento</div>
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {docs.map(doc => (
+              <a key={doc.id} href={doc.file_url} target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'none' }}>
+                <div className="card" style={{ padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <div style={{ width: 44, height: 44, borderRadius: 12, background: 'var(--accent-dim)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, flexShrink: 0 }}>
+                    {doc.category === 'medical' ? '🩺' : '📄'}
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{doc.title || doc.name}</div>
+                    <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>
+                      {doc.category === 'medical' ? '🩺 Médico · ' : ''}
+                      {new Date(doc.created_at).toLocaleDateString('es-ES')}
+                    </div>
+                  </div>
+                  <span style={{ color: 'var(--accent)', fontSize: 13, fontWeight: 700, flexShrink: 0 }}>Ver →</span>
+                </div>
+              </a>
+            ))}
+          </div>
         )}
       </div>
     </div>
@@ -1131,7 +1303,7 @@ function AthleteTrainingWithRPE({ athleteId }) {
                   {detailSession.exercises.map((ex, i) => {
                     const ytId = ex.youtube_url?.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/))([A-Za-z0-9_-]{11})/)?.[1]
                     return (
-                      <div key={i} style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: 14, marginBottom: 10 }}>
+                      <div key={i} style={{ background: 'var(--bg)', borderRadius: 'var(--radius-sm)', padding: 14, marginBottom: 10 }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                           <span style={{ fontWeight: 700, fontSize: 15, flex: 1 }}>{ex.name}</span>
                           <span style={{ color: 'var(--accent)', fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 800, fontSize: 15, flexShrink: 0, marginLeft: 8 }}>{ex.sets} × {ex.reps}</span>
@@ -1161,7 +1333,7 @@ function AthleteTrainingWithRPE({ athleteId }) {
                   placeholder="¿Cómo fue el entreno? ¿Algo que quieras contarle..."
                   maxLength={300}
                   rows={3}
-                  style={{ width: '100%', resize: 'none', padding: '10px 12px', borderRadius: 'var(--radius-sm)', border: '1.5px solid var(--border)', background: 'var(--bg)', fontSize: 14, color: 'var(--text)', fontFamily: 'inherit', boxSizing: 'border-box', outline: 'none' }}
+                  style={{ width: '100%', resize: 'none', padding: '10px 12px', borderRadius: 'var(--radius-sm)', background: 'var(--bg)', fontSize: 14, color: 'var(--text)', fontFamily: 'inherit', boxSizing: 'border-box', outline: 'none' }}
                 />
                 <button
                   className="btn btn-secondary btn-full"
@@ -1341,7 +1513,7 @@ function AthleteNutrition({ athleteId }) {
 
   const saveLog = async (adherence) => {
     setSaving(true)
-    const today = now.toISOString().slice(0,10)
+    const today = new Date().toISOString().slice(0,10)
     try {
       await Nutrition.saveLog(athleteId, today, adherence, comment)
       await load()
@@ -1372,7 +1544,7 @@ function AthleteNutrition({ athleteId }) {
       <div className="page-content">
 
         {/* Check diario */}
-        <div style={{ background: 'var(--card)', borderRadius: 16, padding: 16, border: '1px solid var(--border)', marginBottom: 8 }}>
+        <div style={{ background: 'var(--card)', borderRadius: 16, padding: 16, marginBottom: 8 }}>
           <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 10 }}>¿Has seguido el plan hoy?</div>
           {todayLog ? (
             <div>
@@ -1403,7 +1575,7 @@ function AthleteNutrition({ athleteId }) {
 
         {/* Plan */}
         {plan ? (
-          <div style={{ background: 'var(--card)', borderRadius: 16, padding: 14, border: '1px solid var(--border)' }}>
+          <div style={{ background: 'var(--card)', borderRadius: 16, padding: 14 }}>
             <div style={{ fontSize: 11, fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: 10 }}>
               Tu plan · {MONTHS[plan.month]} {plan.year}
             </div>
@@ -1435,12 +1607,40 @@ function AthleteNutrition({ athleteId }) {
 
             {activeMeals.length === 0
               ? <div style={{ fontSize: 13, color: 'var(--text-muted)', padding: '8px 0' }}>Sin comidas para este día</div>
-              : activeMeals.map((meal, i) => (
-                  <div key={i} style={{ marginBottom: 8, padding: '10px 12px', background: 'var(--bg)', borderRadius: 10 }}>
-                    {meal.name && <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', marginBottom: 3, textTransform: 'uppercase', letterSpacing: '0.3px' }}>{meal.name}</div>}
-                    <div style={{ fontSize: 14 }}>{meal.content}</div>
-                  </div>
-                ))
+              : (() => {
+                  const totals = activeMeals.reduce((acc, m) => ({
+                    kcal: acc.kcal + (Number(m.kcal)||0),
+                    protein: acc.protein + (Number(m.protein)||0),
+                    carbs: acc.carbs + (Number(m.carbs)||0),
+                    fat: acc.fat + (Number(m.fat)||0),
+                  }), { kcal: 0, protein: 0, carbs: 0, fat: 0 })
+                  const hasMacros = !!(totals.kcal || totals.protein || totals.carbs || totals.fat)
+                  return <>
+                    {activeMeals.map((meal, i) => (
+                      <div key={i} style={{ marginBottom: 8, padding: '10px 12px', background: 'var(--bg)', borderRadius: 10 }}>
+                        {meal.name && <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', marginBottom: 3, textTransform: 'uppercase', letterSpacing: '0.3px' }}>{meal.name}</div>}
+                        <div style={{ fontSize: 14, marginBottom: (meal.kcal||meal.protein||meal.carbs||meal.fat) ? 6 : 0, whiteSpace: 'pre-wrap' }}>{meal.content}</div>
+                        {(meal.kcal||meal.protein||meal.carbs||meal.fat) && (
+                          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                            {meal.kcal ? <span style={{ fontSize: 10, fontWeight: 700, color: '#F97316', background: '#FFF7ED', borderRadius: 4, padding: '1px 5px' }}>{meal.kcal} kcal</span> : null}
+                            {meal.protein ? <span style={{ fontSize: 10, fontWeight: 700, color: '#3B82F6', background: '#EFF6FF', borderRadius: 4, padding: '1px 5px' }}>{meal.protein}g prot</span> : null}
+                            {meal.carbs ? <span style={{ fontSize: 10, fontWeight: 700, color: '#EAB308', background: '#FEFCE8', borderRadius: 4, padding: '1px 5px' }}>{meal.carbs}g HC</span> : null}
+                            {meal.fat ? <span style={{ fontSize: 10, fontWeight: 700, color: '#8B5CF6', background: '#F5F3FF', borderRadius: 4, padding: '1px 5px' }}>{meal.fat}g grasa</span> : null}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                    {hasMacros && (
+                      <div style={{ marginTop: 6, padding: '8px 12px', background: 'var(--accent-dim)', borderRadius: 10, display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+                        <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--accent)' }}>Total día:</span>
+                        {totals.kcal ? <span style={{ fontSize: 11, fontWeight: 700, color: '#F97316' }}>{totals.kcal} kcal</span> : null}
+                        {totals.protein ? <span style={{ fontSize: 11, fontWeight: 700, color: '#3B82F6' }}>{totals.protein}g prot</span> : null}
+                        {totals.carbs ? <span style={{ fontSize: 11, fontWeight: 700, color: '#EAB308' }}>{totals.carbs}g HC</span> : null}
+                        {totals.fat ? <span style={{ fontSize: 11, fontWeight: 700, color: '#8B5CF6' }}>{totals.fat}g grasa</span> : null}
+                      </div>
+                    )}
+                  </>
+                })()
             }
 
             {plan.notes && (
