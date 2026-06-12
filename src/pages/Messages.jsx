@@ -58,6 +58,12 @@ export default function Messages() {
   }
 
   useEffect(() => {
+    const params = new URLSearchParams(location.search)
+    const chatFromUrl = params.get('chat')
+    if (chatFromUrl && chatFromUrl !== activeChat) setActiveChat(chatFromUrl)
+  }, [location.search])
+
+  useEffect(() => {
     loadMessages()
     // Suscripción en tiempo real
     const channel = DB.subscribe(activeChat, () => loadMessages())

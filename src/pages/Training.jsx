@@ -183,11 +183,11 @@ export default function Training({ athleteId = null, coachView = false, embedded
     setTemplates(prev => prev.filter(t => t.id !== id))
   }
   const loadTemplate = (tpl) => {
-    setForm(f => ({ ...f, title: tpl.title, type: tpl.type, duration: tpl.duration, notes: tpl.notes, exercises: tpl.exercises.map(e => ({...e, id: Date.now().toString() + Math.random()})) }))
+    setForm(f => ({ ...f, title: tpl.title, type: tpl.type, duration: tpl.duration, notes: tpl.notes, exercises: tpl.exercises.map(e => ({...e, id: crypto.randomUUID()})) }))
     setShowTemplates(false)
   }
 
-  const addExercise = () => setForm(f => ({ ...f, exercises: [...f.exercises, { ...emptyExercise, id: Date.now().toString() }] }))
+  const addExercise = () => setForm(f => ({ ...f, exercises: [...f.exercises, { ...emptyExercise, id: crypto.randomUUID() }] }))
   const updateExercise = (idx, data) => setForm(f => ({ ...f, exercises: f.exercises.map((e,i) => i===idx ? {...e,...data} : e) }))
   const removeExercise = (idx) => setForm(f => ({ ...f, exercises: f.exercises.filter((_,i) => i!==idx) }))
   const toggleAthlete = (id) => setForm(f => ({ ...f, athlete_ids: f.athlete_ids.includes(id) ? f.athlete_ids.filter(x=>x!==id) : [...f.athlete_ids, id] }))

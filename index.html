@@ -24,7 +24,7 @@
   <body>
     <div id="root">
       <div id="app-loading" style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100dvh;background:#F0EFED;font-family:sans-serif;gap:16px">
-        <div style="font-size:48px;font-weight:900;letter-spacing:2px"><span style="color:#2563EB">N</span>ORTHSTONE</div>
+        <div style="font-size:48px;font-weight:900;letter-spacing:2px"><span style="color:#0C4A6E">N</span>ORTHSTONE</div>
         <div style="color:#888;font-size:14px">Cargando...</div>
       </div>
     </div>
@@ -32,13 +32,13 @@
       // Capturar errores JS antes de que React monte
       window.onerror = function(msg, src, line, col, err) {
         var r = document.getElementById('app-loading')
-        if (r) r.innerHTML = '<div style="text-align:center;padding:32px"><div style="font-size:32px;margin-bottom:12px">⚠️</div><div style="font-size:16px;font-weight:700;margin-bottom:8px">Error de carga</div><div style="color:#888;font-size:12px;margin-bottom:16px;max-width:280px;margin-left:auto;margin-right:auto">' + msg + '</div><button onclick="navigator.serviceWorker&&navigator.serviceWorker.getRegistrations().then(function(r){r.forEach(function(sw){sw.unregister()})});caches.keys().then(function(k){k.forEach(function(c){caches.delete(c)})});setTimeout(function(){location.reload(true)},300)" style="background:#2563EB;color:#fff;border:none;border-radius:12px;padding:14px 28px;font-size:16px;font-weight:700;cursor:pointer">Reiniciar app</button></div>'
+        if (r) r.innerHTML = '<div style="text-align:center;padding:32px"><div style="font-size:32px;margin-bottom:12px">⚠️</div><div style="font-size:16px;font-weight:700;margin-bottom:8px">Error de carga</div><div style="color:#888;font-size:12px;margin-bottom:16px;max-width:280px;margin-left:auto;margin-right:auto">' + msg + '</div><button onclick="navigator.serviceWorker&&navigator.serviceWorker.getRegistrations().then(function(r){r.forEach(function(sw){sw.unregister()})});caches.keys().then(function(k){k.forEach(function(c){caches.delete(c)})});setTimeout(function(){location.reload(true)},300)" style="background:#0C4A6E;color:#fff;border:none;border-radius:12px;padding:14px 28px;font-size:16px;font-weight:700;cursor:pointer">Reiniciar app</button></div>'
       }
       // Si el JS no carga en 8s, mostrar botón de reinicio
       setTimeout(function() {
         var r = document.getElementById('app-loading')
         if (r) {
-          r.innerHTML = '<div style="text-align:center;padding:32px"><div style="font-size:48px;margin-bottom:16px">⚠️</div><div style="font-size:18px;font-weight:700;margin-bottom:8px">Error al cargar</div><div style="color:#888;font-size:14px;margin-bottom:24px">Pulsa el botón para reiniciar la app</div><button onclick="navigator.serviceWorker&&navigator.serviceWorker.getRegistrations().then(function(r){r.forEach(function(sw){sw.unregister()})});caches.keys().then(function(k){k.forEach(function(c){caches.delete(c)})});setTimeout(function(){location.reload(true)},300)" style="background:#2563EB;color:#fff;border:none;border-radius:12px;padding:14px 28px;font-size:16px;font-weight:700;cursor:pointer">Reiniciar app</button></div>'
+          r.innerHTML = '<div style="text-align:center;padding:32px"><div style="font-size:48px;margin-bottom:16px">⚠️</div><div style="font-size:18px;font-weight:700;margin-bottom:8px">Error al cargar</div><div style="color:#888;font-size:14px;margin-bottom:24px">Pulsa el botón para reiniciar la app</div><button onclick="navigator.serviceWorker&&navigator.serviceWorker.getRegistrations().then(function(r){r.forEach(function(sw){sw.unregister()})});caches.keys().then(function(k){k.forEach(function(c){caches.delete(c)})});setTimeout(function(){location.reload(true)},300)" style="background:#0C4A6E;color:#fff;border:none;border-radius:12px;padding:14px 28px;font-size:16px;font-weight:700;cursor:pointer">Reiniciar app</button></div>'
         }
       }, 8000)
     </script>

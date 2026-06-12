@@ -132,7 +132,7 @@ export function MonthlyReport({ athleteId, sessions, isFemale }) {
   }, [monthSessions, attendedCount, nutritionPct, avgMood])
 
   const scoreLabel = score === null ? null : score >= 80 ? { text: '🏆 Mes excelente', color: '#059669' }
-    : score >= 60 ? { text: '💪 Buen mes', color: '#2563EB' }
+    : score >= 60 ? { text: '💪 Buen mes', color: '#0C4A6E' }
     : score >= 40 ? { text: '💪 Sigue empujando', color: '#D97706' }
     : { text: '👀 Podemos mejorar', color: '#6B7280' }
 
@@ -178,7 +178,7 @@ export function MonthlyReport({ athleteId, sessions, isFemale }) {
           {/* Grid de stats */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: isFemale && dominantPhase ? 12 : 0 }}>
             {[
-              { icon: '📅', label: 'Sesiones', value: attendedCount !== null ? `${attendedCount}/${monthSessions.length}` : monthSessions.length, sub: 'asistidas / asignadas', color: '#2563EB' },
+              { icon: '📅', label: 'Sesiones', value: attendedCount !== null ? `${attendedCount}/${monthSessions.length}` : monthSessions.length, sub: 'asistidas / asignadas', color: '#0C4A6E' },
               { icon: '🥗', label: 'Nutrición', value: nutritionPct !== null ? `${nutritionPct}%` : '—', sub: 'adherencia', color: '#059669' },
               { icon: '💪', label: 'Intensidad media', value: monthRpe ?? '—', sub: 'sobre 10', color: '#EF4444' },
               { icon: '😊', label: 'Ánimo', value: avgMood ? `${avgMood}/5` : '—', sub: 'bienestar', color: '#8B5CF6' },
@@ -617,7 +617,7 @@ function WellnessHistory({ athleteId }) {
 
   const W = 300, H = 80
   const FIELDS = [
-    { key: 'mood',    color: '#2563EB', label: 'Ánimo',      emoji: '😊' },
+    { key: 'mood',    color: '#0C4A6E', label: 'Ánimo',      emoji: '😊' },
     { key: 'fatigue', color: '#EF4444', label: 'Cansancio',  emoji: '😴' },
   ]
 

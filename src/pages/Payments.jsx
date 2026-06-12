@@ -13,14 +13,14 @@ function AnnualSummary({ year, athletes }) {
     const load = async () => {
       let totalPaid = 0, totalPending = 0
       const byAthlete = {}
-      athletes.forEach(a => { byAthlete[a.id] = { name: a.name, color: a.color, paid: 0, pending: 0 } })
+      athletes.forEach(a => { byAthlete[a.id] = { name: a.name, color: a.color, paid: 0, pending: 0, amountPaid: 0, amountPending: 0 } })
 
       for (let m = 1; m <= 12; m++) {
         const pays = await DB.getByMonth(m, year)
         pays.forEach(p => {
           if (!byAthlete[p.athlete_id]) return
-          if (p.status === 'paid') { byAthlete[p.athlete_id].paid++; totalPaid += p.amount }
-          else { byAthlete[p.athlete_id].pending++; totalPending += p.amount }
+          if (p.status === 'paid') { byAthlete[p.athlete_id].paid++; byAthlete[p.athlete_id].amountPaid += p.amount; totalPaid += p.amount }
+          else { byAthlete[p.athlete_id].pending++; byAthlete[p.athlete_id].amountPending += p.amount; totalPending += p.amount }
         })
       }
       setData({ totalPaid, totalPending, byAthlete: Object.values(byAthlete) })
@@ -52,7 +52,7 @@ function AnnualSummary({ year, athletes }) {
               <div style={{ fontWeight: 700, fontSize: 14 }}>{a.name}</div>
               <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{a.paid} meses pagados · {a.pending} pendientes</div>
             </div>
-            <div style={{ fontWeight: 800, fontSize: 15, color: 'var(--success)' }}>{a.paid > 0 ? `${a.paid * (a.paid > 0 ? Math.round(data.totalPaid / a.paid / a.paid * a.paid) : 0)}€` : '—'}</div>
+            <div style={{ fontWeight: 800, fontSize: 15, color: 'var(--success)' }}>{a.amountPaid > 0 ? `${a.amountPaid}€` : '—'}</div>
           </div>
         ))}
         {data.byAthlete.every(a => a.paid === 0 && a.pending === 0) && (
