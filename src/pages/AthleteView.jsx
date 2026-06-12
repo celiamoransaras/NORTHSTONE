@@ -43,6 +43,9 @@ export default function AthleteView() {
   const [onboarding, setOnboarding] = useState(() => !localStorage.getItem('ns_onboarding_done'))
   const [onboardingStep, setOnboardingStep] = useState(0)
   const [moreOpen, setMoreOpen] = useState(false)
+  const [tabDir, setTabDir] = useState(1)
+  const [tabKey, setTabKey] = useState(0)
+  const TAB_ORDER = ['home', 'training', 'nutrition', 'progress', 'messages']
 
   // Mensajes no leídos
   useEffect(() => {
@@ -174,15 +177,16 @@ export default function AthleteView() {
 
       {/* Content */}
       <main style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-        {tab === 'home'      && <AthleteHome athlete={athlete} athleteId={athleteId} />}
-        {tab === 'training'  && <AthleteTrainingWithRPE athleteId={athleteId} />}
-        {tab === 'health'    && <AthleteHealth athleteId={athleteId} />}
-        {tab === 'nutrition' && <AthleteNutrition athleteId={athleteId} />}
-        {tab === 'progress'  && <AthleteProgressTab athleteId={athleteId} isFemale={athlete?.gender === 'female'} />}
-        {tab === 'payments'  && <AthletePayments athleteId={athleteId} />}
-        {tab === 'docs'      && <AthleteDocs athleteId={athleteId} />}
-        {tab === 'messages'  && <Messages />}
-        {tab === 'home' && moreOpen === false && null /* placeholder */}
+        <div key={tabKey} style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', animation: `tabSlide${tabDir > 0 ? 'Right' : 'Left'} 0.22s cubic-bezier(0.16,1,0.3,1) both` }}>
+          {tab === 'home'      && <AthleteHome athlete={athlete} athleteId={athleteId} />}
+          {tab === 'training'  && <AthleteTrainingWithRPE athleteId={athleteId} />}
+          {tab === 'health'    && <AthleteHealth athleteId={athleteId} />}
+          {tab === 'nutrition' && <AthleteNutrition athleteId={athleteId} />}
+          {tab === 'progress'  && <AthleteProgressTab athleteId={athleteId} isFemale={athlete?.gender === 'female'} />}
+          {tab === 'payments'  && <AthletePayments athleteId={athleteId} />}
+          {tab === 'docs'      && <AthleteDocs athleteId={athleteId} />}
+          {tab === 'messages'  && <Messages />}
+        </div>
       </main>
 
       {/* Sheet "Más" */}
@@ -196,7 +200,7 @@ export default function AthleteView() {
                 { id: 'docs',     icon: '📂', label: 'Documentos', desc: 'Docs de tu entrenadora' },
                 { id: 'health',   icon: '🩺', label: 'Salud', desc: 'Lesiones y ciclo' },
               ].map(({ id, icon, label, desc }) => (
-                <button key={id} onClick={() => { setTab(id); setMoreOpen(false) }}
+                <button key={id} onClick={() => { const d = TAB_ORDER.indexOf(id) >= TAB_ORDER.indexOf(tab) ? 1 : -1; setTabDir(d); setTabKey(k=>k+1); setTab(id); setMoreOpen(false) }}
                   style={{ background: tab === id ? 'var(--accent-dim)' : 'var(--bg)', border: `1.5px solid ${tab === id ? 'var(--accent)' : 'var(--border)'}`, borderRadius: 14, padding: '14px 12px', cursor: 'pointer', textAlign: 'left' }}>
                   <div style={{ fontSize: 24, marginBottom: 6 }}>{icon}</div>
                   <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 800, fontSize: 14, color: tab === id ? 'var(--accent)' : 'var(--text)', textTransform: 'uppercase' }}>{label}</div>
@@ -211,7 +215,7 @@ export default function AthleteView() {
       {/* Bottom nav */}
       <nav className="glass-nav" style={{ display: 'flex', height: 'var(--nav-height)', flexShrink: 0, paddingBottom: 'env(safe-area-inset-bottom)' }}>
         {NAV.map(({ id, icon, label }) => (
-          <button key={id} onClick={() => id === 'more' ? setMoreOpen(o => !o) : (setTab(id), setMoreOpen(false))}
+          <button key={id} onClick={() => id === 'more' ? setMoreOpen(o => !o) : (setTabDir(TAB_ORDER.indexOf(id) >= TAB_ORDER.indexOf(tab) ? 1 : -1), setTabKey(k=>k+1), setTab(id), setMoreOpen(false))}
             style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 3, color: (id === 'more' ? moreOpen : tab===id) ? 'var(--accent)' : 'var(--text-muted)', fontFamily: "'Barlow Condensed', sans-serif", fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.3px', background: 'none', border: 'none', borderTop: (id === 'more' ? moreOpen : tab===id) ? '2px solid var(--accent)' : '2px solid transparent', cursor: 'pointer', transition: 'color 0.15s' }}>
             <span style={{ fontSize: 22, position: 'relative', display: 'inline-block' }}>
               {icon}
@@ -282,14 +286,17 @@ function Badge({ count, color = 'var(--error)' }) {
 // ---- Inicio del deportista ----
 function AthleteHome({ athlete, athleteId }) {
   const [loading, setLoading] = useState(true)
+  const [refreshing, setRefreshing] = useState(false)
+  const [pullY, setPullY] = useState(0)
+  const touchStartY = useRef(0)
+  const scrollRef = useRef(null)
   const [upcoming, setUpcoming] = useState([])
   const [allSessions, setAllSessions] = useState([])
   const [activeInjury, setActiveInjury] = useState(null)
   const [streak, setStreak] = useState(0)
   const [attended, setAttended] = useState(false)
 
-  useEffect(() => {
-    const load = async () => {
+  const load = async (isRefresh = false) => {
       try {
         const [sessions, injuries, records] = await Promise.all([
           Sessions.getByAthlete(athleteId),
@@ -348,11 +355,25 @@ function AthleteHome({ athlete, athleteId }) {
       } catch (e) {
         console.error('AthleteHome load error', e)
       } finally {
-        setLoading(false)
+        if (isRefresh) setRefreshing(false)
+        else setLoading(false)
       }
-    }
-    load()
-  }, [athleteId])
+  }
+
+  useEffect(() => { load() }, [athleteId])
+
+  const handleTouchStart = (e) => {
+    if (scrollRef.current?.scrollTop === 0) touchStartY.current = e.touches[0].clientY
+  }
+  const handleTouchMove = (e) => {
+    if (scrollRef.current?.scrollTop > 0) return
+    const dy = e.touches[0].clientY - touchStartY.current
+    if (dy > 0 && dy < 80) setPullY(dy)
+  }
+  const handleTouchEnd = () => {
+    if (pullY > 60) { setRefreshing(true); load(true) }
+    setPullY(0)
+  }
 
   const now = new Date()
   const h = now.getHours()
@@ -397,7 +418,12 @@ function AthleteHome({ athlete, athleteId }) {
   }).length
 
   return (
-    <div className="page fade-in">
+    <div className="page fade-in" ref={scrollRef} onTouchStart={handleTouchStart} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd}>
+      {/* Pull to refresh indicator */}
+      <div style={{ height: refreshing ? 44 : pullY * 0.5, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: pullY === 0 ? 'height 0.3s ease' : 'none', color: 'var(--text-muted)', fontSize: 13 }}>
+        {(refreshing || pullY > 30) && <span style={{ animation: refreshing ? 'spin 0.7s linear infinite' : 'none', display: 'inline-block' }}>↻</span>}
+        {refreshing && <span style={{ marginLeft: 6 }}>Actualizando...</span>}
+      </div>
       {/* Hero con fecha — igual que el coach */}
       <div style={{ padding: '28px 20px 20px', background: `linear-gradient(160deg, ${athlete.color}12 0%, transparent 60%)` }}>
         <div style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 6 }}>
@@ -882,8 +908,8 @@ function AthleteDocs({ athleteId }) {
   if (loading) return (
     <div className="page">
       <div className="page-header"><h2>Documentos</h2></div>
-      <div className="page-content" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 1 }}>
-        <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>Cargando...</div>
+      <div className="page-content">
+        {[1,2,3].map(i => <div key={i} className="skeleton" style={{ height: 72, borderRadius: 18 }} />)}
       </div>
     </div>
   )

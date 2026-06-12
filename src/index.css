@@ -564,6 +564,16 @@ textarea { resize: vertical; min-height: 88px; }
   to { opacity: 1; transform: translateY(0); }
 }
 
+/* ---- Tab slide transitions ---- */
+@keyframes tabSlideRight {
+  from { opacity: 0; transform: translateX(28px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+@keyframes tabSlideLeft {
+  from { opacity: 0; transform: translateX(-28px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
 /* ---- Card hover ---- */
 .card { transition: box-shadow 0.2s ease, transform 0.15s ease; }
 .card:active { transform: scale(0.99); }
