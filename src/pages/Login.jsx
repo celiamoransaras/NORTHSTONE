@@ -43,13 +43,11 @@ export default function Login() {
 
       {/* Logo */}
       <div className="fade-in" style={{ textAlign: 'center', marginBottom: 36 }}>
-        <div style={{
+        <img src="/apple-touch-icon.png" alt="Northstone" style={{
           width: 80, height: 80, borderRadius: 24,
-          background: 'linear-gradient(135deg, #2563EB, #4F46E5)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          margin: '0 auto 20px', boxShadow: '0 12px 40px rgba(37,99,235,0.3)',
-          fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 900, fontSize: 42, color: '#fff',
-        }}>N</div>
+          margin: '0 auto 20px', display: 'block',
+          boxShadow: '0 12px 40px rgba(12,74,110,0.35)',
+        }} />
         <h1 style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 30, fontWeight: 900, letterSpacing: '2px', textTransform: 'uppercase', color: 'var(--text)' }}>
           NORTHSTONE
         </h1>
