@@ -68,7 +68,7 @@ export default function Login() {
       }}>
         <div style={{ marginBottom: 20 }}>
           <h2 style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 22, fontWeight: 800, textTransform: 'uppercase' }}>
-            {mode === 'login' ? 'Bienvenida' : 'Crear cuenta'}
+            {mode === 'login' ? 'Bienvenida/o' : 'Crear cuenta'}
           </h2>
           <p style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 4 }}>
             {mode === 'login' ? 'Accede a tu plataforma deportiva' : 'Únete a Northstone'}
