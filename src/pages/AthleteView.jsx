@@ -42,6 +42,7 @@ export default function AthleteView() {
   const [uploadingAvatar, setUploadingAvatar] = useState(false)
   const [onboarding, setOnboarding] = useState(() => !localStorage.getItem('ns_onboarding_done'))
   const [onboardingStep, setOnboardingStep] = useState(0)
+  const [pushPrompt, setPushPrompt] = useState(false)
   const [moreOpen, setMoreOpen] = useState(false)
   const [tabDir, setTabDir] = useState(1)
   const [tabKey, setTabKey] = useState(0)
@@ -128,7 +129,13 @@ export default function AthleteView() {
     { icon: '📈', title: 'Tu progreso', text: 'En "Progreso" registra cómo te sientes cada día. Celia verá tu estado de forma y podrá adaptar los entrenos.' },
     { icon: '💬', title: 'Chat directo', text: 'Habla con Celia y con el resto del equipo en "Chat". Recibirás notificaciones cuando te escriba.' },
   ]
-  const finishOnboarding = () => { localStorage.setItem('ns_onboarding_done', '1'); setOnboarding(false) }
+  const finishOnboarding = () => {
+    localStorage.setItem('ns_onboarding_done', '1')
+    setOnboarding(false)
+    if (pushSupported && !pushSubscribed && !localStorage.getItem('ns_push_prompted')) {
+      setTimeout(() => setPushPrompt(true), 600)
+    }
+  }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100dvh', overflow: 'hidden' }}>
@@ -154,6 +161,27 @@ export default function AthleteView() {
             {onboardingStep === 0 && (
               <button onClick={finishOnboarding} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: 13, marginTop: 16, cursor: 'pointer' }}>Saltar</button>
             )}
+          </div>
+        </div>
+      )}
+      {/* Prompt activar notificaciones */}
+      {pushPrompt && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
+          <div style={{ background: 'var(--bg)', borderRadius: '24px 24px 0 0', padding: '32px 24px 48px', width: '100%', maxWidth: 480, textAlign: 'center' }}>
+            <div style={{ fontSize: 52, marginBottom: 16 }}>🔔</div>
+            <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 900, fontSize: 24, textTransform: 'uppercase', marginBottom: 10 }}>Activa las notificaciones</div>
+            <div style={{ fontSize: 15, color: 'var(--text-muted)', lineHeight: 1.5, marginBottom: 28, maxWidth: 300, margin: '0 auto 28px' }}>
+              Así te avisamos cuando Celia te asigne un entreno, un plan de nutrición, o te mande un mensaje.
+            </div>
+            <button className="btn btn-primary btn-full" onClick={async () => {
+              localStorage.setItem('ns_push_prompted', '1')
+              setPushPrompt(false)
+              await enablePush()
+            }}>Activar notificaciones</button>
+            <button onClick={() => { localStorage.setItem('ns_push_prompted', '1'); setPushPrompt(false) }}
+              style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: 13, marginTop: 16, cursor: 'pointer', display: 'block', width: '100%' }}>
+              Ahora no
+            </button>
           </div>
         </div>
       )}

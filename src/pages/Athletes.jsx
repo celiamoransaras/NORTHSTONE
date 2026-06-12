@@ -5,6 +5,7 @@ import { supabase } from '../lib/supabase'
 import Training from './Training'
 import { GoalsSection, RecordsSection, LoadChart, WellnessTodayCoach, WellnessHistory, MonthlyReport } from './Progress'
 import { useToast } from '../contexts/ToastContext'
+import { sendPushToAthletes } from '../lib/pushNotifications'
 
 function getWeekRange() {
   const now = new Date()
@@ -643,6 +644,11 @@ function NutritionCoach({ athleteId }) {
     setSaving(true)
     try {
       await Nutrition.savePlan(athleteId, month, year, days, notes)
+      sendPushToAthletes([athleteId], {
+        title: '🥗 Plan de nutrición actualizado',
+        body: 'Celia ha preparado tu plan semanal. Échale un vistazo.',
+        url: '/?tab=nutrition',
+      })
       await load()
       setEditing(false)
       toast('Plan guardado')

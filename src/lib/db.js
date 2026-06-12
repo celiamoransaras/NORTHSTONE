@@ -228,6 +228,19 @@ export const Documents = {
       .order('created_at', { ascending: false })
     return data || []
   },
+  getMedical: async (athleteId) => {
+    const { data } = await supabase.from('documents').select('*')
+      .eq('athlete_id', athleteId).eq('category', 'medical')
+      .order('created_at', { ascending: false })
+    return data || []
+  },
+  getForAthlete: async (athleteId) => {
+    // Docs generales del coach + docs específicos del deportista (no médicos)
+    const { data } = await supabase.from('documents').select('*')
+      .or(`category.is.null,category.eq.general,and(athlete_id.eq.${athleteId},category.eq.athlete)`)
+      .order('created_at', { ascending: false })
+    return data || []
+  },
   create: async (doc) => {
     const { data } = await supabase.from('documents').insert(doc).select().single()
     return data
@@ -364,10 +377,10 @@ export const Achievements = {
     return data || []
   },
   unlock: async (athleteId, type, title, description, icon) => {
-    await supabase.from('achievements').upsert(
-      { athlete_id: athleteId, type, title, description, icon },
-      { onConflict: 'athlete_id,type', ignoreDuplicates: true }
-    )
+    const { data: existing } = await supabase.from('achievements').select('id').eq('athlete_id', athleteId).eq('type', type).maybeSingle()
+    if (existing) return { newly_unlocked: false }
+    await supabase.from('achievements').insert({ athlete_id: athleteId, type, title, description, icon })
+    return { newly_unlocked: true }
   }
 }
 

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Achievements, Records } from '../lib/db'
 import { supabase } from '../lib/supabase'
+import { sendPushToAthletes } from '../lib/pushNotifications'
 
 const ACHIEVEMENT_DEFS = [
   // Sesiones
@@ -77,9 +78,17 @@ export function calculateStreak(sessions) {
 }
 
 export async function checkAndUnlockAchievements(athleteId, attendedCount, recordsCount, streak, extras = {}) {
-  const u = (type) => {
+  const u = async (type) => {
     const def = ACHIEVEMENT_DEFS.find(d => d.type === type)
-    if (def) return Achievements.unlock(athleteId, def.type, def.title, def.description, def.icon)
+    if (!def) return
+    const result = await Achievements.unlock(athleteId, def.type, def.title, def.description, def.icon)
+    if (result?.newly_unlocked) {
+      sendPushToAthletes([athleteId], {
+        title: `${def.icon} ¡Nuevo logro desbloqueado!`,
+        body: def.title,
+        url: '/?tab=progress',
+      })
+    }
   }
   // Sesiones
   if (attendedCount >= 1)   await u('first_session')
@@ -125,12 +134,20 @@ export async function checkAndUnlockAchievements(athleteId, attendedCount, recor
 
 export function StreakBadge({ streak }) {
   if (!streak) return null
+  const msg = streak >= 52 ? { text: '¡Un año. Eres una leyenda! 🏵️', gradient: 'linear-gradient(135deg, #7C3AED, #4F46E5)' }
+    : streak >= 26 ? { text: '¡Medio año sin parar. Una fiera! 🦁', gradient: 'linear-gradient(135deg, #0EA5E9, #6366F1)' }
+    : streak >= 16 ? { text: '¡4 meses. Absolutamente imparable! 🔱', gradient: 'linear-gradient(135deg, #059669, #0EA5E9)' }
+    : streak >= 12 ? { text: '¡3 meses seguidos. Brutal! 🏆', gradient: 'linear-gradient(135deg, #D97706, #EF4444)' }
+    : streak >= 8  ? { text: '¡2 meses de constancia. Increíble! 🌟', gradient: 'linear-gradient(135deg, #D97706, #F97316)' }
+    : streak >= 4  ? { text: '¡Un mes sin parar! ⚡', gradient: 'linear-gradient(135deg, #F97316, #EF4444)' }
+    : streak >= 2  ? { text: '¡Vas muy bien! 💪', gradient: 'linear-gradient(135deg, #F97316, #EF4444)' }
+    : { text: '¡Sigue así!', gradient: 'linear-gradient(135deg, #F97316, #EF4444)' }
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'linear-gradient(135deg, #F97316, #EF4444)', borderRadius: 16, padding: '8px 16px', marginBottom: 4 }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: msg.gradient, borderRadius: 16, padding: '8px 16px', marginBottom: 4 }}>
       <span style={{ fontSize: 28 }}>🔥</span>
       <div>
         <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 900, fontSize: 24, color: '#fff', lineHeight: 1 }}>{streak} semana{streak > 1 ? 's' : ''}</div>
-        <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.85)' }}>de racha. ¡Sigue así!</div>
+        <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.85)' }}>de racha. {msg.text}</div>
       </div>
     </div>
   )
@@ -188,42 +205,41 @@ export function AchievementsHomeSection({ athleteId }) {
   if (unlockedDefs.length === 0 && !nextDef) return null
 
   return (
-    <div>
+    <div style={{ background: 'var(--card)', borderRadius: 22, padding: '18px 16px', border: '1.5px solid var(--border)', boxShadow: '0 2px 16px rgba(0,0,0,0.05)' }}>
+      <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 800, fontSize: 12, textTransform: 'uppercase', letterSpacing: '1.5px', color: 'var(--text-muted)', marginBottom: 14 }}>🏆 Mis logros</div>
+
       {/* Logros desbloqueados */}
       {unlockedDefs.length > 0 && (
-        <>
-          <div className="section-title" style={{ marginBottom: 10 }}>🏆 Mis logros</div>
-          <div style={{ display: 'flex', gap: 10, overflowX: 'auto', paddingBottom: 4 }}>
-            {unlockedDefs.map(def => (
-              <div key={def.type} style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, minWidth: 72 }}>
-                <div style={{ width: 56, height: 56, borderRadius: 18, background: 'linear-gradient(135deg, #FCD34D, #F59E0B)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 28, boxShadow: '0 4px 16px rgba(245,158,11,0.35)' }}>
-                  {def.icon}
-                </div>
-                <div style={{ fontSize: 10, fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)', textAlign: 'center', lineHeight: 1.2 }}>
-                  {def.title}
-                </div>
+        <div style={{ display: 'flex', gap: 12, overflowX: 'auto', paddingBottom: 4, marginBottom: nextDef ? 16 : 0 }}>
+          {unlockedDefs.map(def => (
+            <div key={def.type} style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, minWidth: 68 }}>
+              <div style={{ width: 56, height: 56, borderRadius: 18, background: 'linear-gradient(135deg, #FCD34D, #F59E0B)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 28, boxShadow: '0 4px 16px rgba(245,158,11,0.3)' }}>
+                {def.icon}
               </div>
-            ))}
-          </div>
-        </>
+              <div style={{ fontSize: 10, fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)', textAlign: 'center', lineHeight: 1.2 }}>
+                {def.title}
+              </div>
+            </div>
+          ))}
+        </div>
       )}
 
       {/* Próximo logro */}
       {nextDef && (
-        <div style={{ marginTop: unlockedDefs.length > 0 ? 14 : 0 }}>
-          {unlockedDefs.length === 0 && <div className="section-title" style={{ marginBottom: 10 }}>🏆 Logros</div>}
-          <div className="card" style={{ padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 14 }}>
-            <div style={{ width: 48, height: 48, borderRadius: 14, background: 'var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24, opacity: 0.5, flexShrink: 0 }}>
+        <>
+          {unlockedDefs.length > 0 && <div style={{ height: 1, background: 'var(--border)', marginBottom: 14 }} />}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+            <div style={{ width: 48, height: 48, borderRadius: 16, background: 'linear-gradient(135deg, #F1F5F9, #E2E8F0)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24, flexShrink: 0, filter: 'grayscale(1)', opacity: 0.5 }}>
               {nextDef.icon}
             </div>
             <div style={{ flex: 1 }}>
-              <div style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Próximo logro</div>
-              <div style={{ fontWeight: 700, fontSize: 14, marginTop: 2 }}>{nextDef.title}</div>
+              <div style={{ fontSize: 10, color: 'var(--text-muted)', fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 800, textTransform: 'uppercase', letterSpacing: '1px' }}>Próximo logro</div>
+              <div style={{ fontWeight: 700, fontSize: 14, marginTop: 2, color: 'var(--text)' }}>{nextDef.title}</div>
               <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>{nextDef.description}</div>
             </div>
-            <div style={{ fontSize: 20, opacity: 0.3 }}>🔒</div>
+            <div style={{ fontSize: 22, opacity: 0.25 }}>🔒</div>
           </div>
-        </div>
+        </>
       )}
     </div>
   )
@@ -250,8 +266,8 @@ export function WeeklyPlan({ sessions }) {
   const todaySessions = sessions.filter(s => s.date === todayStr)
 
   return (
-    <div className="card" style={{ padding: 16 }}>
-      <div className="section-title" style={{ marginBottom: 12 }}>Semana actual</div>
+    <div style={{ background: 'var(--card)', borderRadius: 22, padding: '18px 16px', border: '1.5px solid var(--border)', boxShadow: '0 2px 12px rgba(0,0,0,0.05)' }}>
+      <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 800, fontSize: 12, textTransform: 'uppercase', letterSpacing: '1.5px', color: 'var(--text-muted)', marginBottom: 14 }}>Semana actual</div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4 }}>
         {week.map((day, i) => {
           const dateStr = day.toISOString().slice(0,10)
@@ -273,21 +289,6 @@ export function WeeklyPlan({ sessions }) {
           )
         })}
       </div>
-
-      {todaySessions.length > 0 && (
-        <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid var(--border)' }}>
-          <div style={{ fontSize: 11, fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 800, textTransform: 'uppercase', color: 'var(--accent)', marginBottom: 6 }}>Hoy</div>
-          {todaySessions.map(s => (
-            <div key={s.id} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span style={{ fontSize: 18 }}>{TYPE_ICONS[s.type] || '📅'}</span>
-              <div>
-                <div style={{ fontWeight: 700, fontSize: 14 }}>{s.title}</div>
-                <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{s.duration} min</div>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
 
       {todaySessions.length === 0 && (
         <div style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid var(--border)', fontSize: 13, color: 'var(--text-muted)', textAlign: 'center' }}>
