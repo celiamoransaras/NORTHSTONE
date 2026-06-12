@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useLocation } from 'react-router-dom'
-import { Athletes as DB, Sessions, Storage, Cycle, Nutrition } from '../lib/db'
+import { Athletes as DB, Sessions, Storage, Cycle, Nutrition, Documents } from '../lib/db'
 import { supabase } from '../lib/supabase'
 import Training from './Training'
 import { GoalsSection, RecordsSection, LoadChart, WellnessTodayCoach, WellnessHistory, MonthlyReport } from './Progress'
@@ -32,6 +32,35 @@ function useWeeklyStats(athletes) {
     })
   }, [athletes])
   return stats
+}
+
+function useCoachAlerts(athletes, weeklyStats) {
+  const [rpeAlerts, setRpeAlerts] = useState([])
+  const [noActivity, setNoActivity] = useState([])
+  useEffect(() => {
+    if (!athletes.length) return
+    const active = athletes.filter(a => a.status === 'active')
+    // Sin actividad esta semana: tienen sesiones asignadas pero ninguna confirmada
+    const noAct = active.filter(a => weeklyStats[a.id]?.assigned > 0 && weeklyStats[a.id]?.done === 0)
+    setNoActivity(noAct)
+    // RPE alto (>= 8) en los últimos 3 días
+    const threeDaysAgo = new Date(); threeDaysAgo.setDate(threeDaysAgo.getDate() - 3)
+    const cutoff = threeDaysAgo.toISOString().slice(0, 10)
+    supabase.from('session_athletes')
+      .select('athlete_id, rpe, session_id')
+      .gte('updated_at', cutoff + 'T00:00:00')
+      .gte('rpe', 8)
+      .then(({ data }) => {
+        if (!data) return
+        const ids = [...new Set(data.map(r => r.athlete_id))]
+        const alerts = active.filter(a => ids.includes(a.id)).map(a => {
+          const maxRpe = Math.max(...data.filter(r => r.athlete_id === a.id).map(r => r.rpe))
+          return { ...a, rpe: maxRpe }
+        })
+        setRpeAlerts(alerts)
+      })
+  }, [athletes, weeklyStats])
+  return { rpeAlerts, noActivity }
 }
 
 const COLORS = ['#F59E0B','#10B981','#3B82F6','#EC4899','#8B5CF6','#EF4444','#14B8A6','#F97316']
@@ -66,6 +95,7 @@ export default function Athletes() {
   }
   useEffect(() => { load() }, [])
   const weeklyStats = useWeeklyStats(athletes)
+  const { rpeAlerts, noActivity } = useCoachAlerts(athletes, weeklyStats)
 
   const activeAthletes = athletes.filter(a => a.status !== 'inactive')
   const inactiveAthletes = athletes.filter(a => a.status === 'inactive')
@@ -154,7 +184,7 @@ export default function Athletes() {
             { label: 'Lesionados', val: athletes.filter(a=>a.status==='injured').length },
           ].map(({ label, val }) => (
             <div key={label} style={{
-              flex: 1, background: 'var(--card)', border: '1px solid var(--border)',
+              flex: 1, background: 'var(--card)',
               borderRadius: 'var(--radius-sm)', padding: '10px 12px', textAlign: 'center'
             }}>
               <div style={{ fontSize: 20, fontWeight: 700 }}>{val}</div>
@@ -162,6 +192,34 @@ export default function Athletes() {
             </div>
           ))}
         </div>
+
+        {/* Alertas del coach */}
+        {(rpeAlerts.length > 0 || noActivity.length > 0) && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {rpeAlerts.length > 0 && (
+              <div className="card" style={{ padding: '12px 14px', borderLeft: '3px solid var(--error)', display: 'flex', alignItems: 'center', gap: 10 }}>
+                <span style={{ fontSize: 20 }}>🔥</span>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 12, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--error)', marginBottom: 2 }}>RPE alto estos días</div>
+                  <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>
+                    {rpeAlerts.map(a => `${a.name.split(' ')[0]} (${a.rpe}/10)`).join(' · ')}
+                  </div>
+                </div>
+              </div>
+            )}
+            {noActivity.length > 0 && (
+              <div className="card" style={{ padding: '12px 14px', borderLeft: '3px solid var(--warning)', display: 'flex', alignItems: 'center', gap: 10 }}>
+                <span style={{ fontSize: 20 }}>⚠️</span>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 12, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--warning)', marginBottom: 2 }}>Sin confirmar esta semana</div>
+                  <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>
+                    {noActivity.map(a => a.name.split(' ')[0]).join(' · ')}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
 
         {loading ? (
           <div style={{ color: 'var(--text-muted)', padding: 24, textAlign: 'center' }}>Cargando...</div>
@@ -204,7 +262,7 @@ export default function Athletes() {
             {filteredInactive.length > 0 && (
               <div style={{ marginTop: 8 }}>
                 <button onClick={() => setShowInactive(s => !s)}
-                  style={{ width: '100%', background: 'none', border: '1.5px solid var(--border)', borderRadius: 'var(--radius)', padding: '10px 16px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  style={{ width: '100%', background: 'none', borderRadius: 'var(--radius)', padding: '10px 16px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                   <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 800, fontSize: 14, textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--text-muted)' }}>
                     ⛔ Dados de baja ({filteredInactive.length})
                   </span>
@@ -247,6 +305,7 @@ export default function Athletes() {
             {/* Tabs */}
             <div style={{ display: 'flex', gap: 4, padding: '0 16px 12px', overflowX: 'auto' }}>
               <button className={`pill-tab ${detailTab==='profile'?'active':''}`} onClick={() => setDetailTab('profile')}>Perfil</button>
+              <button className={`pill-tab ${detailTab==='nutrition'?'active':''}`} onClick={() => setDetailTab('nutrition')}>Nutrición</button>
               <button className={`pill-tab ${detailTab==='training'?'active':''}`} onClick={() => setDetailTab('training')}>Entrenos</button>
               <button className={`pill-tab ${detailTab==='progress'?'active':''}`} onClick={() => setDetailTab('progress')}>Progreso</button>
             </div>
@@ -274,13 +333,17 @@ export default function Athletes() {
                   <InfoRow icon="🏋️" label="Deporte" val={sheet.sport || '—'} />
                   {sheet.notes && <><div className="divider" /><div style={{ color: 'var(--text-muted)', fontSize: 14 }}>{sheet.notes}</div></>}
                   <div className="divider" />
-                  <NutritionCoach athleteId={sheet.id} />
-                  <div className="divider" />
                   {sheet.status === 'inactive'
                     ? <button className="btn btn-primary btn-full" onClick={() => reactivate(sheet.id)}>✅ Reactivar deportista</button>
                     : <button className="btn btn-danger btn-full" onClick={() => setConfirmDelete(sheet.id)}>⛔ Dar de baja</button>
                   }
                 </>
+              )}
+              {detailTab === 'nutrition' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                  <NutritionCoach athleteId={sheet.id} />
+                  <MedicalDocsCoach athleteId={sheet.id} />
+                </div>
               )}
               {detailTab === 'training' && (
                 <Training athleteId={sheet.id} coachView embedded />
@@ -512,6 +575,31 @@ function InfoRow({ icon, label, val }) {
   )
 }
 
+function MedicalDocsCoach({ athleteId }) {
+  const [docs, setDocs] = useState([])
+  useEffect(() => { Documents.getMedical(athleteId).then(setDocs) }, [athleteId])
+  if (docs.length === 0) return null
+  return (
+    <div style={{ marginTop: 4 }}>
+      <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 8 }}>📄 Documentos médicos</div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+        {docs.map(doc => (
+          <a key={doc.id} href={doc.file_url} target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'none' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', background: 'var(--bg)', borderRadius: 10 }}>
+              <span style={{ fontSize: 20 }}>📄</span>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontWeight: 600, fontSize: 13, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{doc.title}</div>
+                <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{new Date(doc.created_at).toLocaleDateString('es-ES')}</div>
+              </div>
+              <span style={{ fontSize: 12, color: 'var(--accent)', fontWeight: 700 }}>Ver →</span>
+            </div>
+          </a>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 function NutritionCoach({ athleteId }) {
   const toast = useToast()
   const now = new Date()
@@ -575,7 +663,7 @@ function NutritionCoach({ athleteId }) {
           ? <button onClick={startEdit} style={{ background: 'var(--accent-dim)', color: 'var(--accent)', border: 'none', borderRadius: 8, padding: '4px 12px', fontWeight: 700, fontSize: 12, cursor: 'pointer' }}>
               {plan ? '✏️ Editar' : '+ Crear plan'}
             </button>
-          : <button onClick={() => setEditing(false)} style={{ background: 'var(--bg)', color: 'var(--text-muted)', border: '1px solid var(--border)', borderRadius: 8, padding: '4px 12px', fontWeight: 700, fontSize: 12, cursor: 'pointer' }}>Cancelar</button>
+          : <button onClick={() => setEditing(false)} style={{ background: 'var(--bg)', color: 'var(--text-muted)', borderRadius: 8, padding: '4px 12px', fontWeight: 700, fontSize: 12, cursor: 'pointer' }}>Cancelar</button>
         }
       </div>
 
@@ -600,13 +688,13 @@ function NutritionCoach({ athleteId }) {
       </div>
 
       {editing ? (
-        <div style={{ background: 'var(--card)', borderRadius: 16, padding: 14, border: '1px solid var(--border)' }}>
+        <div style={{ background: 'var(--card)', borderRadius: 16, padding: 14 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
             <div style={{ fontWeight: 700, fontSize: 14 }}>{Nutrition.DAY_LABELS[activeDay]}</div>
             <div style={{ display: 'flex', gap: 6 }}>
               {/* Copiar de otro día */}
               <select onChange={e => e.target.value && copyDay(e.target.value)} value=""
-                style={{ fontSize: 11, padding: '3px 6px', borderRadius: 6, border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text-muted)', cursor: 'pointer' }}>
+                style={{ fontSize: 11, padding: '3px 6px', borderRadius: 6, background: 'var(--bg)', color: 'var(--text-muted)', cursor: 'pointer' }}>
                 <option value="">Copiar de...</option>
                 {Nutrition.DAYS.filter(d => d !== activeDay && (days[d]||[]).length > 0).map(d => (
                   <option key={d} value={d}>{Nutrition.DAY_LABELS[d]}</option>
@@ -621,7 +709,7 @@ function NutritionCoach({ athleteId }) {
           )}
 
           {activeMeals.map((meal, idx) => (
-            <div key={idx} style={{ marginBottom: 8, padding: '10px 12px', background: 'var(--bg)', borderRadius: 10, border: '1px solid var(--border)' }}>
+            <div key={idx} style={{ marginBottom: 8, padding: '10px 12px', background: 'var(--bg)', borderRadius: 10 }}>
               <div style={{ display: 'flex', gap: 6, marginBottom: 6 }}>
                 <input className="input" placeholder="Nombre (ej: Desayuno, Comida...)" value={meal.name}
                   onChange={e => updateMeal(idx,'name',e.target.value)}
@@ -630,7 +718,25 @@ function NutritionCoach({ athleteId }) {
               </div>
               <textarea className="input" rows={2} placeholder="Qué comer..." value={meal.content}
                 onChange={e => updateMeal(idx,'content',e.target.value)}
-                style={{ resize: 'vertical', fontSize: 13 }} />
+                style={{ resize: 'vertical', fontSize: 13, marginBottom: 6 }} />
+              {/* Macros opcionales */}
+              <div style={{ display: 'flex', gap: 6 }}>
+                {[
+                  { key: 'kcal', label: 'kcal', color: '#F97316' },
+                  { key: 'protein', label: 'P', color: '#3B82F6' },
+                  { key: 'carbs', label: 'HC', color: '#EAB308' },
+                  { key: 'fat', label: 'G', color: '#8B5CF6' },
+                ].map(({ key, label, color }) => (
+                  <div key={key} style={{ flex: key === 'kcal' ? 2 : 1 }}>
+                    <div style={{ fontSize: 9, color, fontWeight: 700, marginBottom: 2, textTransform: 'uppercase' }}>{label}{key !== 'kcal' ? ' (g)' : ''}</div>
+                    <input type="number" min="0" className="input"
+                      placeholder="—"
+                      value={meal[key] || ''}
+                      onChange={e => updateMeal(idx, key, e.target.value ? Number(e.target.value) : '')}
+                      style={{ fontSize: 12, padding: '4px 6px', textAlign: 'center', width: '100%' }} />
+                  </div>
+                ))}
+              </div>
             </div>
           ))}
 
@@ -648,16 +754,45 @@ function NutritionCoach({ athleteId }) {
           </button>
         </div>
       ) : plan ? (
-        <div style={{ background: 'var(--card)', borderRadius: 16, padding: 14, border: '1px solid var(--border)' }}>
+        <div style={{ background: 'var(--card)', borderRadius: 16, padding: 14 }}>
           <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 10 }}>{Nutrition.DAY_LABELS[activeDay]}</div>
           {(planDays[activeDay]||[]).filter(m => m.content).length === 0
             ? <div style={{ fontSize: 13, color: 'var(--text-muted)', padding: '8px 0' }}>Sin comidas para este día</div>
-            : (planDays[activeDay]||[]).filter(m => m.content).map((meal,i) => (
-                <div key={i} style={{ marginBottom: 8, padding: '8px 12px', background: 'var(--bg)', borderRadius: 10 }}>
-                  {meal.name && <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', marginBottom: 2 }}>{meal.name}</div>}
-                  <div style={{ fontSize: 13 }}>{meal.content}</div>
-                </div>
-              ))
+            : (() => {
+                const meals = (planDays[activeDay]||[]).filter(m => m.content)
+                const totals = meals.reduce((acc, m) => ({
+                  kcal: acc.kcal + (Number(m.kcal)||0),
+                  protein: acc.protein + (Number(m.protein)||0),
+                  carbs: acc.carbs + (Number(m.carbs)||0),
+                  fat: acc.fat + (Number(m.fat)||0),
+                }), { kcal: 0, protein: 0, carbs: 0, fat: 0 })
+                const hasMacros = !!(totals.kcal || totals.protein || totals.carbs || totals.fat)
+                return <>
+                  {meals.map((meal,i) => (
+                    <div key={i} style={{ marginBottom: 8, padding: '8px 12px', background: 'var(--bg)', borderRadius: 10 }}>
+                      {meal.name && <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', marginBottom: 2 }}>{meal.name}</div>}
+                      <div style={{ fontSize: 13, marginBottom: (meal.kcal||meal.protein||meal.carbs||meal.fat) ? 6 : 0, whiteSpace: 'pre-wrap' }}>{meal.content}</div>
+                      {(meal.kcal||meal.protein||meal.carbs||meal.fat) && (
+                        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                          {meal.kcal ? <span style={{ fontSize: 10, fontWeight: 700, color: '#F97316', background: '#FFF7ED', borderRadius: 4, padding: '1px 5px' }}>{meal.kcal} kcal</span> : null}
+                          {meal.protein ? <span style={{ fontSize: 10, fontWeight: 700, color: '#3B82F6', background: '#EFF6FF', borderRadius: 4, padding: '1px 5px' }}>{meal.protein}g prot</span> : null}
+                          {meal.carbs ? <span style={{ fontSize: 10, fontWeight: 700, color: '#EAB308', background: '#FEFCE8', borderRadius: 4, padding: '1px 5px' }}>{meal.carbs}g HC</span> : null}
+                          {meal.fat ? <span style={{ fontSize: 10, fontWeight: 700, color: '#8B5CF6', background: '#F5F3FF', borderRadius: 4, padding: '1px 5px' }}>{meal.fat}g grasa</span> : null}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                  {hasMacros && (
+                    <div style={{ marginTop: 6, padding: '8px 12px', background: 'var(--accent-dim)', borderRadius: 10, display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+                      <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--accent)' }}>Total día:</span>
+                      {totals.kcal ? <span style={{ fontSize: 11, fontWeight: 700, color: '#F97316' }}>{totals.kcal} kcal</span> : null}
+                      {totals.protein ? <span style={{ fontSize: 11, fontWeight: 700, color: '#3B82F6' }}>{totals.protein}g prot</span> : null}
+                      {totals.carbs ? <span style={{ fontSize: 11, fontWeight: 700, color: '#EAB308' }}>{totals.carbs}g HC</span> : null}
+                      {totals.fat ? <span style={{ fontSize: 11, fontWeight: 700, color: '#8B5CF6' }}>{totals.fat}g grasa</span> : null}
+                    </div>
+                  )}
+                </>
+              })()
           }
           {plan.notes && (
             <div style={{ marginTop: 8, padding: '8px 12px', background: 'var(--accent-dim)', borderRadius: 10, borderLeft: '3px solid var(--accent)' }}>
