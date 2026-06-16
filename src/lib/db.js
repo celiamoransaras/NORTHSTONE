@@ -48,12 +48,13 @@ export const Sessions = {
   getByAthlete: async (athleteId) => {
     const { data } = await supabase
       .from('session_athletes')
-      .select('sessions(*, exercises(*), session_athletes(athlete_id, attended))')
+      .select('sessions(*, exercises(*), session_athletes(athlete_id, attended, rpe, rpe_notes, fatigue_pre, fatigue_post, mood_post))')
       .eq('athlete_id', athleteId)
     return (data || []).map(r => r.sessions).filter(Boolean).map(s => ({
       ...s,
       athlete_ids: (s.session_athletes || []).map(sa => sa.athlete_id),
-      attendance: (s.session_athletes || []).reduce((acc, sa) => ({ ...acc, [sa.athlete_id]: sa.attended }), {})
+      attendance: (s.session_athletes || []).reduce((acc, sa) => ({ ...acc, [sa.athlete_id]: sa.attended }), {}),
+      ratings: (s.session_athletes || []).reduce((acc, sa) => ({ ...acc, [sa.athlete_id]: { rpe: sa.rpe, rpe_notes: sa.rpe_notes, fatigue_pre: sa.fatigue_pre, fatigue_post: sa.fatigue_post, mood_post: sa.mood_post } }), {})
     })).sort((a,b) => a.date.localeCompare(b.date))
   },
   getById: async (id) => {
