@@ -1353,28 +1353,30 @@ function AthleteTrainingWithRPE({ athleteId }) {
               {detailSession.notes && <div style={{ color: 'var(--text-muted)', fontSize: 14, marginBottom: 16 }}>{detailSession.notes}</div>}
               {detailSession.exercises?.length > 0 ? (
                 <>
-                  <div className="section-title">Ejercicios</div>
-                  {detailSession.exercises.map((ex, i) => {
-                    const ytId = ex.youtube_url?.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/))([A-Za-z0-9_-]{11})/)?.[1]
-                    return (
-                      <div key={i} style={{ background: 'var(--bg)', borderRadius: 'var(--radius-sm)', padding: 14, marginBottom: 10 }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                          <span style={{ fontWeight: 700, fontSize: 15, flex: 1 }}>{ex.name}</span>
-                          <span style={{ color: 'var(--accent)', fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 800, fontSize: 15, flexShrink: 0, marginLeft: 8 }}>{ex.sets} × {ex.reps}</span>
+                  <div className="section-title">Entrenamientos</div>
+                  {detailSession.exercises.map((ex, i) => (
+                    <div key={i} style={{ background: 'var(--bg)', borderRadius: 'var(--radius-sm)', padding: 14, marginBottom: 10 }}>
+                      <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 6 }}>{ex.name}</div>
+                      {ex.notes && <div style={{ fontSize: 13, color: 'var(--text-muted)', whiteSpace: 'pre-line' }}>{ex.notes}</div>}
+                      {ex.videos?.length > 0 && (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 10 }}>
+                          {ex.videos.map((v, vi) => {
+                            const ytId = v.url?.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/))([A-Za-z0-9_-]{11})/)?.[1]
+                            if (!ytId) return null
+                            return (
+                              <a key={vi} href={`https://www.youtube.com/watch?v=${ytId}`} target="_blank" rel="noopener noreferrer"
+                                style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#FF0000', color: '#fff', padding: '6px 12px', borderRadius: 8, fontSize: 13, fontWeight: 700, textDecoration: 'none' }}>
+                                ▶ {v.label || 'Ver en YouTube'}
+                              </a>
+                            )
+                          })}
                         </div>
-                        {ex.notes && <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 4 }}>{ex.notes}</div>}
-                        {ytId && (
-                          <a href={`https://www.youtube.com/watch?v=${ytId}`} target="_blank" rel="noopener noreferrer"
-                            style={{ display: 'inline-flex', alignItems: 'center', gap: 6, marginTop: 10, background: '#FF0000', color: '#fff', padding: '6px 12px', borderRadius: 8, fontSize: 13, fontWeight: 700, textDecoration: 'none' }}>
-                            ▶ Ver en YouTube
-                          </a>
-                        )}
-                      </div>
-                    )
-                  })}
+                      )}
+                    </div>
+                  ))}
                 </>
               ) : (
-                <div style={{ color: 'var(--text-muted)', fontSize: 14 }}>Sin ejercicios registrados</div>
+                <div style={{ color: 'var(--text-muted)', fontSize: 14 }}>Sin entrenamientos registrados</div>
               )}
               <div className="divider" />
               <div style={{ marginBottom: 16 }}>

@@ -24,7 +24,8 @@ const TYPE_COLOR = {
   strength: '#F59E0B', flexibility: '#10B981', mixed: '#707070'
 }
 const emptyForm = { title: '', date: new Date().toISOString().slice(0,10), type: 'run', duration: 60, notes: '', exercises: [], athlete_ids: [] }
-const emptyExercise = { name: '', sets: 3, reps: '10', notes: '', youtube_url: '' }
+const emptyExercise = { name: '', notes: '', videos: [] }
+const emptyVideo = { label: '', url: '' }
 
 function getYouTubeId(url) {
   const m = url?.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/))([A-Za-z0-9_-]{11})/)
@@ -190,6 +191,9 @@ export default function Training({ athleteId = null, coachView = false, embedded
   const addExercise = () => setForm(f => ({ ...f, exercises: [...f.exercises, { ...emptyExercise, id: crypto.randomUUID() }] }))
   const updateExercise = (idx, data) => setForm(f => ({ ...f, exercises: f.exercises.map((e,i) => i===idx ? {...e,...data} : e) }))
   const removeExercise = (idx) => setForm(f => ({ ...f, exercises: f.exercises.filter((_,i) => i!==idx) }))
+  const addVideo = (idx) => updateExercise(idx, { videos: [...(form.exercises[idx].videos||[]), { ...emptyVideo, id: crypto.randomUUID() }] })
+  const updateVideo = (idx, vIdx, data) => updateExercise(idx, { videos: form.exercises[idx].videos.map((v,i) => i===vIdx ? {...v,...data} : v) })
+  const removeVideo = (idx, vIdx) => updateExercise(idx, { videos: form.exercises[idx].videos.filter((_,i) => i!==vIdx) })
   const toggleAthlete = (id) => setForm(f => ({ ...f, athlete_ids: f.athlete_ids.includes(id) ? f.athlete_ids.filter(x=>x!==id) : [...f.athlete_ids, id] }))
 
   const formatDate = (dateStr) => {
@@ -260,7 +264,7 @@ export default function Training({ athleteId = null, coachView = false, embedded
 
               {detailSession.exercises?.length > 0 && (
                 <>
-                  <div className="section-title">Ejercicios</div>
+                  <div className="section-title">Entrenamientos</div>
                   {detailSession.exercises.map((ex, i) => <ExerciseCard key={i} exercise={ex} />)}
                 </>
               )}
@@ -384,22 +388,30 @@ export default function Training({ athleteId = null, coachView = false, embedded
               </div>
 
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-                <div className="section-title" style={{ margin: 0 }}>Ejercicios</div>
-                <button className="btn btn-ghost btn-sm" onClick={addExercise}>+ Añadir</button>
+                <div className="section-title" style={{ margin: 0 }}>Entrenamientos</div>
+                <button className="btn btn-ghost btn-sm" onClick={addExercise}>+ Añadir entrenamiento</button>
               </div>
               {form.exercises.map((ex, idx) => (
-                <div key={idx} className="card" style={{ marginBottom: 10 }}>
+                <div key={ex.id || idx} className="card" style={{ marginBottom: 10 }}>
                   <div style={{ padding: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
                     <div style={{ display: 'flex', gap: 8 }}>
-                      <input className="input" placeholder="Nombre del ejercicio" value={ex.name} onChange={e => updateExercise(idx,{name:e.target.value})} style={{ flex: 1 }} />
+                      <input className="input" placeholder="Nombre del entrenamiento" value={ex.name} onChange={e => updateExercise(idx,{name:e.target.value})} style={{ flex: 1 }} />
                       <button className="btn btn-ghost btn-sm btn-icon" onClick={() => removeExercise(idx)} style={{ color: 'var(--error)' }}>✕</button>
                     </div>
-                    <div style={{ display: 'flex', gap: 8 }}>
-                      <input className="input" type="number" placeholder="Series" value={ex.sets} onChange={e => updateExercise(idx,{sets:e.target.value})} style={{ width: 72 }} />
-                      <input className="input" placeholder="Reps / Tiempo" value={ex.reps} onChange={e => updateExercise(idx,{reps:e.target.value})} />
+                    <textarea className="input" placeholder={"Escribe aquí el detalle, una línea por ejercicio:\nej. Sentadilla 4x10\nPeso muerto 3x8\nPlancha 3x30s"}
+                      rows={5} value={ex.notes} onChange={e => updateExercise(idx,{notes:e.target.value})} style={{ resize: 'vertical' }} />
+
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 4 }}>
+                      <span style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 600 }}>🎬 Vídeos</span>
+                      <button type="button" className="btn btn-ghost btn-sm" onClick={() => addVideo(idx)}>+ Añadir vídeo</button>
                     </div>
-                    <input className="input" placeholder="🎬 URL de YouTube (opcional)" value={ex.youtube_url} onChange={e => updateExercise(idx,{youtube_url:e.target.value})} />
-                    <input className="input" placeholder="Notas (peso, ritmo...)" value={ex.notes} onChange={e => updateExercise(idx,{notes:e.target.value})} />
+                    {(ex.videos||[]).map((v, vIdx) => (
+                      <div key={v.id || vIdx} style={{ display: 'flex', gap: 6 }}>
+                        <input className="input" placeholder="A qué ejercicio corresponde" value={v.label} onChange={e => updateVideo(idx,vIdx,{label:e.target.value})} style={{ flex: 1 }} />
+                        <input className="input" placeholder="URL de YouTube" value={v.url} onChange={e => updateVideo(idx,vIdx,{url:e.target.value})} style={{ flex: 1 }} />
+                        <button className="btn btn-ghost btn-sm btn-icon" onClick={() => removeVideo(idx,vIdx)} style={{ color: 'var(--error)' }}>✕</button>
+                      </div>
+                    ))}
                   </div>
                 </div>
               ))}
@@ -538,19 +550,23 @@ function CalendarView({ sessions, onSelectDay }) {
 }
 
 function ExerciseCard({ exercise }) {
-  const ytId = getYouTubeId(exercise.youtube_url)
   return (
     <div style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: 14, marginBottom: 10 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 4 }}>
-        <span style={{ fontWeight: 700, fontSize: 15, flex: 1 }}>{exercise.name}</span>
-        <span style={{ color: 'var(--accent)', fontSize: 14, fontWeight: 800, fontFamily: "'Barlow Condensed', sans-serif", flexShrink: 0, marginLeft: 8 }}>{exercise.sets} × {exercise.reps}</span>
-      </div>
-      {exercise.notes && <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 4 }}>{exercise.notes}</div>}
-      {ytId && (
-        <a href={`https://www.youtube.com/watch?v=${ytId}`} target="_blank" rel="noopener noreferrer"
-          style={{ display: 'inline-flex', alignItems: 'center', gap: 6, marginTop: 10, background: '#FF0000', color: '#fff', padding: '6px 12px', borderRadius: 8, fontSize: 13, fontWeight: 700, textDecoration: 'none' }}>
-          ▶ Ver en YouTube
-        </a>
+      <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 6 }}>{exercise.name}</div>
+      {exercise.notes && <div style={{ fontSize: 13, color: 'var(--text-muted)', whiteSpace: 'pre-line' }}>{exercise.notes}</div>}
+      {exercise.videos?.length > 0 && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 10 }}>
+          {exercise.videos.map((v, i) => {
+            const ytId = getYouTubeId(v.url)
+            if (!ytId) return null
+            return (
+              <a key={v.id || i} href={`https://www.youtube.com/watch?v=${ytId}`} target="_blank" rel="noopener noreferrer"
+                style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#FF0000', color: '#fff', padding: '6px 12px', borderRadius: 8, fontSize: 13, fontWeight: 700, textDecoration: 'none' }}>
+                ▶ {v.label || 'Ver en YouTube'}
+              </a>
+            )
+          })}
+        </div>
       )}
     </div>
   )

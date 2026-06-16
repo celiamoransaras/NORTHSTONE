@@ -47,7 +47,8 @@ create table if not exists exercises (
   reps text default '10',
   notes text,
   youtube_url text,
-  sort_order integer default 0
+  sort_order integer default 0,
+  videos jsonb default '[]'::jsonb
 );
 
 -- ---- DEPORTISTAS POR SESIÓN ----

@@ -32,6 +32,11 @@ export const Athletes = {
 }
 
 // ---- SESSIONS ----
+const mapExercises = (exercises) => (exercises || [])
+  .slice()
+  .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
+  .map(e => ({ ...e, videos: e.videos || [] }))
+
 export const Sessions = {
   getAll: async () => {
     const { data } = await supabase
@@ -40,6 +45,7 @@ export const Sessions = {
       .order('date')
     return (data || []).map(s => ({
       ...s,
+      exercises: mapExercises(s.exercises),
       athlete_ids: (s.session_athletes || []).map(sa => sa.athlete_id),
       attendance: (s.session_athletes || []).reduce((acc, sa) => ({ ...acc, [sa.athlete_id]: sa.attended }), {}),
       ratings: (s.session_athletes || []).reduce((acc, sa) => ({ ...acc, [sa.athlete_id]: { rpe: sa.rpe, rpe_notes: sa.rpe_notes, fatigue_pre: sa.fatigue_pre, fatigue_post: sa.fatigue_post, mood_post: sa.mood_post } }), {})
@@ -52,6 +58,7 @@ export const Sessions = {
       .eq('athlete_id', athleteId)
     return (data || []).map(r => r.sessions).filter(Boolean).map(s => ({
       ...s,
+      exercises: mapExercises(s.exercises),
       athlete_ids: (s.session_athletes || []).map(sa => sa.athlete_id),
       attendance: (s.session_athletes || []).reduce((acc, sa) => ({ ...acc, [sa.athlete_id]: sa.attended }), {}),
       ratings: (s.session_athletes || []).reduce((acc, sa) => ({ ...acc, [sa.athlete_id]: { rpe: sa.rpe, rpe_notes: sa.rpe_notes, fatigue_pre: sa.fatigue_pre, fatigue_post: sa.fatigue_post, mood_post: sa.mood_post } }), {})
@@ -64,7 +71,7 @@ export const Sessions = {
       .eq('id', id)
       .single()
     if (!data) return null
-    return { ...data, athlete_ids: (data.session_athletes || []).map(sa => sa.athlete_id) }
+    return { ...data, exercises: mapExercises(data.exercises), athlete_ids: (data.session_athletes || []).map(sa => sa.athlete_id) }
   },
   create: async ({ exercises = [], athlete_ids = [], ...session }) => {
     const { data: newSession } = await supabase.from('sessions').insert(session).select().single()
@@ -73,11 +80,9 @@ export const Sessions = {
     if (exercises.length) {
       await supabase.from('exercises').insert(exercises.map((e, i) => ({
         session_id: newSession.id,
-        name: e.name || 'Ejercicio',
-        sets: parseInt(e.sets) || 3,
-        reps: String(e.reps || '10'),
+        name: e.name || 'Entrenamiento',
         notes: e.notes || null,
-        youtube_url: e.youtube_url || null,
+        videos: (e.videos || []).filter(v => v.url),
         sort_order: i
       })))
     }
@@ -95,11 +100,9 @@ export const Sessions = {
       if (exercises.length) {
         await supabase.from('exercises').insert(exercises.map((e, i) => ({
           session_id: id,
-          name: e.name || 'Ejercicio',
-          sets: parseInt(e.sets) || 3,
-          reps: String(e.reps || '10'),
+          name: e.name || 'Entrenamiento',
           notes: e.notes || null,
-          youtube_url: e.youtube_url || null,
+          videos: (e.videos || []).filter(v => v.url),
           sort_order: i
         })))
       }
