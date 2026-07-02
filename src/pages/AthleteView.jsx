@@ -10,6 +10,7 @@ import { Records } from '../lib/db'
 import { usePushNotifications } from '../hooks/usePushNotifications'
 import { useToast } from '../contexts/ToastContext'
 import { haptic } from '../lib/haptic'
+import { sendPushToCoach } from '../lib/pushNotifications'
 
 const TYPE_ICONS  = { run:'🏃', fuerza:'💪', series:'⚡', endurance:'🫁', especifico:'🎯', ergometros:'🚣', cardio:'❤️', rest_day:'😴', strength:'💪', flexibility:'🧘', mixed:'⚡' }
 const TYPE_COLORS = { run:'#10B981', fuerza:'#F59E0B', series:'#EF4444', endurance:'#3B82F6', especifico:'#8B5CF6', ergometros:'#14B8A6', cardio:'#EC4899', rest_day:'#9CA3AF', strength:'#F59E0B', flexibility:'#10B981', mixed:'#9CA3AF' }
@@ -1173,6 +1174,12 @@ function AthleteTrainingWithRPE({ athleteId }) {
       await RPE.set(detailSession.id, athleteId, { rpe_notes: sessionComment.trim() || null })
       haptic('success')
       toast('Comentario enviado a Celia ✓')
+      const athleteName = profile?.athletes?.name || 'Una deportista'
+      sendPushToCoach({
+        title: `💬 ${athleteName}`,
+        body: sessionComment.trim(),
+        url: '/training',
+      })
     } catch {
       toast('Error al guardar el comentario', 'error')
       haptic('error')

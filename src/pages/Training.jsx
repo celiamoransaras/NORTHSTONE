@@ -3,7 +3,7 @@ import { Sessions, Athletes, RPE } from '../lib/db'
 import ConfirmSheet from '../components/ConfirmSheet'
 import { useToast } from '../contexts/ToastContext'
 import { haptic } from '../lib/haptic'
-import { sendPushToAthletes } from '../lib/pushNotifications'
+import { sendPushToAthletes, sendPushToCoach } from '../lib/pushNotifications'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 
@@ -127,6 +127,13 @@ export default function Training({ athleteId = null, coachView = false, embedded
       ratings: { ...s.ratings, [athleteId]: { ...s.ratings[athleteId], coach_reply: reply } }
     }))
     toast('Respuesta guardada')
+    if (reply) {
+      sendPushToAthletes([athleteId], {
+        title: '💬 Celia ha respondido a tu comentario',
+        body: reply,
+        url: `/?tab=training`,
+      })
+    }
   }
 
   const save = async () => {
