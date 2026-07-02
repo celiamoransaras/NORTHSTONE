@@ -80,7 +80,7 @@ export default function Payments() {
 
   const load = async () => {
     setLoading(true)
-    const ath = await Athletes.getAll()
+    const ath = await Athletes.getActive()
     setAthletes(ath)
     const f = {}
     ath.forEach(a => { if (a.monthly_fee != null) f[a.id] = a.monthly_fee })
@@ -102,7 +102,7 @@ export default function Payments() {
     haptic('success')
     toast('Cuota guardada ✓')
     // Reload to create payment record if it didn't exist
-    const ath = await Athletes.getAll()
+    const ath = await Athletes.getActive()
     const pays = await DB.ensureMonth(ath, month, year)
     setPayments(pays)
   }

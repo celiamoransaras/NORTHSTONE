@@ -59,7 +59,7 @@ export default function Training({ athleteId = null, coachView = false, embedded
     setLoading(true)
     const [sess, ath] = await Promise.all([
       athleteId ? Sessions.getByAthlete(athleteId) : Sessions.getAll(),
-      Athletes.getAll()
+      Athletes.getActive()
     ])
     setSessions(sess)
     setAthletes(ath)

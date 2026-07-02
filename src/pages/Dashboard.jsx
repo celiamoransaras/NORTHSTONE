@@ -33,7 +33,7 @@ export default function Dashboard() {
       const year = now.getFullYear()
       const today = now.toISOString().slice(0, 10)
 
-      const athletes = await Athletes.getAll()
+      const athletes = await Athletes.getActive()
       if (athletes.length > 0) await Payments.ensureMonth(athletes, month, year)
 
       const [sessions, injuries, payments, fatigueAlerts] = await Promise.all([
@@ -254,7 +254,7 @@ function TeamStatsSheet({ onClose }) {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    Promise.all([Athletes.getAll(), Sessions.getAll()]).then(([aths, sess]) => {
+    Promise.all([Athletes.getActive(), Sessions.getAll()]).then(([aths, sess]) => {
       setAthletes(aths)
       setSessions(sess)
       setLoading(false)

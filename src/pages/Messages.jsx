@@ -37,7 +37,7 @@ export default function Messages() {
   const fileRef = useRef(null)
 
   useEffect(() => {
-    Athletes.getAll().then(setAthletes)
+    Athletes.getActive().then(setAthletes)
     // Cargar foto del coach
     supabase.from('profiles').select('avatar_url').eq('role', 'coach').single()
       .then(({ data }) => { if (data?.avatar_url) setCoachAvatar(data.avatar_url) })

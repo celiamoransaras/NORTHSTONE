@@ -10,6 +10,10 @@ export const Athletes = {
     const { data } = await supabase.from('athletes').select('*').order('name')
     return data || []
   },
+  getActive: async () => {
+    const { data } = await supabase.from('athletes').select('*').neq('status', 'inactive').order('name')
+    return data || []
+  },
   getById: async (id) => {
     const { data } = await supabase.from('athletes').select('*').eq('id', id).single()
     return data
