@@ -81,6 +81,7 @@ export default function Athletes() {
   const [confirmDelete, setConfirmDelete] = useState(null)
   const [showInactive, setShowInactive] = useState(false)
   const [detailTab, setDetailTab] = useState('profile')
+  const [progressKey, setProgressKey] = useState(0)
   const [uploadingPhoto, setUploadingPhoto] = useState(false)
 
   const load = async () => {
@@ -111,7 +112,7 @@ export default function Athletes() {
 
   const openNew = () => { setForm(emptyForm); setEditing(null); setSheet('form') }
   const openEdit = (a) => { setForm({ ...a, gender: a.gender || '' }); setEditing(a.id); setSheet('form') }
-  const openDetail = (a) => { setSheet({ ...a }); setDetailTab('profile') }
+  const openDetail = (a) => { setSheet({ ...a }); setDetailTab('profile'); setProgressKey(k => k + 1) }
 
   const save = async () => {
     if (!form.name.trim()) return
@@ -308,7 +309,7 @@ export default function Athletes() {
               <button className={`pill-tab ${detailTab==='profile'?'active':''}`} onClick={() => setDetailTab('profile')}>Perfil</button>
               <button className={`pill-tab ${detailTab==='nutrition'?'active':''}`} onClick={() => setDetailTab('nutrition')}>Nutrición</button>
               <button className={`pill-tab ${detailTab==='training'?'active':''}`} onClick={() => setDetailTab('training')}>Entrenos</button>
-              <button className={`pill-tab ${detailTab==='progress'?'active':''}`} onClick={() => setDetailTab('progress')}>Progreso</button>
+              <button className={`pill-tab ${detailTab==='progress'?'active':''}`} onClick={() => { setDetailTab('progress'); setProgressKey(k => k + 1) }}>Progreso</button>
             </div>
             <div className="sheet-body" style={{ paddingTop: 0 }}>
               {detailTab === 'profile' && (
@@ -350,7 +351,7 @@ export default function Athletes() {
                 <Training athleteId={sheet.id} coachView embedded />
               )}
               {detailTab === 'progress' && (
-                <AthleteProgress athleteId={sheet.id} isFemale={sheet.gender === 'female'} />
+                <AthleteProgress key={`${sheet.id}-${progressKey}`} athleteId={sheet.id} isFemale={sheet.gender === 'female'} />
               )}
             </div>
           </div>
