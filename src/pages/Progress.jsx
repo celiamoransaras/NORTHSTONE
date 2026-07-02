@@ -614,7 +614,12 @@ function WellnessHistory({ athleteId }) {
     Wellness.getByAthlete(athleteId, 14).then(d => setData([...d].reverse()))
   }, [athleteId])
 
-  if (!data.length) return null
+  if (!data.length) return (
+    <div className="card" style={{ padding: '16px 18px' }}>
+      <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 800, fontSize: 16, textTransform: 'uppercase', marginBottom: 6 }}>Bienestar</div>
+      <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>Aún no hay registros de bienestar. Aparecerán aquí cuando se rellene el check-in diario.</div>
+    </div>
+  )
 
   const W = 300, H = 80
   const FIELDS = [
