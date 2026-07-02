@@ -292,6 +292,17 @@ export const Messages = {
     const { data } = supabase.storage.from('chat').getPublicUrl(path)
     return { url: data.publicUrl, type: file.type, name: file.name }
   },
+  getLatestPerGroup: async (groupIds) => {
+    const { data } = await supabase
+      .from('messages')
+      .select('group_id, created_at, sender')
+      .in('group_id', groupIds)
+      .order('created_at', { ascending: false })
+    // Keep only the latest per group
+    const seen = {}
+    ;(data || []).forEach(m => { if (!seen[m.group_id]) seen[m.group_id] = m })
+    return seen
+  },
   subscribe: (group, callback) => {
     return supabase
       .channel(`messages:${group}`)

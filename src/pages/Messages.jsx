@@ -26,6 +26,7 @@ export default function Messages() {
   const [messages, setMessages] = useState([])
   const [reactions, setReactions] = useState({})
   const [reactionTarget, setReactionTarget] = useState(null)
+  const [unread, setUnread] = useState({}) // { [chatId]: true }
   const [input, setInput] = useState('')
   const [uploading, setUploading] = useState(false)
   const [recording, setRecording] = useState(false)
@@ -35,6 +36,38 @@ export default function Messages() {
   const audioChunksRef = useRef([])
   const bottomRef = useRef(null)
   const fileRef = useRef(null)
+
+  const STORAGE_KEY = 'ns_chat_last_read'
+
+  const getLastRead = () => {
+    try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}') } catch { return {} }
+  }
+
+  const markRead = (chatId) => {
+    const stored = getLastRead()
+    stored[chatId] = new Date().toISOString()
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(stored))
+    setUnread(u => { const next = { ...u }; delete next[chatId]; return next })
+  }
+
+  const refreshUnread = async (chatIds) => {
+    if (!chatIds.length) return
+    const latest = await DB.getLatestPerGroup(chatIds)
+    const stored = getLastRead()
+    const newUnread = {}
+    chatIds.forEach(id => {
+      const msg = latest[id]
+      if (!msg) return
+      // Solo contar como no leído si el último mensaje no lo envié yo
+      const senderIsMe = isCoach ? (msg.sender === 'coach' || msg.sender === 'me') : msg.sender === myAthleteId
+      if (senderIsMe) return
+      const lastRead = stored[id]
+      if (!lastRead || new Date(msg.created_at) > new Date(lastRead)) {
+        newUnread[id] = true
+      }
+    })
+    setUnread(newUnread)
+  }
 
   useEffect(() => {
     Athletes.getActive().then(setAthletes)
@@ -46,6 +79,7 @@ export default function Messages() {
   const loadMessages = async () => {
     const msgs = await DB.getGroup(activeChat)
     setMessages(msgs)
+    markRead(activeChat)
     if (!msgs.length) { setReactions({}); return }
     const { data: reactionData } = await supabase.from('message_reactions').select('*').in('message_id', msgs.map(m => m.id))
     const grouped = {}
@@ -165,6 +199,26 @@ export default function Messages() {
     await loadMessages()
   }
 
+  // Cargar no leídos cuando tengamos la lista de chats disponible
+  useEffect(() => {
+    const ids = isCoach
+      ? ['general', ...athletes.map(a => a.id)]
+      : ['general', myAthleteId].filter(Boolean)
+    if (ids.length) refreshUnread(ids)
+  }, [athletes, isCoach, myAthleteId])
+
+  // Refrescar no leídos cuando llega un mensaje en tiempo real (en cualquier chat)
+  useEffect(() => {
+    const ids = isCoach
+      ? ['general', ...athletes.map(a => a.id)]
+      : ['general', myAthleteId].filter(Boolean)
+    if (!ids.length) return
+    const channels = ids
+      .filter(id => id !== activeChat)
+      .map(id => DB.subscribe(id, () => refreshUnread(ids)))
+    return () => channels.forEach(c => c?.unsubscribe())
+  }, [athletes, activeChat, isCoach, myAthleteId])
+
   // Coach ve todos los chats, deportista solo el general y el suyo con la entrenadora
   const chats = isCoach
     ? [
@@ -204,25 +258,31 @@ export default function Messages() {
           {chats.map(c => {
             const isActive = activeChat === c.id
             const athlete = athletes.find(a => a.id === c.id)
+            const hasUnread = !isActive && unread[c.id]
             return (
               <button key={c.id} onClick={() => setActiveChat(c.id)}
                 style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: 8, padding: '8px 14px', borderRadius: 24, border: 'none', cursor: 'pointer', transition: 'all 0.15s',
                   background: isActive ? (c.id === 'general' ? 'var(--accent)' : c.color || 'var(--accent)') : 'var(--card)',
                   boxShadow: isActive ? `0 4px 12px ${c.color || 'var(--accent)'}40` : 'var(--shadow-sm)' }}>
-                <div style={{ width: 28, height: 28, borderRadius: '50%', flexShrink: 0, overflow: 'hidden',
-                  background: isActive ? 'rgba(255,255,255,0.25)' : (c.color ? c.color+'20' : 'var(--border)'),
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: c.icon ? 16 : 11, fontWeight: 800,
-                  color: isActive ? '#fff' : (c.color || 'var(--text-muted)') }}>
-                  {c.id === 'general'
-                    ? c.icon
-                    : (!isCoach && c.id === myAthleteId)
-                      ? (coachAvatar
-                          ? <img src={coachAvatar} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                          : c.icon ? c.icon : initials(c.name))
-                      : athlete?.avatar_url
-                        ? <img src={athlete.avatar_url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                        : c.icon ? c.icon : initials(c.name)}
+                <div style={{ position: 'relative', width: 28, height: 28, flexShrink: 0 }}>
+                  <div style={{ width: 28, height: 28, borderRadius: '50%', overflow: 'hidden',
+                    background: isActive ? 'rgba(255,255,255,0.25)' : (c.color ? c.color+'20' : 'var(--border)'),
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: c.icon ? 16 : 11, fontWeight: 800,
+                    color: isActive ? '#fff' : (c.color || 'var(--text-muted)') }}>
+                    {c.id === 'general'
+                      ? c.icon
+                      : (!isCoach && c.id === myAthleteId)
+                        ? (coachAvatar
+                            ? <img src={coachAvatar} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                            : c.icon ? c.icon : initials(c.name))
+                        : athlete?.avatar_url
+                          ? <img src={athlete.avatar_url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                          : c.icon ? c.icon : initials(c.name)}
+                  </div>
+                  {hasUnread && (
+                    <div style={{ position: 'absolute', top: -2, right: -2, width: 10, height: 10, borderRadius: '50%', background: '#EF4444', border: '2px solid var(--surface)' }} />
+                  )}
                 </div>
                 <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700, fontSize: 13, textTransform: 'uppercase', letterSpacing: '0.3px',
                   color: isActive ? '#fff' : 'var(--text-muted)', whiteSpace: 'nowrap' }}>
