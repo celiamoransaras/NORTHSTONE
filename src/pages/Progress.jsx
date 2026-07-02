@@ -393,7 +393,7 @@ function RpeSparkline({ data }) {
 }
 
 // ---- Check-in diario ----
-function WellnessCheckin({ athleteId }) {
+function WellnessCheckin({ athleteId, onDone }) {
   const [today, setToday] = useState(null)
   const [saving, setSaving] = useState(false)
   const [done, setDone] = useState(false)
@@ -412,6 +412,7 @@ function WellnessCheckin({ athleteId }) {
     await Wellness.upsert({ athlete_id: athleteId, date: new Date().toISOString().slice(0,10), ...today })
     setSaving(false)
     setDone(true)
+    setTimeout(() => onDone?.(), 1200)
     // Alertar al coach si el cansancio o dolor es alto (≥ 4)
     if (today.fatigue >= 4 || today.soreness >= 4) {
       const fatigueLabels = ['', 'A tope', 'Bien', 'Normal', 'Cansado/a', 'Agotado/a']

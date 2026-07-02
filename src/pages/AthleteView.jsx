@@ -1,11 +1,12 @@
 import { useState, useEffect, useRef } from 'react'
 import { useAuth } from '../contexts/AuthContext'
-import { Sessions, Injuries, Payments, Storage, RPE, Athletes as AthletesDB, Cycle, Nutrition, Documents } from '../lib/db'
+import { Sessions, Injuries, Payments, Storage, RPE, Athletes as AthletesDB, Cycle, Nutrition, Documents, Wellness } from '../lib/db'
 import { supabase } from '../lib/supabase'
 import Messages from './Messages'
 import DocsPage from './Documents'
 import Progress from './Progress'
 import { AchievementsHomeSection, StreakBadge, WeeklyPlan, calculateStreak, checkAndUnlockAchievements } from './Achievements'
+import { WellnessCheckin } from './Progress'
 import { Records } from '../lib/db'
 import { usePushNotifications } from '../hooks/usePushNotifications'
 import { useToast } from '../contexts/ToastContext'
@@ -324,6 +325,14 @@ function AthleteHome({ athlete, athleteId }) {
   const [activeInjury, setActiveInjury] = useState(null)
   const [streak, setStreak] = useState(0)
   const [attended, setAttended] = useState(false)
+  const [showWellness, setShowWellness] = useState(false)
+
+  useEffect(() => {
+    if (!athleteId) return
+    Wellness.getToday(athleteId).then(data => {
+      if (!data) setShowWellness(true)
+    })
+  }, [athleteId])
 
   const load = async (isRefresh = false) => {
       try {
@@ -448,6 +457,21 @@ function AthleteHome({ athlete, athleteId }) {
 
   return (
     <div className="page fade-in" ref={scrollRef} onTouchStart={handleTouchStart} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd}>
+      {/* Modal bienestar diario */}
+      {showWellness && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 100, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }}>
+          <div onClick={() => setShowWellness(false)} style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.45)' }} />
+          <div style={{ position: 'relative', background: 'var(--surface)', borderRadius: '20px 20px 0 0', padding: '8px 0 24px', maxHeight: '90vh', overflowY: 'auto' }}>
+            <div style={{ width: 36, height: 4, borderRadius: 2, background: 'var(--border)', margin: '0 auto 16px' }} />
+            <div style={{ padding: '0 16px' }}>
+              <WellnessCheckin athleteId={athleteId} onDone={() => setShowWellness(false)} />
+              <button className="btn btn-ghost btn-full" style={{ marginTop: 8, color: 'var(--text-muted)', fontSize: 13 }} onClick={() => setShowWellness(false)}>
+                Ahora no
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       {/* Pull to refresh indicator */}
       <div style={{ height: refreshing ? 44 : pullY * 0.5, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: pullY === 0 ? 'height 0.3s ease' : 'none', color: 'var(--text-muted)', fontSize: 13 }}>
         {(refreshing || pullY > 30) && <span style={{ animation: refreshing ? 'spin 0.7s linear infinite' : 'none', display: 'inline-block' }}>↻</span>}
