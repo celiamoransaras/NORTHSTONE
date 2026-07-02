@@ -275,9 +275,14 @@ export default function Training({ athleteId = null, coachView = false, embedded
           <div className="sheet">
             <div className="sheet-handle" />
             <div className="sheet-header">
-              <div>
-                <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{formatDate(detailSession.date)}</div>
-                <h3>{detailSession.title}</h3>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                {embedded && (
+                  <button className="btn btn-ghost btn-sm" onClick={() => setSheet(null)} style={{ padding: '4px 8px', fontSize: 18, lineHeight: 1 }}>←</button>
+                )}
+                <div>
+                  <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{formatDate(detailSession.date)}</div>
+                  <h3>{detailSession.title}</h3>
+                </div>
               </div>
               {(!athleteId || coachView) && <button className="btn btn-ghost btn-sm" onClick={() => openEdit(detailSession)}>✏️</button>}
             </div>
