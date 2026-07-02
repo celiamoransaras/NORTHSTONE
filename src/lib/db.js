@@ -45,27 +45,27 @@ export const Sessions = {
   getAll: async () => {
     const { data } = await supabase
       .from('sessions')
-      .select('*, exercises(*), session_athletes(athlete_id, attended, rpe, rpe_notes, fatigue_pre, fatigue_post, mood_post)')
+      .select('*, exercises(*), session_athletes(athlete_id, attended, rpe, rpe_notes, fatigue_pre, fatigue_post, mood_post, coach_reply)')
       .order('date')
     return (data || []).map(s => ({
       ...s,
       exercises: mapExercises(s.exercises),
       athlete_ids: (s.session_athletes || []).map(sa => sa.athlete_id),
       attendance: (s.session_athletes || []).reduce((acc, sa) => ({ ...acc, [sa.athlete_id]: sa.attended }), {}),
-      ratings: (s.session_athletes || []).reduce((acc, sa) => ({ ...acc, [sa.athlete_id]: { rpe: sa.rpe, rpe_notes: sa.rpe_notes, fatigue_pre: sa.fatigue_pre, fatigue_post: sa.fatigue_post, mood_post: sa.mood_post } }), {})
+      ratings: (s.session_athletes || []).reduce((acc, sa) => ({ ...acc, [sa.athlete_id]: { rpe: sa.rpe, rpe_notes: sa.rpe_notes, fatigue_pre: sa.fatigue_pre, fatigue_post: sa.fatigue_post, mood_post: sa.mood_post, coach_reply: sa.coach_reply } }), {})
     }))
   },
   getByAthlete: async (athleteId) => {
     const { data } = await supabase
       .from('session_athletes')
-      .select('sessions(*, exercises(*), session_athletes(athlete_id, attended, rpe, rpe_notes, fatigue_pre, fatigue_post, mood_post))')
+      .select('sessions(*, exercises(*), session_athletes(athlete_id, attended, rpe, rpe_notes, fatigue_pre, fatigue_post, mood_post, coach_reply))')
       .eq('athlete_id', athleteId)
     return (data || []).map(r => r.sessions).filter(Boolean).map(s => ({
       ...s,
       exercises: mapExercises(s.exercises),
       athlete_ids: (s.session_athletes || []).map(sa => sa.athlete_id),
       attendance: (s.session_athletes || []).reduce((acc, sa) => ({ ...acc, [sa.athlete_id]: sa.attended }), {}),
-      ratings: (s.session_athletes || []).reduce((acc, sa) => ({ ...acc, [sa.athlete_id]: { rpe: sa.rpe, rpe_notes: sa.rpe_notes, fatigue_pre: sa.fatigue_pre, fatigue_post: sa.fatigue_post, mood_post: sa.mood_post } }), {})
+      ratings: (s.session_athletes || []).reduce((acc, sa) => ({ ...acc, [sa.athlete_id]: { rpe: sa.rpe, rpe_notes: sa.rpe_notes, fatigue_pre: sa.fatigue_pre, fatigue_post: sa.fatigue_post, mood_post: sa.mood_post, coach_reply: sa.coach_reply } }), {})
     })).sort((a,b) => a.date.localeCompare(b.date))
   },
   getById: async (id) => {
@@ -500,8 +500,11 @@ export const RPE = {
     await supabase.from('session_athletes').update(fields).eq('session_id', sessionId).eq('athlete_id', athleteId)
   },
   get: async (sessionId, athleteId) => {
-    const { data } = await supabase.from('session_athletes').select('rpe, rpe_notes, fatigue_pre, fatigue_post, mood_post').eq('session_id', sessionId).eq('athlete_id', athleteId).single()
+    const { data } = await supabase.from('session_athletes').select('rpe, rpe_notes, fatigue_pre, fatigue_post, mood_post, coach_reply').eq('session_id', sessionId).eq('athlete_id', athleteId).single()
     return data
+  },
+  setCoachReply: async (sessionId, athleteId, reply) => {
+    await supabase.from('session_athletes').update({ coach_reply: reply || null }).eq('session_id', sessionId).eq('athlete_id', athleteId)
   }
 }
 

@@ -1082,6 +1082,7 @@ function AthleteTrainingWithRPE({ athleteId }) {
   const [moodPost, setMoodPost] = useState(0)
   const [rpeNotes, setRpeNotes] = useState('')
   const [sessionComment, setSessionComment] = useState('')
+  const [coachReply, setCoachReply] = useState(null)
   const [savingComment, setSavingComment] = useState(false)
   const [savingPre, setSavingPre] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -1137,6 +1138,7 @@ function AthleteTrainingWithRPE({ athleteId }) {
     if (!detailSession) return
     RPE.get(detailSession.id, athleteId).then(data => {
       setSessionComment(data?.rpe_notes || '')
+      setCoachReply(data?.coach_reply || null)
     })
   }, [detailSession])
 
@@ -1398,6 +1400,12 @@ function AthleteTrainingWithRPE({ athleteId }) {
                   style={{ marginTop: 8 }}>
                   {savingComment ? 'Enviando...' : sessionComment.trim() ? '📨 Enviar comentario' : '📨 Escribe algo para enviar'}
                 </button>
+                {coachReply && (
+                  <div style={{ marginTop: 10, padding: '10px 12px', background: 'var(--accent-dim)', borderRadius: 10, borderLeft: '3px solid var(--accent)' }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: '0.4px', marginBottom: 4 }}>💬 Respuesta de Celia</div>
+                    <div style={{ fontSize: 14, color: 'var(--text)' }}>{coachReply}</div>
+                  </div>
+                )}
               </div>
               <button className="btn btn-primary btn-full" onClick={() => { setDetailSession(null); setRpeSheet(detailSession); setRpe(0) }}>
                 ⭐ Valorar este entrenamiento

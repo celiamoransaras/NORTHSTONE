@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Sessions, Athletes } from '../lib/db'
+import { Sessions, Athletes, RPE } from '../lib/db'
 import ConfirmSheet from '../components/ConfirmSheet'
 import { useToast } from '../contexts/ToastContext'
 import { haptic } from '../lib/haptic'
@@ -42,6 +42,7 @@ export default function Training({ athleteId = null, coachView = false, embedded
   const [detailSession, setDetailSession] = useState(null)
   const [saving, setSaving] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(null)
+  const [replyDraft, setReplyDraft] = useState({}) // { [athleteId]: texto }
   const [tab, setTab] = useState('upcoming')
   const [titleError, setTitleError] = useState(false)
   const toast = useToast()
@@ -107,7 +108,26 @@ export default function Training({ athleteId = null, coachView = false, embedded
     setForm(base); setEditing(null); setSheet('form')
   }
   const openEdit = (s) => { setForm({ ...s, exercises: [...(s.exercises||[])], athlete_ids: [...(s.athlete_ids||[])] }); setEditing(s.id); setSheet('form') }
-  const openDetail = (s) => { setDetailSession(s); setSheet('detail') }
+  const openDetail = (s) => {
+    setDetailSession(s)
+    setSheet('detail')
+    // Precargar borradores con respuestas ya guardadas
+    const drafts = {}
+    Object.entries(s.ratings || {}).forEach(([aid, r]) => {
+      if (r.coach_reply) drafts[aid] = r.coach_reply
+    })
+    setReplyDraft(drafts)
+  }
+
+  const saveReply = async (athleteId) => {
+    const reply = replyDraft[athleteId]?.trim() || null
+    await RPE.setCoachReply(detailSession.id, athleteId, reply)
+    setDetailSession(s => ({
+      ...s,
+      ratings: { ...s.ratings, [athleteId]: { ...s.ratings[athleteId], coach_reply: reply } }
+    }))
+    toast('Respuesta guardada')
+  }
 
   const save = async () => {
     if (!form.title.trim()) {
@@ -303,6 +323,29 @@ export default function Training({ athleteId = null, coachView = false, embedded
                               {r.rpe_notes && (
                                 <div style={{ marginTop: 6, padding: '8px 10px', background: 'var(--bg)', borderRadius: 8, borderLeft: '3px solid var(--accent)', fontSize: 13, color: 'var(--text)', fontStyle: 'italic' }}>
                                   💬 "{r.rpe_notes}"
+                                </div>
+                              )}
+                              {r.rpe_notes && (
+                                <div style={{ marginTop: 6 }}>
+                                  {r.coach_reply && replyDraft[id] === undefined && (
+                                    <div style={{ padding: '6px 10px', background: 'var(--accent-dim)', borderRadius: 8, borderLeft: '3px solid var(--accent)', fontSize: 13, color: 'var(--text)' }}>
+                                      🏋️ "{r.coach_reply}"
+                                    </div>
+                                  )}
+                                  <div style={{ display: 'flex', gap: 6, marginTop: 4 }}>
+                                    <input
+                                      className="input"
+                                      placeholder="Responder al comentario…"
+                                      value={replyDraft[id] ?? r.coach_reply ?? ''}
+                                      onChange={e => setReplyDraft(d => ({ ...d, [id]: e.target.value }))}
+                                      style={{ flex: 1, fontSize: 13, padding: '6px 10px' }}
+                                    />
+                                    <button
+                                      className="btn btn-primary btn-sm"
+                                      onClick={() => saveReply(id)}
+                                      style={{ flexShrink: 0 }}
+                                    >Enviar</button>
+                                  </div>
                                 </div>
                               )}
                             </div>
