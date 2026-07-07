@@ -3,7 +3,7 @@ import { useLocation } from 'react-router-dom'
 import { Athletes as DB, Sessions, Storage, Cycle, Nutrition, Documents } from '../lib/db'
 import { supabase } from '../lib/supabase'
 import Training from './Training'
-import { GoalsSection, RecordsSection, LoadChart, WellnessTodayCoach, WellnessHistory, MonthlyReport } from './Progress'
+import { GoalsSection, RecordsSection, LoadChart, WellnessTodayCoach, WellnessHistory, MonthlyReport, WeightCoach } from './Progress'
 import { useToast } from '../contexts/ToastContext'
 import { sendPushToAthletes } from '../lib/pushNotifications'
 
@@ -328,6 +328,7 @@ export default function Athletes() {
                   <WeeklyAdherence athleteId={sheet.id} color={sheet.color} />
                   <div style={{ marginBottom: 16 }}>
                     <WellnessTodayCoach athleteId={sheet.id} athleteName={sheet.name} />
+                    <WeightCoach athleteId={sheet.id} athleteName={sheet.name} />
                   </div>
                   <InfoRow icon="✉️" label="Email" val={sheet.email || '—'} />
                   <InfoRow icon="📱" label="Teléfono" val={sheet.phone || '—'} />

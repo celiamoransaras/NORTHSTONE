@@ -554,3 +554,28 @@ export const Nutrition = {
     return data || null
   }
 }
+
+
+// ---- WEIGHT LOGS ----
+export const WeightLog = {
+  add: async (athleteId, date, weight, notes = null) => {
+    await supabase.from('weight_logs').upsert(
+      { athlete_id: athleteId, date, weight, notes },
+      { onConflict: 'athlete_id,date' }
+    )
+  },
+  getByAthlete: async (athleteId, limit = 50) => {
+    const { data } = await supabase.from('weight_logs').select('*')
+      .eq('athlete_id', athleteId)
+      .order('date', { ascending: true })
+      .limit(limit)
+    return data || []
+  },
+  getLast: async (athleteId) => {
+    const { data } = await supabase.from('weight_logs').select('*')
+      .eq('athlete_id', athleteId)
+      .order('date', { ascending: false })
+      .limit(1)
+    return data?.[0] || null
+  }
+}

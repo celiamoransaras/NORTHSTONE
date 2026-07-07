@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
-import { Records, Goals, Wellness } from '../lib/db'
+import { Records, Goals, Wellness, WeightLog } from '../lib/db'
 import { supabase } from '../lib/supabase'
 import ConfirmSheet from '../components/ConfirmSheet'
 import { useToast } from '../contexts/ToastContext'
@@ -1219,6 +1219,138 @@ function RecordsSection({ athleteId, canEdit }) {
   )
 }
 
+// ---- Registro de peso libre ----
+export function WeightSection({ athleteId }) {
+  const { toast } = useToast()
+  const [logs, setLogs] = useState([])
+  const [input, setInput] = useState('')
+  const [saving, setSaving] = useState(false)
+  const today = new Date().toISOString().slice(0, 10)
+
+  useEffect(() => {
+    WeightLog.getByAthlete(athleteId).then(setLogs)
+  }, [athleteId])
+
+  const save = async () => {
+    const val = parseFloat(input.replace(',', '.'))
+    if (!val || val < 20 || val > 300) return toast('Introduce un peso válido', 'error')
+    setSaving(true)
+    await WeightLog.add(athleteId, today, val)
+    const updated = await WeightLog.getByAthlete(athleteId)
+    setLogs(updated)
+    setInput('')
+    setSaving(false)
+    toast('Peso guardado')
+    haptic('light')
+  }
+
+  const first = logs[0]
+  const last = logs[logs.length - 1]
+  const diff = first && last && logs.length > 1 ? (last.weight - first.weight).toFixed(1) : null
+
+  // Gráfica SVG simple
+  const chartW = 320, chartH = 100
+  const points = logs.slice(-20)
+  const minW = points.length ? Math.min(...points.map(p => p.weight)) - 1 : 0
+  const maxW = points.length ? Math.max(...points.map(p => p.weight)) + 1 : 100
+  const toX = (i) => (i / Math.max(points.length - 1, 1)) * (chartW - 24) + 12
+  const toY = (w) => chartH - 16 - ((w - minW) / (maxW - minW || 1)) * (chartH - 32)
+  const pathD = points.map((p, i) => `${i === 0 ? 'M' : 'L'} ${toX(i)} ${toY(p.weight)}`).join(' ')
+
+  return (
+    <div className="card" style={{ padding: '18px 16px' }}>
+      <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 800, fontSize: 16, textTransform: 'uppercase', marginBottom: 14 }}>
+        Peso corporal
+      </div>
+
+      {/* Input */}
+      <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+        <div style={{ position: 'relative', flex: 1 }}>
+          <input
+            type="number"
+            inputMode="decimal"
+            placeholder="ej. 68.5"
+            value={input}
+            onChange={e => setInput(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && save()}
+            style={{ width: '100%', padding: '10px 36px 10px 12px', borderRadius: 10, border: '1.5px solid var(--border)', background: 'var(--surface)', fontSize: 15, color: 'var(--text)', boxSizing: 'border-box' }}
+          />
+          <span style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', fontSize: 12, color: 'var(--text-muted)', fontWeight: 700 }}>kg</span>
+        </div>
+        <button onClick={save} disabled={saving || !input} style={{ padding: '10px 18px', borderRadius: 10, background: 'var(--accent)', color: '#fff', fontWeight: 800, fontSize: 14, border: 'none', cursor: saving || !input ? 'not-allowed' : 'pointer', opacity: saving || !input ? 0.5 : 1, fontFamily: "'Barlow Condensed', sans-serif", textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+          Guardar
+        </button>
+      </div>
+
+      {/* Gráfica */}
+      {points.length >= 2 ? (
+        <>
+          <svg width="100%" viewBox={`0 0 ${chartW} ${chartH}`} style={{ display: 'block', marginBottom: 8 }}>
+            <defs>
+              <linearGradient id="wgrad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="var(--accent)" stopOpacity="0.15" />
+                <stop offset="100%" stopColor="var(--accent)" stopOpacity="0" />
+              </linearGradient>
+            </defs>
+            <path d={`${pathD} L ${toX(points.length - 1)} ${chartH} L ${toX(0)} ${chartH} Z`} fill="url(#wgrad)" />
+            <path d={pathD} fill="none" stroke="var(--accent)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            {points.map((p, i) => (
+              <circle key={i} cx={toX(i)} cy={toY(p.weight)} r={i === points.length - 1 ? 4 : 2.5} fill="var(--accent)" />
+            ))}
+            <text x={toX(points.length - 1)} y={toY(last.weight) - 8} textAnchor="middle" fontSize={10} fontWeight={800} fill="var(--accent)">{last.weight} kg</text>
+          </svg>
+
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: 'var(--text-muted)' }}>
+            <span>{new Date(first.date + 'T12:00:00').toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })} · {first.weight} kg</span>
+            {diff !== null && (
+              <span style={{ fontWeight: 700, color: parseFloat(diff) < 0 ? 'var(--success)' : parseFloat(diff) > 0 ? 'var(--error)' : 'var(--text-muted)' }}>
+                {parseFloat(diff) > 0 ? '+' : ''}{diff} kg
+              </span>
+            )}
+          </div>
+        </>
+      ) : logs.length === 1 ? (
+        <div style={{ fontSize: 13, color: 'var(--text-muted)', textAlign: 'center', padding: '8px 0' }}>
+          Último registro: <strong>{last.weight} kg</strong> · Añade más para ver la evolución
+        </div>
+      ) : (
+        <div style={{ fontSize: 13, color: 'var(--text-muted)', textAlign: 'center', padding: '8px 0' }}>
+          Apunta tu peso cuando quieras y verás tu evolución aquí
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ---- Último peso para el coach ----
+export function WeightCoach({ athleteId, athleteName }) {
+  const [last, setLast] = useState(undefined)
+
+  useEffect(() => {
+    WeightLog.getLast(athleteId).then(setLast)
+  }, [athleteId])
+
+  if (last === undefined) return null
+  if (!last) return null
+
+  const daysAgo = Math.floor((new Date() - new Date(last.date + 'T12:00:00')) / 86400000)
+  const label = daysAgo === 0 ? 'Hoy' : daysAgo === 1 ? 'Ayer' : `Hace ${daysAgo} días`
+
+  return (
+    <div className="card" style={{ padding: '14px 16px', marginBottom: 4 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div>
+          <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 800, fontSize: 15, textTransform: 'uppercase' }}>Peso</div>
+          <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>{label}</div>
+        </div>
+        <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 900, fontSize: 28, color: 'var(--text)' }}>
+          {last.weight} <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-muted)' }}>kg</span>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ---- Página principal ----
 export default function Progress({ athleteId, sessions = [], isCoach = false, isFemale = false }) {
   return (
@@ -1243,6 +1375,9 @@ export default function Progress({ athleteId, sessions = [], isCoach = false, is
 
         {/* Historial bienestar */}
         {!isCoach && <WellnessHistory athleteId={athleteId} />}
+
+        {/* Peso corporal */}
+        {!isCoach && <WeightSection athleteId={athleteId} />}
 
         {/* Objetivos */}
         <GoalsSection athleteId={athleteId} canCreate={isCoach} />
