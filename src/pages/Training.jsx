@@ -120,7 +120,9 @@ export default function Training({ athleteId = null, coachView = false, embedded
   }
 
   const saveReply = async (athleteId) => {
-    const reply = replyDraft[athleteId]?.trim() || null
+    // Si el draft está sin definir (nunca se tocó el input), leer el valor actual del campo
+    const draftVal = replyDraft[athleteId]
+    const reply = (draftVal !== undefined ? draftVal : detailSession.ratings?.[athleteId]?.coach_reply ?? '')?.trim() || null
     await RPE.setCoachReply(detailSession.id, athleteId, reply)
     setDetailSession(s => ({
       ...s,

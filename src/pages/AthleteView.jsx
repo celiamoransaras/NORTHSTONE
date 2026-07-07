@@ -1198,12 +1198,10 @@ function AthleteTrainingWithRPE({ athleteId }) {
       await RPE.set(detailSession.id, athleteId, { rpe_notes: sessionComment.trim() || null })
       haptic('success')
       toast('Comentario enviado a Celia ✓')
-      const athleteName = profile?.athletes?.name || 'Una deportista'
-      sendPushToCoach({
-        title: `💬 ${athleteName}`,
-        body: sessionComment.trim(),
-        url: '/training',
-      })
+      try {
+        const athleteName = profile?.athletes?.name || 'Una deportista'
+        sendPushToCoach({ title: `💬 ${athleteName}`, body: sessionComment.trim(), url: '/training' })
+      } catch { /* notificación opcional, no bloquear */ }
     } catch {
       toast('Error al guardar el comentario', 'error')
       haptic('error')

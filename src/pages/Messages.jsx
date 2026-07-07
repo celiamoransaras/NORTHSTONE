@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useLocation } from 'react-router-dom'
 import { Messages as DB, Athletes, Reactions } from '../lib/db'
 import { useAuth } from '../contexts/AuthContext'
@@ -50,7 +50,7 @@ export default function Messages() {
     setUnread(u => { const next = { ...u }; delete next[chatId]; return next })
   }
 
-  const refreshUnread = async (chatIds) => {
+  const refreshUnread = useCallback(async (chatIds) => {
     if (!chatIds.length) return
     const latest = await DB.getLatestPerGroup(chatIds)
     const stored = getLastRead()
@@ -58,7 +58,6 @@ export default function Messages() {
     chatIds.forEach(id => {
       const msg = latest[id]
       if (!msg) return
-      // Solo contar como no leído si el último mensaje no lo envié yo
       const senderIsMe = isCoach ? (msg.sender === 'coach' || msg.sender === 'me') : msg.sender === myAthleteId
       if (senderIsMe) return
       const lastRead = stored[id]
@@ -67,7 +66,7 @@ export default function Messages() {
       }
     })
     setUnread(newUnread)
-  }
+  }, [isCoach, myAthleteId])
 
   useEffect(() => {
     Athletes.getActive().then(setAthletes)
@@ -217,7 +216,7 @@ export default function Messages() {
       .filter(id => id !== activeChat)
       .map(id => DB.subscribe(id, () => refreshUnread(ids)))
     return () => channels.forEach(c => c?.unsubscribe())
-  }, [athletes, activeChat, isCoach, myAthleteId])
+  }, [athletes, activeChat, isCoach, myAthleteId, refreshUnread])
 
   // Coach ve todos los chats, deportista solo el general y el suyo con la entrenadora
   const chats = isCoach
