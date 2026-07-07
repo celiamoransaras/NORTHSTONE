@@ -166,17 +166,36 @@ export default function Training({ athleteId = null, coachView = false, embedded
         safeForm.athlete_ids = [...safeForm.athlete_ids, athleteId]
       }
       if (editing) {
+        const prev = sessions.find(s => s.id === editing)
         await Sessions.update(editing, safeForm)
+        // Notificar si cambia la fecha o se añaden deportistas nuevos
+        const newAthletes = (safeForm.athlete_ids || []).filter(id => !prev?.athlete_ids?.includes(id))
+        const dateChanged = prev?.date !== safeForm.date
+        if (newAthletes.length || dateChanged) {
+          const dateLabel = new Date(safeForm.date + 'T12:00:00').toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })
+          const targets = newAthletes.length ? newAthletes : safeForm.athlete_ids || []
+          if (targets.length) {
+            try {
+              sendPushToAthletes(targets, {
+                title: dateChanged ? '📅 Sesión modificada' : '📅 Nueva sesión asignada',
+                body: `${safeForm.title} · ${dateLabel}`,
+                url: '/?tab=training',
+              })
+            } catch { /* notificación opcional */ }
+          }
+        }
       } else {
         await Sessions.create(safeForm)
         // Notificar a los deportistas convocados
         if (safeForm.athlete_ids?.length) {
           const dateLabel = new Date(safeForm.date + 'T12:00:00').toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })
-          sendPushToAthletes(safeForm.athlete_ids, {
-            title: '📅 Nueva sesión asignada',
-            body: `${safeForm.title} · ${dateLabel}`,
-            url: '/',
-          })
+          try {
+            sendPushToAthletes(safeForm.athlete_ids, {
+              title: '📅 Nueva sesión asignada',
+              body: `${safeForm.title} · ${dateLabel}`,
+              url: '/?tab=training',
+            })
+          } catch { /* notificación opcional */ }
         }
       }
       await load()
