@@ -39,6 +39,7 @@ export default function AthleteView() {
   })
   const [unreadMessages, setUnreadMessages] = useState(0)
   const [unratedCount, setUnratedCount] = useState(0)
+  const [openSessionId, setOpenSessionId] = useState(null)
   const [profileOpen, setProfileOpen] = useState(false)
   const { subscribed: pushSubscribed, loading: pushLoading, supported: pushSupported, enable: enablePush, disable: disablePush } = usePushNotifications({ athleteId })
   const [uploadingAvatar, setUploadingAvatar] = useState(false)
@@ -50,43 +51,50 @@ export default function AthleteView() {
   const [tabKey, setTabKey] = useState(0)
   const TAB_ORDER = ['home', 'training', 'nutrition', 'progress', 'messages']
 
-  // Mensajes no leídos
+  // Mensajes no leídos — usa la misma clave que Messages.jsx
   useEffect(() => {
+    if (!athleteId) return
+    const chatIds = ['general', athleteId]
     const checkUnread = async () => {
-      let lastRead = localStorage.getItem('chat_last_read_athlete')
-      if (!lastRead) {
-        lastRead = new Date().toISOString()
-        localStorage.setItem('chat_last_read_athlete', lastRead)
-      }
-      const { count } = await supabase.from('messages').select('*', { count: 'exact', head: true })
-        .eq('sender', 'coach').gt('created_at', lastRead)
-      setUnreadMessages(count || 0)
+      const stored = (() => { try { return JSON.parse(localStorage.getItem('ns_chat_last_read') || '{}') } catch { return {} } })()
+      const { data } = await supabase.from('messages').select('group_id, created_at, sender')
+        .in('group_id', chatIds).order('created_at', { ascending: false }).limit(chatIds.length * 10)
+      const latest = {}
+      ;(data || []).forEach(m => { if (!latest[m.group_id]) latest[m.group_id] = m })
+      const count = chatIds.filter(id => {
+        const msg = latest[id]
+        if (!msg) return false
+        if (msg.sender === athleteId) return false
+        const lastRead = stored[id]
+        return !lastRead || new Date(msg.created_at) > new Date(lastRead)
+      }).length
+      setUnreadMessages(count)
     }
     checkUnread()
-    const channel = supabase.channel('unread_athlete')
+    const channel = supabase.channel('unread_athlete_' + athleteId)
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, checkUnread)
       .subscribe()
     return () => channel.unsubscribe()
-  }, [])
+  }, [athleteId])
 
   useEffect(() => {
-    if (tab === 'messages') {
-      localStorage.setItem('chat_last_read_athlete', new Date().toISOString())
-      setUnreadMessages(0)
-    }
+    if (tab === 'messages') setUnreadMessages(0)
   }, [tab])
 
-  // Entrenos pasados sin valorar
+  // Entrenos pasados sin valorar + respuestas de coach sin leer
   useEffect(() => {
     if (!athleteId) return
     const fetchUnrated = async () => {
       const today = new Date().toISOString().slice(0, 10)
       const { data: assigned } = await supabase
-        .from('session_athletes').select('session_id, rpe, sessions!inner(date)')
+        .from('session_athletes').select('session_id, rpe, coach_reply, sessions!inner(date)')
         .eq('athlete_id', athleteId)
         .lt('sessions.date', today)
       if (!assigned?.length) return
-      setUnratedCount(assigned.filter(r => r.rpe == null).length)
+      const unrated = assigned.filter(r => r.rpe == null).length
+      const seen = (() => { try { return JSON.parse(localStorage.getItem('ns_seen_replies') || '[]') } catch { return [] } })()
+      const unreadReplies = assigned.filter(r => r.coach_reply && !seen.includes(r.session_id)).length
+      setUnratedCount(unrated + unreadReplies)
     }
     fetchUnrated()
   }, [athleteId, tab])
@@ -208,8 +216,8 @@ export default function AthleteView() {
       {/* Content */}
       <main style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
         <div key={tabKey} style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', animation: `tabSlide${tabDir > 0 ? 'Right' : 'Left'} 0.22s cubic-bezier(0.16,1,0.3,1) both` }}>
-          {tab === 'home'      && <AthleteHome athlete={athlete} athleteId={athleteId} />}
-          {tab === 'training'  && <AthleteTrainingWithRPE athleteId={athleteId} />}
+          {tab === 'home'      && <AthleteHome athlete={athlete} athleteId={athleteId} onOpenSession={s => { setTabDir(1); setTabKey(k=>k+1); setTab('training'); setOpenSessionId(s.id) }} />}
+          {tab === 'training'  && <AthleteTrainingWithRPE athleteId={athleteId} initialSessionId={openSessionId} onSessionOpened={() => setOpenSessionId(null)} />}
           {tab === 'health'    && <AthleteHealth athleteId={athleteId} />}
           {tab === 'nutrition' && <AthleteNutrition athleteId={athleteId} />}
           {tab === 'progress'  && <AthleteProgressTab athleteId={athleteId} isFemale={athlete?.gender === 'female'} />}
@@ -314,7 +322,7 @@ function Badge({ count, color = 'var(--error)' }) {
 }
 
 // ---- Inicio del deportista ----
-function AthleteHome({ athlete, athleteId }) {
+function AthleteHome({ athlete, athleteId, onOpenSession }) {
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [pullY, setPullY] = useState(0)
@@ -500,7 +508,7 @@ function AthleteHome({ athlete, athleteId }) {
             {/* 1. SESIÓN DE HOY — lo más importante */}
             <div className="section-title">Hoy</div>
             {todaySession ? (
-              <div className="card" style={{ padding: '16px', borderLeft: `4px solid ${athlete.color}` }}>
+              <div className="card" style={{ padding: '16px', borderLeft: `4px solid ${athlete.color}`, cursor: 'pointer' }} onClick={() => onOpenSession?.(todaySession)}>
                 <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginBottom: 14 }}>
                   <div style={{ width: 48, height: 48, borderRadius: 14, background: `${athlete.color}18`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24, flexShrink: 0 }}>
                     {TYPE_ICONS[todaySession.type] || '📅'}
@@ -511,7 +519,7 @@ function AthleteHome({ athlete, athleteId }) {
                       {todaySession.duration} min{todaySession.type ? ` · ${TYPE_LABELS[todaySession.type] || todaySession.type}` : ''}
                     </div>
                   </div>
-                  {attended && <span className="badge badge-green">✓ Hecha</span>}
+                  {attended ? <span className="badge badge-green">✓ Hecha</span> : <span style={{ fontSize: 18, opacity: 0.4 }}>›</span>}
                 </div>
                 {todaySession.description && (
                   <div style={{ fontSize: 13, color: 'var(--text-muted)', background: 'var(--bg)', borderRadius: 10, padding: '10px 12px', marginBottom: 14, lineHeight: 1.5 }}>
@@ -1095,7 +1103,7 @@ function AthleteProgressTab({ athleteId, isFemale }) {
 }
 
 // ---- Entrenos con RPE ----
-function AthleteTrainingWithRPE({ athleteId }) {
+function AthleteTrainingWithRPE({ athleteId, initialSessionId, onSessionOpened }) {
   const [sessions, setSessions] = useState([])
   const [loading, setLoading] = useState(true)
   const [rpeSheet, setRpeSheet] = useState(null)
@@ -1113,11 +1121,22 @@ function AthleteTrainingWithRPE({ athleteId }) {
   const [saving, setSaving] = useState(false)
   const [attendanceMap, setAttendanceMap] = useState({})
 
+  const getSeenReplies = () => { try { return JSON.parse(localStorage.getItem('ns_seen_replies') || '[]') } catch { return [] } }
+  const markReplyAsSeen = (sessionId) => {
+    const seen = getSeenReplies()
+    if (!seen.includes(sessionId)) { seen.push(sessionId); localStorage.setItem('ns_seen_replies', JSON.stringify(seen)) }
+  }
+
   const loadSessions = () => Sessions.getByAthlete(athleteId).then(data => { setSessions(data); setLoading(false) })
 
+  useEffect(() => { loadSessions() }, [athleteId])
+
+  // Abrir sesión directamente si viene desde la card de hoy
   useEffect(() => {
-    loadSessions()
-  }, [athleteId])
+    if (!initialSessionId || !sessions.length) return
+    const s = sessions.find(s => s.id === initialSessionId)
+    if (s) { setDetailSession(s); onSessionOpened?.() }
+  }, [initialSessionId, sessions])
 
   // Realtime: sesiones nuevas, editadas o eliminadas
   useEffect(() => {
@@ -1164,6 +1183,7 @@ function AthleteTrainingWithRPE({ athleteId }) {
     RPE.get(detailSession.id, athleteId).then(data => {
       setSessionComment(data?.rpe_notes || '')
       setCoachReply(data?.coach_reply || null)
+      if (data?.coach_reply) markReplyAsSeen(detailSession.id)
     })
   }, [detailSession])
 
@@ -1310,6 +1330,7 @@ function AthleteTrainingWithRPE({ athleteId }) {
               const color = TYPE_COLORS[s.type] || 'var(--accent)'
               const icon = TYPE_ICONS[s.type] || '📅'
               const attended = attendanceMap[s.id] || false
+              const hasUnseenReply = s.ratings?.[athleteId]?.coach_reply && !getSeenReplies().includes(s.id)
               return (
                 <div key={s.id} className="card" style={{ padding: '14px 16px', cursor: 'pointer' }} onClick={() => setDetailSession(s)}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -1319,7 +1340,9 @@ function AthleteTrainingWithRPE({ athleteId }) {
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 600, fontFamily: "'Barlow Condensed', sans-serif", textTransform: 'uppercase' }}>{formatDate(s.date)}</div>
                       <div style={{ fontWeight: 700, fontSize: 15 }}>{s.title}</div>
-                      {s.exercises?.length > 0 && <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 1 }}>📋 {s.exercises.length} ejercicios</div>}
+                      {hasUnseenReply
+                        ? <div style={{ fontSize: 12, color: 'var(--accent)', fontWeight: 700, marginTop: 1 }}>💬 Celia ha respondido</div>
+                        : s.exercises?.length > 0 && <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 1 }}>📋 {s.exercises.length} ejercicios</div>}
                     </div>
                     <button onClick={e => { e.stopPropagation(); setRpeSheet(s); setRpe(0) }}
                       className="btn btn-sm"
