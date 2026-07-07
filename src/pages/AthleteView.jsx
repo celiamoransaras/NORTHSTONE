@@ -1203,6 +1203,11 @@ function AthleteTrainingWithRPE({ athleteId, initialSessionId, onSessionOpened }
       setRpe(0); setFatiguePost(0); setMoodPost(0)
       haptic('success')
       toast('Valoración guardada ✓')
+      try {
+        const name = profile?.athletes?.name || 'Una deportista'
+        const rpeLabel = rpe ? ` · RPE ${rpe}/10` : ''
+        sendPushToCoach({ title: `💪 ${name} valoró un entreno`, body: `${rpeSheet.title}${rpeLabel}`, url: '/training' })
+      } catch { /* notificación opcional */ }
     } catch {
       toast('Error al guardar la valoración', 'error')
       haptic('error')
