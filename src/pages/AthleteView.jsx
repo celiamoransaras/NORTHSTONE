@@ -576,7 +576,7 @@ function AthleteHome({ athlete, athleteId, onOpenSession }) {
             </div>
 
             {/* 3. CALENDARIO SEMANAL */}
-            <WeeklyPlan sessions={allSessions} />
+            <WeeklyPlan sessions={allSessions} athleteId={athleteId} onOpenSession={onOpenSession} />
 
             {/* 4. LESIÓN ACTIVA (alerta) */}
             {activeInjury && (

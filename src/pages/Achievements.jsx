@@ -245,7 +245,7 @@ export function AchievementsHomeSection({ athleteId }) {
   )
 }
 
-export function WeeklyPlan({ sessions }) {
+export function WeeklyPlan({ sessions, athleteId, onOpenSession }) {
   const TYPE_COLORS = { run: '#10B981', fuerza: '#F59E0B', series: '#EF4444', endurance: '#3B82F6', especifico: '#8B5CF6', ergometros: '#14B8A6', cardio: '#EC4899', rest_day: '#9CA3AF' }
   const TYPE_ICONS = { run: '🏃', fuerza: '💪', series: '⚡', endurance: '🫁', especifico: '🎯', ergometros: '🚣', cardio: '❤️', rest_day: '😴' }
 
@@ -268,23 +268,58 @@ export function WeeklyPlan({ sessions }) {
   return (
     <div style={{ background: 'var(--card)', borderRadius: 22, padding: '18px 16px', border: '1.5px solid var(--border)', boxShadow: '0 2px 12px rgba(0,0,0,0.05)' }}>
       <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 800, fontSize: 12, textTransform: 'uppercase', letterSpacing: '1.5px', color: 'var(--text-muted)', marginBottom: 14 }}>Semana actual</div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 6 }}>
         {week.map((day, i) => {
           const dateStr = day.toISOString().slice(0,10)
           const daySessions = sessions.filter(s => s.date === dateStr)
           const isToday = dateStr === todayStr
           const isPast = dateStr < todayStr
+          const s = daySessions[0]
+          const attended = s && athleteId ? s.attendance?.[athleteId] === true : false
+          const typeColor = s ? (TYPE_COLORS[s.type] || 'var(--accent)') : null
+
+          let circleBg = 'transparent'
+          let circleBorder = '1.5px solid var(--border)'
+          let circleTextColor = 'var(--text-muted)'
+          if (isToday) {
+            circleBg = 'var(--accent)'
+            circleBorder = 'none'
+            circleTextColor = '#fff'
+          } else if (isPast && attended) {
+            circleBg = '#10B981'
+            circleBorder = 'none'
+            circleTextColor = '#fff'
+          } else if (isPast && s) {
+            circleBg = 'transparent'
+            circleBorder = '1.5px solid #10B98150'
+            circleTextColor = 'var(--text-muted)'
+          } else if (!isPast && s) {
+            circleBg = `${typeColor}20`
+            circleBorder = `1.5px solid ${typeColor}`
+            circleTextColor = 'var(--text)'
+          }
+
           return (
-            <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+            <div
+              key={i}
+              onClick={() => s && onOpenSession?.(s)}
+              style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, cursor: s ? 'pointer' : 'default' }}
+            >
               <div style={{ fontSize: 9, fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 800, color: isToday ? 'var(--accent)' : 'var(--text-muted)', textTransform: 'uppercase' }}>{DAYS[i]}</div>
-              <div style={{ width: 32, height: 32, borderRadius: 10, background: isToday ? 'var(--accent)' : 'transparent', border: isToday ? 'none' : `1.5px solid ${daySessions.length > 0 ? 'var(--accent)' : 'var(--border)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <span style={{ fontSize: 12, fontWeight: isToday ? 800 : 500, color: isToday ? '#fff' : isPast ? 'var(--text-muted)' : 'var(--text)' }}>{day.getDate()}</span>
+              <div style={{ width: 34, height: 34, borderRadius: 10, background: circleBg, border: circleBorder, display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.15s' }}>
+                {isPast && attended
+                  ? <span style={{ fontSize: 14 }}>✓</span>
+                  : <span style={{ fontSize: 11, fontWeight: 700, color: circleTextColor }}>{day.getDate()}</span>
+                }
               </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 2, alignItems: 'center' }}>
-                {daySessions.map(s => (
-                  <div key={s.id} style={{ fontSize: 14 }} title={s.title}>{TYPE_ICONS[s.type] || '📅'}</div>
-                ))}
-              </div>
+              {s ? (
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 }}>
+                  <span style={{ fontSize: 13 }}>{TYPE_ICONS[s.type] || '📅'}</span>
+                  <span style={{ fontSize: 8, color: 'var(--text-muted)', textAlign: 'center', lineHeight: 1.2, maxWidth: 36, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{s.title}</span>
+                </div>
+              ) : (
+                <div style={{ height: 28 }} />
+              )}
             </div>
           )
         })}
