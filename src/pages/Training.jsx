@@ -108,6 +108,12 @@ export default function Training({ athleteId = null, coachView = false, embedded
     setForm(base); setEditing(null); setSheet('form')
   }
   const openEdit = (s) => { setForm({ ...s, exercises: [...(s.exercises||[])], athlete_ids: [...(s.athlete_ids||[])] }); setEditing(s.id); setSheet('form') }
+  const duplicateSession = (s) => {
+    const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate() + 1)
+    setForm({ ...s, date: tomorrow.toISOString().slice(0,10), exercises: [...(s.exercises||[])], athlete_ids: [...(s.athlete_ids||[])] })
+    setEditing(null)
+    setSheet('form')
+  }
   const openDetail = (s) => {
     setDetailSession(s)
     setSheet('detail')
@@ -292,7 +298,12 @@ export default function Training({ athleteId = null, coachView = false, embedded
                   <h3>{detailSession.title}</h3>
                 </div>
               </div>
-              {(!athleteId || coachView) && <button className="btn btn-ghost btn-sm" onClick={() => openEdit(detailSession)}>✏️</button>}
+              {(!athleteId || coachView) && (
+                <div style={{ display: 'flex', gap: 6 }}>
+                  <button className="btn btn-ghost btn-sm" onClick={() => duplicateSession(detailSession)} title="Duplicar sesión">⧉</button>
+                  <button className="btn btn-ghost btn-sm" onClick={() => openEdit(detailSession)}>✏️</button>
+                </div>
+              )}
             </div>
             <div className="sheet-body">
               <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
