@@ -298,7 +298,7 @@ export const Messages = {
       .select('group_id, created_at, sender')
       .in('group_id', groupIds)
       .order('created_at', { ascending: false })
-    // Keep only the latest per group
+      .limit(groupIds.length * 20)
     const seen = {}
     ;(data || []).forEach(m => { if (!seen[m.group_id]) seen[m.group_id] = m })
     return seen

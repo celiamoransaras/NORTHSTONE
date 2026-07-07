@@ -459,9 +459,9 @@ function AthleteHome({ athlete, athleteId }) {
     <div className="page fade-in" ref={scrollRef} onTouchStart={handleTouchStart} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd}>
       {/* Modal bienestar diario */}
       {showWellness && (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 100, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }}>
+        <div style={{ position: 'fixed', inset: 0, zIndex: 100, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', animation: 'fadeIn 0.2s ease' }}>
           <div onClick={() => setShowWellness(false)} style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.45)' }} />
-          <div style={{ position: 'relative', background: 'var(--surface)', borderRadius: '20px 20px 0 0', padding: '8px 0 24px', maxHeight: '90vh', overflowY: 'auto' }}>
+          <div style={{ position: 'relative', background: 'var(--surface)', borderRadius: '20px 20px 0 0', padding: '8px 0 24px', maxHeight: '90vh', overflowY: 'auto', animation: 'slideUp 0.3s cubic-bezier(0.32,0.72,0,1)' }}>
             <div style={{ width: 36, height: 4, borderRadius: 2, background: 'var(--border)', margin: '0 auto 16px' }} />
             <div style={{ padding: '0 16px' }}>
               <WellnessCheckin athleteId={athleteId} onDone={() => setShowWellness(false)} />

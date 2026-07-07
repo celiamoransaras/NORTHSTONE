@@ -123,18 +123,24 @@ export default function Training({ athleteId = null, coachView = false, embedded
     // Si el draft está sin definir (nunca se tocó el input), leer el valor actual del campo
     const draftVal = replyDraft[athleteId]
     const reply = (draftVal !== undefined ? draftVal : detailSession.ratings?.[athleteId]?.coach_reply ?? '')?.trim() || null
-    await RPE.setCoachReply(detailSession.id, athleteId, reply)
-    setDetailSession(s => ({
-      ...s,
-      ratings: { ...s.ratings, [athleteId]: { ...s.ratings[athleteId], coach_reply: reply } }
-    }))
-    toast('Respuesta guardada')
-    if (reply) {
-      sendPushToAthletes([athleteId], {
-        title: '💬 Celia ha respondido a tu comentario',
-        body: reply,
-        url: `/?tab=training`,
-      })
+    try {
+      await RPE.setCoachReply(detailSession.id, athleteId, reply)
+      setDetailSession(s => ({
+        ...s,
+        ratings: { ...s.ratings, [athleteId]: { ...s.ratings[athleteId], coach_reply: reply } }
+      }))
+      toast('Respuesta guardada')
+      if (reply) {
+        try {
+          sendPushToAthletes([athleteId], {
+            title: '💬 Celia ha respondido a tu comentario',
+            body: reply,
+            url: `/?tab=training`,
+          })
+        } catch { /* notificación opcional */ }
+      }
+    } catch {
+      toast('Error al guardar la respuesta', 'error')
     }
   }
 
