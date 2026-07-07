@@ -44,6 +44,7 @@ export default function Training({ athleteId = null, coachView = false, embedded
   const [confirmDelete, setConfirmDelete] = useState(null)
   const [replyDraft, setReplyDraft] = useState({}) // { [athleteId]: texto }
   const [tab, setTab] = useState('upcoming')
+  const [filterType, setFilterType] = useState(null)
   const [titleError, setTitleError] = useState(false)
   const toast = useToast()
   const { user } = useAuth()
@@ -100,7 +101,8 @@ export default function Training({ athleteId = null, coachView = false, embedded
   const today = new Date().toISOString().slice(0,10)
   const upcoming = sessions.filter(s => s.date >= today)
   const past = sessions.filter(s => s.date < today).reverse()
-  const displayed = tab === 'upcoming' ? upcoming : past
+  const baseList = tab === 'upcoming' ? upcoming : past
+  const displayed = filterType ? baseList.filter(s => s.type === filterType) : baseList
 
   const openNew = () => {
     const base = { ...emptyForm }
@@ -262,10 +264,34 @@ export default function Training({ athleteId = null, coachView = false, embedded
 
       <div className="page-content">
         <div className="pill-tabs">
-          <button className={`pill-tab ${tab==='upcoming'?'active':''}`} onClick={() => setTab('upcoming')}>Próximos ({upcoming.length})</button>
-          <button className={`pill-tab ${tab==='past'?'active':''}`} onClick={() => setTab('past')}>Historial ({past.length})</button>
+          <button className={`pill-tab ${tab==='upcoming'?'active':''}`} onClick={() => { setTab('upcoming'); setFilterType(null) }}>Próximos ({upcoming.length})</button>
+          <button className={`pill-tab ${tab==='past'?'active':''}`} onClick={() => { setTab('past'); setFilterType(null) }}>Historial ({past.length})</button>
           {!embedded && <button className={`pill-tab ${tab==='calendar'?'active':''}`} onClick={() => setTab('calendar')}>Calendario</button>}
         </div>
+
+        {tab !== 'calendar' && (() => {
+          const typesInList = [...new Set(baseList.map(s => s.type).filter(Boolean))]
+          if (typesInList.length < 2) return null
+          return (
+            <div style={{ display: 'flex', gap: 6, overflowX: 'auto', paddingBottom: 4, scrollbarWidth: 'none' }}>
+              <button
+                onClick={() => setFilterType(null)}
+                style={{ flexShrink: 0, padding: '4px 12px', borderRadius: 20, fontSize: 12, fontWeight: 700, border: '1.5px solid var(--border)', background: !filterType ? 'var(--accent)' : 'var(--surface)', color: !filterType ? '#fff' : 'var(--text-muted)', cursor: 'pointer', fontFamily: "'Barlow Condensed', sans-serif", textTransform: 'uppercase', letterSpacing: '0.5px' }}
+              >Todos</button>
+              {typesInList.map(type => {
+                const opt = TYPE_OPTS.find(t => t.value === type)
+                const active = filterType === type
+                return (
+                  <button
+                    key={type}
+                    onClick={() => setFilterType(active ? null : type)}
+                    style={{ flexShrink: 0, padding: '4px 12px', borderRadius: 20, fontSize: 12, fontWeight: 700, border: `1.5px solid ${active ? TYPE_COLOR[type] : 'var(--border)'}`, background: active ? TYPE_COLOR[type] : 'var(--surface)', color: active ? '#fff' : 'var(--text-muted)', cursor: 'pointer', fontFamily: "'Barlow Condensed', sans-serif", textTransform: 'uppercase', letterSpacing: '0.5px' }}
+                  >{opt?.label || type}</button>
+                )
+              })}
+            </div>
+          )
+        })()}
 
         {loading ? (
           <div style={{ color: 'var(--text-muted)', textAlign: 'center', padding: 24 }}>Cargando...</div>
