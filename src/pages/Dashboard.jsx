@@ -441,7 +441,7 @@ function WeeklyAdherenceSection({ athleteMap }) {
   const [data, setData] = useState(null)
 
   useEffect(() => {
-    Sessions.getAll().then(sessions => {
+    const load = async () => {
       const now = new Date()
       const mon = new Date(now)
       mon.setDate(now.getDate() - ((now.getDay() + 6) % 7))
@@ -449,15 +449,35 @@ function WeeklyAdherenceSection({ athleteMap }) {
       sun.setDate(mon.getDate() + 6)
       const weekStart = mon.toISOString().slice(0,10)
       const weekEnd = sun.toISOString().slice(0,10)
+
+      const sessions = await Sessions.getAll()
       const weekSessions = sessions.filter(s => s.date >= weekStart && s.date <= weekEnd)
+      const sessionIds = weekSessions.map(s => s.id)
+
+      let rpeByAthlete = {}
+      if (sessionIds.length > 0) {
+        const { data: rpeData } = await supabase
+          .from('session_athletes')
+          .select('athlete_id, rpe')
+          .in('session_id', sessionIds)
+          .not('rpe', 'is', null)
+        ;(rpeData || []).forEach(r => {
+          if (!rpeByAthlete[r.athlete_id]) rpeByAthlete[r.athlete_id] = []
+          rpeByAthlete[r.athlete_id].push(r.rpe)
+        })
+      }
+
       const athletes = Object.values(athleteMap)
       const rows = athletes.map(a => {
         const assigned = weekSessions.filter(s => s.athlete_ids?.includes(a.id))
         const done = assigned.filter(s => s.attendance?.[a.id] === true)
-        return { ...a, assigned: assigned.length, done: done.length }
+        const rpes = rpeByAthlete[a.id] || []
+        const avgRpe = rpes.length ? Math.round((rpes.reduce((s,v) => s+v, 0) / rpes.length) * 10) / 10 : null
+        return { ...a, assigned: assigned.length, done: done.length, avgRpe }
       }).filter(a => a.assigned > 0).sort((a,b) => (b.done/Math.max(b.assigned,1)) - (a.done/Math.max(a.assigned,1)))
       setData(rows)
-    })
+    }
+    load()
   }, [athleteMap])
 
   if (!data || data.length === 0) return null
@@ -467,10 +487,12 @@ function WeeklyAdherenceSection({ athleteMap }) {
   const sun = new Date(mon); sun.setDate(mon.getDate() + 6)
   const fmt = d => d.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })
 
+  const rpeColor = rpe => rpe >= 8 ? '#EF4444' : rpe >= 6 ? '#F59E0B' : '#10B981'
+
   return (
     <>
       <div className="section-title" style={{ marginTop: 4 }}>
-        Adherencia semanal
+        Carga semanal del equipo
         <span style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 400, marginLeft: 6, textTransform: 'none', fontFamily: 'inherit' }}>
           {fmt(mon)} – {fmt(sun)}
         </span>
@@ -489,7 +511,12 @@ function WeeklyAdherenceSection({ athleteMap }) {
                     </div>
                 }
                 <div style={{ flex: 1, fontWeight: 600, fontSize: 13 }}>{a.name}</div>
-                <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 900, fontSize: 16, color }}>{a.done}/{a.assigned}</div>
+                {a.avgRpe !== null && (
+                  <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 800, fontSize: 13, color: rpeColor(a.avgRpe), background: rpeColor(a.avgRpe)+'15', padding: '2px 8px', borderRadius: 8 }}>
+                    RPE {a.avgRpe}
+                  </div>
+                )}
+                <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 900, fontSize: 16, color, minWidth: 32, textAlign: 'right' }}>{a.done}/{a.assigned}</div>
               </div>
               <div style={{ height: 4, background: 'var(--bg)', borderRadius: 2 }}>
                 <div style={{ height: '100%', width: `${pct}%`, background: color, borderRadius: 2, transition: 'width 0.4s ease' }} />
