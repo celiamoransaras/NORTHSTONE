@@ -224,7 +224,7 @@ export default function AthleteView() {
           {tab === 'progress'  && <AthleteProgressTab athleteId={athleteId} isFemale={athlete?.gender === 'female'} />}
           {tab === 'payments'  && <AthletePayments athleteId={athleteId} />}
           {tab === 'docs'      && <AthleteDocs athleteId={athleteId} />}
-          {tab === 'hyrox'     && <HyroxPlanner />}
+          {tab === 'hyrox'     && <HyroxPlanner athleteId={athleteId} />}
           {tab === 'messages'  && <Messages />}
         </div>
       </main>
