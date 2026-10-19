@@ -217,7 +217,7 @@ export default function AthleteView() {
       {/* Content */}
       <main style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
         <div key={tabKey} style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', animation: `tabSlide${tabDir > 0 ? 'Right' : 'Left'} 0.22s cubic-bezier(0.16,1,0.3,1) both` }}>
-          {tab === 'home'      && <AthleteHome athlete={athlete} athleteId={athleteId} onOpenSession={s => { setTabDir(1); setTabKey(k=>k+1); setTab('training'); setOpenSessionId(s.id) }} />}
+          {tab === 'home'      && <AthleteHome athlete={athlete} athleteId={athleteId} onOpenSession={s => { setTabDir(1); setTabKey(k=>k+1); setTab('training'); setOpenSessionId(s.id) }} onGoTo={t => { setTabDir(1); setTabKey(k=>k+1); setTab(t) }} />}
           {tab === 'training'  && <AthleteTrainingWithRPE athleteId={athleteId} initialSessionId={openSessionId} onSessionOpened={() => setOpenSessionId(null)} onReplySeen={() => setUnreadReplies(c => Math.max(0, c - 1))} />}
           {tab === 'health'    && <AthleteHealth athleteId={athleteId} />}
           {tab === 'nutrition' && FEATURES.nutrition && <AthleteNutrition athleteId={athleteId} />}
@@ -328,7 +328,7 @@ function Badge({ count, color = 'var(--error)' }) {
 }
 
 // ---- Inicio del deportista ----
-function AthleteHome({ athlete, athleteId, onOpenSession }) {
+function AthleteHome({ athlete, athleteId, onOpenSession, onGoTo }) {
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [pullY, setPullY] = useState(0)
@@ -340,10 +340,22 @@ function AthleteHome({ athlete, athleteId, onOpenSession }) {
   const [streak, setStreak] = useState(0)
   const [attended, setAttended] = useState(false)
   const [showWellness, setShowWellness] = useState(false)
+  const [wellnessDone, setWellnessDone] = useState(false)
+  const [lastCycle, setLastCycle] = useState(undefined) // undefined = cargando, null = sin registros
+  const [cycleSnoozed, setCycleSnoozed] = useState(() => {
+    try { return (localStorage.getItem('ns_cycle_snooze') || '') > ymd(new Date()) } catch { return false }
+  })
+  const [savingCycle, setSavingCycle] = useState(false)
+
+  useEffect(() => {
+    if (!athleteId || athlete?.gender !== 'female') return
+    Cycle.getByAthlete(athleteId).then(list => setLastCycle(list[0] || null)).catch(() => setLastCycle(null))
+  }, [athleteId, athlete?.gender])
 
   useEffect(() => {
     if (!athleteId) return
     Wellness.getToday(athleteId).then(data => {
+      setWellnessDone(!!data)
       if (!data) {
         const dismissedDate = localStorage.getItem('wellness_dismissed_date')
         if (dismissedDate !== new Date().toDateString()) {
@@ -467,7 +479,7 @@ function AthleteHome({ athlete, athleteId, onOpenSession }) {
   weekStart.setDate(now.getDate() - ((now.getDay() + 6) % 7))
   const weekStr = ymd(weekStart)
   const weekSessions = allSessions.filter(s => s.date >= weekStr && s.date <= todayStr)
-  const weekDone = weekSessions.length
+  const weekDone = weekSessions.filter(s => s.attendance?.[athleteId] === true || (s.date === todayStr && attended)).length
   const weekTotal = allSessions.filter(s => {
     const d = new Date(s.date + 'T12:00:00')
     const wEnd = new Date(weekStart); wEnd.setDate(weekStart.getDate() + 6)
@@ -483,7 +495,7 @@ function AthleteHome({ athlete, athleteId, onOpenSession }) {
           <div style={{ position: 'relative', background: 'var(--surface)', borderRadius: '20px 20px 0 0', padding: '8px 0 24px', maxHeight: '90vh', overflowY: 'auto', animation: 'slideUp 0.3s cubic-bezier(0.32,0.72,0,1)' }}>
             <div style={{ width: 36, height: 4, borderRadius: 2, background: 'var(--border)', margin: '0 auto 16px' }} />
             <div style={{ padding: '0 16px' }}>
-              <WellnessCheckin athleteId={athleteId} onDone={() => { localStorage.removeItem('wellness_dismissed_date'); setShowWellness(false) }} />
+              <WellnessCheckin athleteId={athleteId} onDone={() => { localStorage.removeItem('wellness_dismissed_date'); setShowWellness(false); setWellnessDone(true) }} />
               <button className="btn btn-ghost btn-full" style={{ marginTop: 8, color: 'var(--text-muted)', fontSize: 13 }} onClick={() => { localStorage.setItem('wellness_dismissed_date', new Date().toDateString()); setShowWellness(false) }}>
                 Ahora no
               </button>
@@ -538,7 +550,8 @@ function AthleteHome({ athlete, athleteId, onOpenSession }) {
                   </div>
                 )}
                 <button
-                  onClick={async () => {
+                  onClick={async (e) => {
+                    e.stopPropagation()
                     const next = !attended
                     setAttended(next)
                     try { await Sessions.toggleAttendance(todaySession.id, athleteId, !next) }
@@ -564,6 +577,87 @@ function AthleteHome({ athlete, athleteId, onOpenSession }) {
                 </div>
               </div>
             )}
+
+            {/* TU DÍA: check-in → entreno → valoración, en un toque cada paso */}
+            {todaySession && (() => {
+              const rated = todaySession.ratings?.[athleteId]?.rpe != null
+              const steps = [
+                { icon: '📝', label: 'Cómo estás', done: wellnessDone, action: () => setShowWellness(true) },
+                { icon: TYPE_ICONS[todaySession.type] || '🏋️', label: 'Entreno', done: attended, action: () => onOpenSession?.(todaySession) },
+                { icon: '⭐', label: 'Valorar', done: rated, action: () => onOpenSession?.(todaySession) },
+              ]
+              const next = steps.findIndex(st => !st.done)
+              return (
+                <div className="card" style={{ padding: '12px 14px' }}>
+                  <div style={{ fontSize: 11, fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: 10 }}>
+                    {next === -1 ? '🎉 Día completado' : `Tu día · paso ${next + 1} de 3`}
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    {steps.map((st, i) => (
+                      <div key={st.label} style={{ display: 'contents' }}>
+                        <button onClick={st.action}
+                          style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, padding: '10px 4px', borderRadius: 12, cursor: 'pointer',
+                            border: `1.5px solid ${st.done ? 'var(--success)' : i === next ? athlete.color : 'var(--border)'}`,
+                            background: st.done ? 'var(--success-dim)' : i === next ? `${athlete.color}12` : 'var(--bg)' }}>
+                          <span style={{ fontSize: 20 }}>{st.done ? '✅' : st.icon}</span>
+                          <span style={{ fontSize: 11, fontWeight: 700, color: st.done ? 'var(--success)' : i === next ? athlete.color : 'var(--text-muted)' }}>{st.label}</span>
+                        </button>
+                        {i < steps.length - 1 && <span style={{ color: 'var(--text-dim)', fontSize: 12 }}>›</span>}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )
+            })()}
+
+            {/* RECORDATORIO DEL CICLO (solo mujeres) */}
+            {athlete?.gender === 'female' && lastCycle !== undefined && !cycleSnoozed && (() => {
+              const len = athlete.cycle_length || 28
+              const daysSince = lastCycle ? Math.floor((now - new Date(lastCycle.date_start + 'T12:00:00')) / 86400000) : null
+              const due = lastCycle === null || daysSince > len + 3
+              if (!due) return null
+              const snooze = (days) => {
+                const d = new Date(); d.setDate(d.getDate() + days)
+                try { localStorage.setItem('ns_cycle_snooze', ymd(d)) } catch { /* sin almacenamiento */ }
+                setCycleSnoozed(true)
+              }
+              const logToday = async () => {
+                setSavingCycle(true)
+                try {
+                  await Cycle.log(athleteId, ymd(new Date()))
+                  setLastCycle({ date_start: ymd(new Date()) })
+                } catch { /* si falla, la tarjeta sigue visible */ }
+                setSavingCycle(false)
+              }
+              return (
+                <div className="card" style={{ padding: '14px 16px', background: '#FDF2F8', border: '1px solid #FCE7F3' }}>
+                  <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+                    <span style={{ fontSize: 22 }}>🌸</span>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontWeight: 800, fontSize: 14, color: '#9D174D' }}>
+                        {lastCycle === null ? 'Registra tu ciclo' : '¿Te ha bajado la regla?'}
+                      </div>
+                      <div style={{ fontSize: 12, color: '#BE185D', marginTop: 2, lineHeight: 1.5 }}>
+                        {lastCycle === null
+                          ? 'Así Celia puede tener en cuenta cómo te encuentras en cada fase.'
+                          : `Han pasado ${daysSince} días desde tu último registro.`}
+                      </div>
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+                    {lastCycle === null ? (
+                      <button onClick={() => onGoTo?.('health')} className="btn btn-sm" style={{ flex: 1, background: '#DB2777', color: '#fff' }}>Registrar</button>
+                    ) : (
+                      <>
+                        <button onClick={logToday} disabled={savingCycle} className="btn btn-sm" style={{ flex: 1, background: '#DB2777', color: '#fff' }}>{savingCycle ? 'Guardando...' : 'Sí, hoy'}</button>
+                        <button onClick={() => onGoTo?.('health')} className="btn btn-sm" style={{ flex: 1, background: '#fff', color: '#9D174D', border: '1px solid #FBCFE8' }}>Otro día</button>
+                      </>
+                    )}
+                    <button onClick={() => snooze(lastCycle === null ? 7 : 3)} className="btn btn-sm" style={{ background: 'none', color: '#9D174D' }}>{lastCycle === null ? 'Luego' : 'Aún no'}</button>
+                  </div>
+                </div>
+              )
+            })()}
 
             {/* 2. STATS DE LA SEMANA */}
             <div className="section-title" style={{ marginTop: 4 }}>Esta semana</div>
