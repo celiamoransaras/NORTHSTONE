@@ -102,16 +102,18 @@ export const Sessions = {
     if (!newSession) return null
 
     if (exercises.length) {
-      await supabase.from('exercises').insert(exercises.map((e, i) => ({
+      const { error: exError } = await supabase.from('exercises').insert(exercises.map((e, i) => ({
         session_id: newSession.id,
         name: e.name || 'Entrenamiento',
         notes: e.notes || null,
         videos: (e.videos || []).filter(v => v.url),
         sort_order: i
       })))
+      if (exError) throw exError
     }
     if (athlete_ids.length) {
-      await supabase.from('session_athletes').insert(athlete_ids.map(id => ({ session_id: newSession.id, athlete_id: id })))
+      const { error: saError } = await supabase.from('session_athletes').insert(athlete_ids.map(id => ({ session_id: newSession.id, athlete_id: id })))
+      if (saError) throw saError
     }
     return newSession
   },

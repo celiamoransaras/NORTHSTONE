@@ -1,7 +1,7 @@
 import { ymd } from '../lib/dates'
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Athletes, Sessions, Injuries, Payments, Wellness, isPendingPayment } from '../lib/db'
+import { Athletes, Sessions, Injuries, Payments, Wellness, Cycle, isPendingPayment } from '../lib/db'
 import { supabase } from '../lib/supabase'
 import { getDismissed, dismissFatigueAlert, isFatigueDismissed, subscribeAlerts } from '../lib/alertState'
 import { TYPE_ICONS, TYPE_COLORS, TYPE_LABELS } from '../lib/constants'
@@ -55,7 +55,8 @@ export default function Dashboard() {
 
       const upcoming = sessions.filter(s => s.date >= today).slice(0, 3)
       const activeInjuries = injuries.filter(i => !i.date_end || i.date_end > today)
-      const paidCount = payments.filter(p => p.status === 'paid').length
+      // Al día = pagado o sin nada que pagar (cuota 0 €)
+      const paidCount = payments.filter(p => !isPendingPayment(p)).length
       const pendingPayments = payments.filter(isPendingPayment).length
 
       setStats({
@@ -63,7 +64,7 @@ export default function Dashboard() {
         injured: new Set(activeInjuries.map(i => i.athlete_id)).size,
         sessionsThisMonth: sessions.filter(s => s.date.startsWith(`${year}-${String(month).padStart(2,'0')}`)).length,
         paidCount,
-        totalPayments: athletes.length,
+        totalPayments: payments.length || athletes.length,
         pendingPayments,
         fatigueAlerts,
         monthName: ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'][month-1],
@@ -251,6 +252,9 @@ export default function Dashboard() {
 
         {/* Bienestar del equipo hoy */}
         <TeamWellnessSection />
+
+        {/* Ciclo menstrual del equipo */}
+        <TeamCycleSection athleteMap={athleteMap} />
 
       </div>
     </div>
@@ -568,6 +572,83 @@ function SessionRow({ session, last, onClick }) {
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4, flexShrink: 0 }}>
         {isToday && <span className="badge badge-green" style={{ fontSize: 10 }}>HOY</span>}
         <span style={{ fontSize: 18 }}>{icon}</span>
+      </div>
+    </div>
+  )
+}
+
+// ─────────────────────────────────────────────
+// CICLO DEL EQUIPO: fase actual de cada deportista y avisos si hace mucho
+// que no registra la regla (posible señal de baja disponibilidad energética).
+// ─────────────────────────────────────────────
+function TeamCycleSection({ athleteMap }) {
+  const navigate = useNavigate()
+  const [cycles, setCycles] = useState(null)
+
+  useEffect(() => {
+    supabase.from('injuries').select('athlete_id, date_start, date_end')
+      .eq('type', 'cycle').order('date_start', { ascending: false })
+      .then(({ data }) => {
+        const latest = {}
+        ;(data || []).forEach(c => { if (!latest[c.athlete_id]) latest[c.athlete_id] = c })
+        setCycles(latest)
+      })
+  }, [])
+
+  const women = Object.values(athleteMap || {}).filter(a => a.gender === 'female' && a.status !== 'inactive')
+  if (!cycles || !women.length) return null
+
+  const today = new Date()
+  const rows = women.map(a => {
+    const c = cycles[a.id]
+    if (!c) return { a, state: 'none' }
+    const len = a.cycle_length || 28
+    const daysSince = Math.floor((today - new Date(c.date_start + 'T12:00:00')) / 86400000)
+    // Más de la duración de su ciclo + 10 días sin registrar una nueva regla → revisar
+    if (daysSince > len + 10) return { a, state: 'late', daysSince }
+    return { a, state: 'ok', phase: Cycle.getPhase(c, len) }
+  }).sort((x, y) => ({ late: 0, ok: 1, none: 2 }[x.state] - { late: 0, ok: 1, none: 2 }[y.state]))
+
+  const late = rows.filter(r => r.state === 'late').length
+
+  return (
+    <div className="card" style={{ padding: '16px 18px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+        <div>
+          <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 800, fontSize: 16, textTransform: 'uppercase' }}>
+            🩸 Ciclo del equipo
+          </div>
+          <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>Fase actual según lo que registra cada deportista</div>
+        </div>
+        {late > 0 && (
+          <span style={{ background: 'var(--error-dim)', color: 'var(--error)', fontSize: 11, fontWeight: 700, padding: '4px 10px', borderRadius: 20, fontFamily: "'Barlow Condensed', sans-serif" }}>
+            ⚠️ {late} a revisar
+          </span>
+        )}
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        {rows.map(({ a, state, phase, daysSince }) => (
+          <div key={a.id} onClick={() => navigate('/athletes', { state: { openAthlete: a.id } })} style={{
+            display: 'flex', alignItems: 'center', gap: 12, padding: '10px 12px', borderRadius: 'var(--radius-sm)', cursor: 'pointer',
+            background: state === 'late' ? 'var(--error-dim)' : 'var(--bg)',
+            border: `1px solid ${state === 'late' ? 'var(--error)' : 'var(--border)'}`,
+          }}>
+            <div style={{ width: 8, height: 8, borderRadius: '50%', background: a.color || 'var(--accent)', flexShrink: 0 }} />
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontWeight: 600, fontSize: 14 }}>{a.name}</div>
+              <div style={{ fontSize: 11, color: state === 'late' ? 'var(--error)' : 'var(--text-muted)', marginTop: 1 }}>
+                {state === 'late' && `Sin registrar la regla desde hace ${daysSince} días · pregúntale cómo está`}
+                {state === 'ok' && phase && `Día ${phase.day} del ciclo`}
+                {state === 'none' && 'Aún no ha registrado su ciclo'}
+              </div>
+            </div>
+            {state === 'ok' && phase && (
+              <span style={{ fontSize: 12, fontWeight: 700, color: phase.color, background: `${phase.color}15`, padding: '4px 10px', borderRadius: 20, whiteSpace: 'nowrap' }}>
+                {phase.emoji} {phase.label}
+              </span>
+            )}
+          </div>
+        ))}
       </div>
     </div>
   )

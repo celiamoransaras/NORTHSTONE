@@ -2,6 +2,7 @@ import { ymd } from '../lib/dates'
 import { useState, useEffect } from 'react'
 import { Sessions, Athletes, RPE } from '../lib/db'
 import ConfirmSheet from '../components/ConfirmSheet'
+import CopyWeekSheet from '../components/CopyWeekSheet'
 import { useToast } from '../contexts/ToastContext'
 import { haptic } from '../lib/haptic'
 import { sendPushToAthletes, sendPushToCoach } from '../lib/pushNotifications'
@@ -53,6 +54,8 @@ export default function Training({ athleteId = null, coachView = false, embedded
   const [templates, setTemplates] = useState([])
   const [showTemplates, setShowTemplates] = useState(false)
   const [daySessionsToSelect, setDaySessionsToSelect] = useState([])
+  const [libraryFor, setLibraryFor] = useState(null) // índice del entrenamiento con la biblioteca abierta
+  const [libraryQuery, setLibraryQuery] = useState('')
 
   const loadTemplates = async () => {
     if (!user?.id) return
@@ -259,6 +262,19 @@ export default function Training({ athleteId = null, coachView = false, embedded
   const addExercise = () => setForm(f => ({ ...f, exercises: [...f.exercises, { ...emptyExercise, id: crypto.randomUUID() }] }))
   const updateExercise = (idx, data) => setForm(f => ({ ...f, exercises: f.exercises.map((e,i) => i===idx ? {...e,...data} : e) }))
   const removeExercise = (idx) => setForm(f => ({ ...f, exercises: f.exercises.filter((_,i) => i!==idx) }))
+  // Biblioteca de vídeos: todos los vídeos ya usados en sesiones anteriores (sin repetir)
+  const videoLibrary = (() => {
+    const seen = new Map()
+    sessions.forEach(ss => (ss.exercises || []).forEach(e => (e.videos || []).forEach(v => {
+      if (v?.url && !seen.has(v.url)) seen.set(v.url, { label: v.label || e.name || 'Vídeo', url: v.url })
+    })))
+    return [...seen.values()].sort((a, b) => a.label.localeCompare(b.label, 'es'))
+  })()
+  const addVideoFromLibrary = (idx, v) => {
+    const current = form.exercises[idx].videos || []
+    if (current.some(x => x.url === v.url)) return
+    updateExercise(idx, { videos: [...current, { label: v.label, url: v.url, id: crypto.randomUUID() }] })
+  }
   const addVideo = (idx) => updateExercise(idx, { videos: [...(form.exercises[idx].videos||[]), { ...emptyVideo, id: crypto.randomUUID() }] })
   const updateVideo = (idx, vIdx, data) => updateExercise(idx, { videos: form.exercises[idx].videos.map((v,i) => i===vIdx ? {...v,...data} : v) })
   const removeVideo = (idx, vIdx) => updateExercise(idx, { videos: form.exercises[idx].videos.filter((_,i) => i!==vIdx) })
@@ -278,7 +294,12 @@ export default function Training({ athleteId = null, coachView = false, embedded
       {!embedded && (
         <div className="page-header">
           <h2>Entrenamientos</h2>
-          {showCreate && <button className="btn btn-primary btn-sm" onClick={openNew}>+ Nuevo</button>}
+          {showCreate && (
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button className="btn btn-secondary btn-sm" onClick={() => setSheet('copyWeek')} title="Copiar una semana de entrenos">⧉ Copiar semana</button>
+              <button className="btn btn-primary btn-sm" onClick={openNew}>+ Nuevo</button>
+            </div>
+          )}
         </div>
       )}
       {embedded && showCreate && (
@@ -567,8 +588,37 @@ export default function Training({ athleteId = null, coachView = false, embedded
 
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 4 }}>
                       <span style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 600 }}>🎬 Vídeos</span>
-                      <button type="button" className="btn btn-ghost btn-sm" onClick={() => addVideo(idx)}>+ Añadir vídeo</button>
+                      <div style={{ display: 'flex', gap: 4 }}>
+                        {videoLibrary.length > 0 && (
+                          <button type="button" className="btn btn-ghost btn-sm" onClick={() => { setLibraryFor(libraryFor === idx ? null : idx); setLibraryQuery('') }}>📚 Biblioteca</button>
+                        )}
+                        <button type="button" className="btn btn-ghost btn-sm" onClick={() => addVideo(idx)}>+ Añadir vídeo</button>
+                      </div>
                     </div>
+                    {libraryFor === idx && (
+                      <div style={{ background: 'var(--bg)', borderRadius: 10, padding: 8, border: '1px solid var(--border)' }}>
+                        <input className="input" placeholder="Buscar vídeo (ej. wall ball, trineo...)" value={libraryQuery}
+                          onChange={e => setLibraryQuery(e.target.value)} style={{ marginBottom: 6 }} />
+                        <div style={{ maxHeight: 220, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 4 }}>
+                          {videoLibrary
+                            .filter(v => !libraryQuery.trim() || v.label.toLowerCase().includes(libraryQuery.trim().toLowerCase()))
+                            .map(v => {
+                              const added = (ex.videos || []).some(x => x.url === v.url)
+                              const yt = getYouTubeId(v.url)
+                              return (
+                                <button key={v.url} type="button" onClick={() => addVideoFromLibrary(idx, v)} disabled={added}
+                                  style={{ display: 'flex', alignItems: 'center', gap: 8, padding: 6, borderRadius: 8, border: 'none', background: added ? 'var(--success-dim)' : 'var(--card)', cursor: added ? 'default' : 'pointer', textAlign: 'left' }}>
+                                  {yt
+                                    ? <img src={`https://img.youtube.com/vi/${yt}/default.jpg`} alt="" width="48" height="36" style={{ borderRadius: 4, objectFit: 'cover', flexShrink: 0 }} />
+                                    : <span style={{ fontSize: 20, width: 48, textAlign: 'center' }}>🎬</span>}
+                                  <span style={{ flex: 1, fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>{v.label}</span>
+                                  <span style={{ fontSize: 12, color: added ? 'var(--success)' : 'var(--accent)', fontWeight: 700 }}>{added ? '✓' : '+ Añadir'}</span>
+                                </button>
+                              )
+                            })}
+                        </div>
+                      </div>
+                    )}
                     {(ex.videos||[]).map((v, vIdx) => (
                       <div key={v.id || vIdx} style={{ display: 'flex', gap: 6 }}>
                         <input className="input" placeholder="A qué ejercicio corresponde" value={v.label} onChange={e => updateVideo(idx,vIdx,{label:e.target.value})} style={{ flex: 1 }} />
@@ -599,6 +649,11 @@ export default function Training({ athleteId = null, coachView = false, embedded
             </div>
           </div>
         </>
+      )}
+      {sheet === 'copyWeek' && (
+        <CopyWeekSheet sessions={sessions} athletes={athletes} toast={toast}
+          onClose={() => setSheet(null)}
+          onDone={async () => { setSheet(null); await load() }} />
       )}
     </>
   )
