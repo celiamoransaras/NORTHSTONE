@@ -6,6 +6,7 @@ import { haptic } from '../lib/haptic'
 import { sendPushToAthletes, sendPushToCoach } from '../lib/pushNotifications'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
+import { TYPE_ICONS, TYPE_COLORS } from '../lib/constants'
 
 const TYPE_OPTS = [
   { value: 'run',        label: '🏃 Run' },
@@ -17,12 +18,6 @@ const TYPE_OPTS = [
   { value: 'cardio',     label: '❤️ Cardio' },
   { value: 'rest_day',   label: '😴 Rest Day' },
 ]
-const TYPE_COLOR = {
-  run: '#10B981', fuerza: '#F59E0B', series: '#EF4444',
-  endurance: '#3B82F6', especifico: '#8B5CF6',
-  ergometros: '#14B8A6', cardio: '#EC4899', rest_day: '#707070',
-  strength: '#F59E0B', flexibility: '#10B981', mixed: '#707070'
-}
 const emptyForm = { title: '', date: new Date().toISOString().slice(0,10), type: 'run', duration: 60, notes: '', exercises: [], athlete_ids: [] }
 const emptyExercise = { name: '', notes: '', videos: [] }
 const emptyVideo = { label: '', url: '' }
@@ -44,12 +39,19 @@ export default function Training({ athleteId = null, coachView = false, embedded
   const [confirmDelete, setConfirmDelete] = useState(null)
   const [replyDraft, setReplyDraft] = useState({}) // { [athleteId]: texto }
   const [tab, setTab] = useState('upcoming')
-  const [filterType, setFilterType] = useState(null)
+  const [filterType, setFilterType] = useState(() => sessionStorage.getItem('training_filter') || null)
+
+  const setFilterTypePersisted = (value) => {
+    if (value) sessionStorage.setItem('training_filter', value)
+    else sessionStorage.removeItem('training_filter')
+    setFilterType(value)
+  }
   const [titleError, setTitleError] = useState(false)
   const toast = useToast()
   const { user } = useAuth()
   const [templates, setTemplates] = useState([])
   const [showTemplates, setShowTemplates] = useState(false)
+  const [daySessionsToSelect, setDaySessionsToSelect] = useState([])
 
   const loadTemplates = async () => {
     if (!user?.id) return
@@ -112,7 +114,8 @@ export default function Training({ athleteId = null, coachView = false, embedded
   const openEdit = (s) => { setForm({ ...s, exercises: [...(s.exercises||[])], athlete_ids: [...(s.athlete_ids||[])] }); setEditing(s.id); setSheet('form') }
   const duplicateSession = (s) => {
     const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate() + 1)
-    setForm({ ...s, date: tomorrow.toISOString().slice(0,10), exercises: [...(s.exercises||[])], athlete_ids: [...(s.athlete_ids||[])] })
+    const { id: _id, ...rest } = s
+    setForm({ ...rest, date: tomorrow.toISOString().slice(0,10), exercises: [...(s.exercises||[])], athlete_ids: [...(s.athlete_ids||[])] })
     setEditing(null)
     setSheet('form')
   }
@@ -137,6 +140,7 @@ export default function Training({ athleteId = null, coachView = false, embedded
         ...s,
         ratings: { ...s.ratings, [athleteId]: { ...s.ratings[athleteId], coach_reply: reply } }
       }))
+      setReplyDraft(d => { const n = { ...d }; delete n[athleteId]; return n })
       toast('Respuesta guardada')
       if (reply) {
         try {
@@ -202,8 +206,9 @@ export default function Training({ athleteId = null, coachView = false, embedded
       setSheet(null)
       haptic('success')
       toast(editing ? 'Sesión actualizada' : 'Sesión creada')
-    } catch {
-      toast('Error al guardar la sesión', 'error')
+    } catch (err) {
+      console.error('Error guardando sesión:', err)
+      toast('Error: ' + (err?.message || JSON.stringify(err)), 'error')
       haptic('error')
     } finally {
       setSaving(false)
@@ -275,7 +280,7 @@ export default function Training({ athleteId = null, coachView = false, embedded
           {showCreate && <button className="btn btn-primary btn-sm" onClick={openNew}>+ Nuevo</button>}
         </div>
       )}
-      {embedded && (
+      {embedded && showCreate && (
         <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 12 }}>
           <button className="btn btn-primary btn-sm" onClick={openNew}>+ Nueva sesión</button>
         </div>
@@ -283,8 +288,8 @@ export default function Training({ athleteId = null, coachView = false, embedded
 
       <div className="page-content">
         <div className="pill-tabs">
-          <button className={`pill-tab ${tab==='upcoming'?'active':''}`} onClick={() => { setTab('upcoming'); setFilterType(null) }}>Próximos ({upcoming.length})</button>
-          <button className={`pill-tab ${tab==='past'?'active':''}`} onClick={() => { setTab('past'); setFilterType(null) }}>Historial ({past.length})</button>
+          <button className={`pill-tab ${tab==='upcoming'?'active':''}`} onClick={() => { setTab('upcoming'); setFilterTypePersisted(null) }}>Próximos ({upcoming.length})</button>
+          <button className={`pill-tab ${tab==='past'?'active':''}`} onClick={() => { setTab('past'); setFilterTypePersisted(null) }}>Historial ({past.length})</button>
           {!embedded && <button className={`pill-tab ${tab==='calendar'?'active':''}`} onClick={() => setTab('calendar')}>Calendario</button>}
         </div>
 
@@ -294,7 +299,7 @@ export default function Training({ athleteId = null, coachView = false, embedded
           return (
             <div style={{ display: 'flex', gap: 6, overflowX: 'auto', paddingBottom: 4, scrollbarWidth: 'none' }}>
               <button
-                onClick={() => setFilterType(null)}
+                onClick={() => setFilterTypePersisted(null)}
                 style={{ flexShrink: 0, padding: '4px 12px', borderRadius: 20, fontSize: 12, fontWeight: 700, border: '1.5px solid var(--border)', background: !filterType ? 'var(--accent)' : 'var(--surface)', color: !filterType ? '#fff' : 'var(--text-muted)', cursor: 'pointer', fontFamily: "'Barlow Condensed', sans-serif", textTransform: 'uppercase', letterSpacing: '0.5px' }}
               >Todos</button>
               {typesInList.map(type => {
@@ -303,8 +308,8 @@ export default function Training({ athleteId = null, coachView = false, embedded
                 return (
                   <button
                     key={type}
-                    onClick={() => setFilterType(active ? null : type)}
-                    style={{ flexShrink: 0, padding: '4px 12px', borderRadius: 20, fontSize: 12, fontWeight: 700, border: `1.5px solid ${active ? TYPE_COLOR[type] : 'var(--border)'}`, background: active ? TYPE_COLOR[type] : 'var(--surface)', color: active ? '#fff' : 'var(--text-muted)', cursor: 'pointer', fontFamily: "'Barlow Condensed', sans-serif", textTransform: 'uppercase', letterSpacing: '0.5px' }}
+                    onClick={() => setFilterTypePersisted(active ? null : type)}
+                    style={{ flexShrink: 0, padding: '4px 12px', borderRadius: 20, fontSize: 12, fontWeight: 700, border: `1.5px solid ${active ? TYPE_COLORS[type] : 'var(--border)'}`, background: active ? TYPE_COLORS[type] : 'var(--surface)', color: active ? '#fff' : 'var(--text-muted)', cursor: 'pointer', fontFamily: "'Barlow Condensed', sans-serif", textTransform: 'uppercase', letterSpacing: '0.5px' }}
                   >{opt?.label || type}</button>
                 )
               })}
@@ -315,7 +320,10 @@ export default function Training({ athleteId = null, coachView = false, embedded
         {loading ? (
           <div style={{ color: 'var(--text-muted)', textAlign: 'center', padding: 24 }}>Cargando...</div>
         ) : tab === 'calendar' ? (
-          <CalendarView sessions={sessions} onSelectDay={daySessions => { setDetailSession(daySessions[0]); setSheet('detail') }} />
+          <CalendarView sessions={sessions} onSelectDay={daySessions => {
+            if (daySessions.length === 1) { setDetailSession(daySessions[0]); setSheet('detail') }
+            else { setDaySessionsToSelect(daySessions); setSheet('dayPicker') }
+          }} />
         ) : displayed.length === 0 ? (
           <div className="empty-state">
             <div className="icon">📅</div>
@@ -326,6 +334,39 @@ export default function Training({ athleteId = null, coachView = false, embedded
           <SessionCard key={s.id} session={s} athletes={athletes} onPress={() => openDetail(s)} formatDate={formatDate} />
         ))}
       </div>
+
+      {/* Day session picker */}
+      {sheet==='dayPicker' && daySessionsToSelect.length > 0 && (
+        <>
+          <div className="overlay" onClick={() => setSheet(null)} />
+          <div className="sheet">
+            <div className="sheet-handle" />
+            <div className="sheet-header">
+              <h3>Sesiones del {formatDate(daySessionsToSelect[0].date)}</h3>
+              <button className="btn btn-ghost btn-sm" onClick={() => setSheet(null)}>✕</button>
+            </div>
+            <div className="sheet-body">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {daySessionsToSelect.map(s => {
+                  const typeOpt = TYPE_OPTS.find(t => t.value === s.type)
+                  return (
+                    <div key={s.id} onClick={() => { setDetailSession(s); setSheet('detail') }}
+                      style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px', background: 'var(--card)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border)', cursor: 'pointer' }}>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontWeight: 700, fontSize: 15 }}>{s.title}</div>
+                        <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>
+                          {typeOpt?.label} · ⏱ {s.duration} min · 👥 {s.athlete_ids?.length || 0}
+                        </div>
+                      </div>
+                      <span style={{ color: 'var(--text-dim)', fontSize: 18 }}>›</span>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          </div>
+        </>
+      )}
 
       {/* Detail */}
       {sheet==='detail' && detailSession && (
@@ -387,6 +428,11 @@ export default function Training({ athleteId = null, coachView = false, embedded
                             <span style={{ fontSize: 14, fontWeight: 500, flex: 1 }}>{a.name}</span>
                             <span style={{ fontSize: 12, color: attended ? 'var(--success)' : 'var(--text-muted)' }}>{attended ? 'Asistió' : 'No asistió'}</span>
                           </div>
+                          {detailSession.date < new Date().toISOString().slice(0,10) && !r && (
+                            <div style={{ marginTop: 4, marginLeft: 12, fontSize: 12, color: 'var(--text-muted)', fontStyle: 'italic' }}>
+                              Sin valorar aún
+                            </div>
+                          )}
                           {r && (r.rpe || r.fatigue_pre || r.fatigue_post || r.mood_post || r.rpe_notes) && (
                             <div style={{ marginTop: 6, marginLeft: 12 }}>
                               <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
@@ -401,29 +447,27 @@ export default function Training({ athleteId = null, coachView = false, embedded
                                   💬 "{r.rpe_notes}"
                                 </div>
                               )}
-                              {r.rpe_notes && (
-                                <div style={{ marginTop: 6 }}>
-                                  {r.coach_reply && replyDraft[id] === undefined && (
-                                    <div style={{ padding: '6px 10px', background: 'var(--accent-dim)', borderRadius: 8, borderLeft: '3px solid var(--accent)', fontSize: 13, color: 'var(--text)' }}>
-                                      🏋️ "{r.coach_reply}"
-                                    </div>
-                                  )}
-                                  <div style={{ display: 'flex', gap: 6, marginTop: 4 }}>
-                                    <input
-                                      className="input"
-                                      placeholder="Responder al comentario…"
-                                      value={replyDraft[id] ?? r.coach_reply ?? ''}
-                                      onChange={e => setReplyDraft(d => ({ ...d, [id]: e.target.value }))}
-                                      style={{ flex: 1, fontSize: 13, padding: '6px 10px' }}
-                                    />
-                                    <button
-                                      className="btn btn-primary btn-sm"
-                                      onClick={() => saveReply(id)}
-                                      style={{ flexShrink: 0 }}
-                                    >Enviar</button>
+                              <div style={{ marginTop: 6 }}>
+                                {r.coach_reply && replyDraft[id] === undefined && (
+                                  <div style={{ padding: '6px 10px', background: 'var(--accent-dim)', borderRadius: 8, borderLeft: '3px solid var(--accent)', fontSize: 13, color: 'var(--text)', marginBottom: 4 }}>
+                                    🏋️ "{r.coach_reply}"
                                   </div>
+                                )}
+                                <div style={{ display: 'flex', gap: 6, marginTop: 4 }}>
+                                  <input
+                                    className="input"
+                                    placeholder={r.rpe_notes ? 'Responder al comentario…' : 'Escribir mensaje al deportista…'}
+                                    value={replyDraft[id] ?? r.coach_reply ?? ''}
+                                    onChange={e => setReplyDraft(d => ({ ...d, [id]: e.target.value }))}
+                                    style={{ flex: 1, fontSize: 13, padding: '6px 10px' }}
+                                  />
+                                  <button
+                                    className="btn btn-primary btn-sm"
+                                    onClick={() => saveReply(id)}
+                                    style={{ flexShrink: 0 }}
+                                  >Enviar</button>
                                 </div>
-                              )}
+                              </div>
                             </div>
                           )}
                         </div>
@@ -563,13 +607,11 @@ export default function Training({ athleteId = null, coachView = false, embedded
     : <div className="page fade-in">{inner}</div>
 }
 
-const TYPE_ICONS_MAP = { run:'🏃', fuerza:'💪', series:'⚡', endurance:'🫁', especifico:'🎯', ergometros:'🚣', cardio:'❤️', rest_day:'😴', strength:'💪', flexibility:'🧘', mixed:'⚡' }
-
 function SessionCard({ session, athletes, onPress, formatDate }) {
-  const typeColor = TYPE_COLOR[session.type] || '#9CA3AF'
+  const typeColor = TYPE_COLORS[session.type] || '#9CA3AF'
   const typeOpt = TYPE_OPTS.find(t=>t.value===session.type)
   const typeLabel = typeOpt?.label?.replace(/^[^ ]+ /, '') || session.type
-  const typeIcon = TYPE_ICONS_MAP[session.type] || '📅'
+  const typeIcon = TYPE_ICONS[session.type] || '📅'
   const isToday = session.date === new Date().toISOString().slice(0,10)
   const date = new Date(session.date + 'T12:00:00')
   const days = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb']

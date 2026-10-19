@@ -3,10 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { Athletes, Sessions, Injuries, Payments, Wellness } from '../lib/db'
 import { supabase } from '../lib/supabase'
 import { getDismissed, dismissFatigueAlert, isFatigueDismissed, subscribeAlerts } from '../lib/alertState'
-
-const TYPE_ICONS = { run:'🏃', fuerza:'💪', series:'⚡', endurance:'🫁', especifico:'🎯', ergometros:'🚣', cardio:'❤️', rest_day:'😴', strength:'💪', flexibility:'🧘', mixed:'⚡' }
-const TYPE_COLORS = { run:'#10B981', fuerza:'#F59E0B', series:'#EF4444', endurance:'#3B82F6', especifico:'#8B5CF6', ergometros:'#14B8A6', cardio:'#EC4899', rest_day:'#9CA3AF', strength:'#F59E0B', cardio_:'#3B82F6', flexibility:'#10B981', mixed:'#9CA3AF' }
-const TYPE_LABELS = { run:'Run', fuerza:'Fuerza', series:'Series', endurance:'Endurance', especifico:'Específico', ergometros:'Ergómetros', cardio:'Cardio', rest_day:'Rest Day', strength:'Fuerza', flexibility:'Flexibilidad', mixed:'Mixta' }
+import { TYPE_ICONS, TYPE_COLORS, TYPE_LABELS } from '../lib/constants'
 
 export default function Dashboard() {
   const navigate = useNavigate()
@@ -150,8 +147,8 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* Pagos pendientes — solo inicio de mes */}
-        {stats.pendingPayments > 0 && today.getDate() <= 7 && (
+        {/* Pagos pendientes */}
+        {stats.pendingPayments > 0 && (
           <div className="fade-in-1" onClick={() => navigate('/payments')} style={{ background: 'var(--accent-gradient)', borderRadius: 'var(--radius)', padding: '14px 18px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 12, boxShadow: 'var(--accent-glow)' }}>
             <span style={{ fontSize: 24 }}>💳</span>
             <div style={{ flex: 1 }}>
@@ -172,6 +169,17 @@ export default function Dashboard() {
           <StatCard value={stats.sessionsThisMonth} label="Sesiones" color="var(--accent)" icon="📅" onClick={() => navigate('/training')} />
           <StatCard value={`${stats.paidCount}/${stats.totalPayments}`} label="Pagos al día" color="#059669" icon="💳" onClick={() => navigate('/payments')} />
         </div>
+
+        {/* Nueva sesión */}
+        <button onClick={() => navigate('/training')}
+          style={{ width: '100%', padding: '14px 18px', borderRadius: 'var(--radius)', background: 'var(--accent-gradient)', border: 'none', boxShadow: 'var(--accent-glow)', display: 'flex', alignItems: 'center', gap: 14, cursor: 'pointer', textAlign: 'left' }}>
+          <span style={{ fontSize: 26 }}>➕</span>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 800, fontSize: 16, textTransform: 'uppercase', color: '#fff' }}>Nueva sesión</div>
+            <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.8)', marginTop: 2 }}>Crear o planificar entrenamiento</div>
+          </div>
+          <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: 22 }}>→</span>
+        </button>
 
         {/* Próximas sesiones */}
         {upcomingSessions.length > 0 && (
@@ -272,8 +280,6 @@ function TeamStatsSheet({ onClose }) {
   // Distribución por tipo (este mes)
   const now = new Date()
   const monthStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`
-  const TYPE_COLORS_LOCAL = { run:'#10B981', fuerza:'#F59E0B', series:'#EF4444', endurance:'#3B82F6', especifico:'#8B5CF6', ergometros:'#14B8A6', cardio:'#EC4899', rest_day:'#9CA3AF' }
-  const TYPE_LABELS_LOCAL = { run:'Run', fuerza:'Fuerza', series:'Series', endurance:'Endurance', especifico:'Específico', ergometros:'Ergómetros', cardio:'Cardio', rest_day:'Rest Day' }
   const monthSessions = sessions.filter(s => s.date.startsWith(monthStr))
   const byType = monthSessions.reduce((acc, s) => { acc[s.type] = (acc[s.type]||0)+1; return acc }, {})
   const typeEntries = Object.entries(byType).sort((a,b)=>b[1]-a[1])
@@ -300,12 +306,12 @@ function TeamStatsSheet({ onClose }) {
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 24 }}>
                   {typeEntries.map(([type, count]) => {
-                    const color = TYPE_COLORS_LOCAL[type] || '#9CA3AF'
+                    const color = TYPE_COLORS[type] || '#9CA3AF'
                     const pct = (count / maxType) * 100
                     return (
                       <div key={type}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                          <span style={{ fontSize: 13, fontWeight: 600, color }}>{TYPE_LABELS_LOCAL[type] || type}</span>
+                          <span style={{ fontSize: 13, fontWeight: 600, color }}>{TYPE_LABELS[type] || type}</span>
                           <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 800, fontSize: 14, color }}>{count}</span>
                         </div>
                         <div style={{ height: 6, background: 'var(--bg)', borderRadius: 3 }}>
@@ -376,6 +382,7 @@ function TeamWellnessSection() {
   const moodEmojis    = ['😔','😐','🙂','😄','🤩']
   const fatigueEmojis = ['🔥','💪','🙂','😐','😴']
   const sorenessEmojis= ['✅','😊','😐','😬','🤕']
+  const sleepEmojis   = ['😩','😪','😐','😌','😴']
   const alerts = entries.filter(e => e.fatigue >= 4 || e.soreness >= 4)
 
   const dateLabel = (date) => {
@@ -424,10 +431,18 @@ function TeamWellnessSection() {
                   {dateLabel(e.date)}
                 </div>
               </div>
-              <div style={{ display: 'flex', gap: 6, fontSize: 20 }}>
-                <span title="Cansancio">{e.fatigue ? fatigueEmojis[e.fatigue - 1] : '—'}</span>
-                <span title="Dolor muscular">{e.soreness ? sorenessEmojis[e.soreness - 1] : '—'}</span>
-                <span title="Ánimo">{e.mood ? moodEmojis[e.mood - 1] : '—'}</span>
+              <div style={{ display: 'flex', gap: 8 }}>
+                {[
+                  { emoji: e.fatigue ? fatigueEmojis[e.fatigue - 1] : '—', label: 'Cansancio' },
+                  { emoji: e.soreness ? sorenessEmojis[e.soreness - 1] : '—', label: 'Agujetas' },
+                  { emoji: e.mood ? moodEmojis[e.mood - 1] : '—', label: 'Ánimo' },
+                  { emoji: e.sleep ? sleepEmojis[e.sleep - 1] : '—', label: 'Sueño' },
+                ].map(({ emoji, label }) => (
+                  <div key={label} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+                    <span style={{ fontSize: 20 }}>{emoji}</span>
+                    <span style={{ fontSize: 9, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.3px' }}>{label}</span>
+                  </div>
+                ))}
               </div>
             </div>
           )

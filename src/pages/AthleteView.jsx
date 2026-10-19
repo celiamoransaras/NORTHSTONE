@@ -12,10 +12,8 @@ import { usePushNotifications } from '../hooks/usePushNotifications'
 import { useToast } from '../contexts/ToastContext'
 import { haptic } from '../lib/haptic'
 import { sendPushToCoach } from '../lib/pushNotifications'
-
-const TYPE_ICONS  = { run:'🏃', fuerza:'💪', series:'⚡', endurance:'🫁', especifico:'🎯', ergometros:'🚣', cardio:'❤️', rest_day:'😴', strength:'💪', flexibility:'🧘', mixed:'⚡' }
-const TYPE_COLORS = { run:'#10B981', fuerza:'#F59E0B', series:'#EF4444', endurance:'#3B82F6', especifico:'#8B5CF6', ergometros:'#14B8A6', cardio:'#EC4899', rest_day:'#9CA3AF', strength:'#F59E0B', flexibility:'#10B981', mixed:'#9CA3AF' }
-const TYPE_LABELS = { run:'Run', fuerza:'Fuerza', series:'Series', endurance:'Endurance', especifico:'Específico', ergometros:'Ergómetros', cardio:'Cardio', rest_day:'Rest Day', strength:'Fuerza', flexibility:'Flexibilidad', mixed:'Mixta' }
+import { TYPE_ICONS, TYPE_COLORS, TYPE_LABELS } from '../lib/constants'
+import { initials } from '../lib/utils'
 
 // 7 tabs
 const NAV = [
@@ -39,6 +37,7 @@ export default function AthleteView() {
   })
   const [unreadMessages, setUnreadMessages] = useState(0)
   const [unratedCount, setUnratedCount] = useState(0)
+  const [unreadReplies, setUnreadReplies] = useState(0)
   const [openSessionId, setOpenSessionId] = useState(null)
   const [profileOpen, setProfileOpen] = useState(false)
   const { subscribed: pushSubscribed, loading: pushLoading, supported: pushSupported, enable: enablePush, disable: disablePush } = usePushNotifications({ athleteId })
@@ -93,8 +92,9 @@ export default function AthleteView() {
       if (!assigned?.length) return
       const unrated = assigned.filter(r => r.rpe == null).length
       const seen = (() => { try { return JSON.parse(localStorage.getItem('ns_seen_replies') || '[]') } catch { return [] } })()
-      const unreadReplies = assigned.filter(r => r.coach_reply && !seen.includes(r.session_id)).length
-      setUnratedCount(unrated + unreadReplies)
+      const unread = assigned.filter(r => r.coach_reply && !seen.includes(r.session_id)).length
+      setUnratedCount(unrated)
+      setUnreadReplies(unread)
     }
     fetchUnrated()
   }, [athleteId, tab])
@@ -111,8 +111,6 @@ export default function AthleteView() {
       </div>
     )
   }
-
-  const initials = (name) => name.split(' ').map(w => w[0]).join('').slice(0,2).toUpperCase()
 
   const handleAvatarChange = async (e) => {
     const file = e.target.files[0]
@@ -258,7 +256,10 @@ export default function AthleteView() {
             <span style={{ fontSize: 22, position: 'relative', display: 'inline-block' }}>
               {icon}
               {id === 'messages' && unreadMessages > 0 && <Badge count={unreadMessages} />}
-              {id === 'training' && unratedCount > 0 && <Badge count={unratedCount} color="var(--warning)" />}
+              {id === 'training' && unratedCount > 0 && <Badge count={unratedCount} color="var(--error)" />}
+              {id === 'training' && unreadReplies > 0 && (
+                <span style={{ position: 'absolute', top: -2, right: unratedCount > 0 ? -20 : -8, width: 8, height: 8, borderRadius: '50%', background: '#F97316', border: '1.5px solid var(--bg)' }} />
+              )}
             </span>
             {label}
           </button>
@@ -338,7 +339,12 @@ function AthleteHome({ athlete, athleteId, onOpenSession }) {
   useEffect(() => {
     if (!athleteId) return
     Wellness.getToday(athleteId).then(data => {
-      if (!data) setShowWellness(true)
+      if (!data) {
+        const dismissedDate = localStorage.getItem('wellness_dismissed_date')
+        if (dismissedDate !== new Date().toDateString()) {
+          setShowWellness(true)
+        }
+      }
     })
   }, [athleteId])
 
@@ -468,12 +474,12 @@ function AthleteHome({ athlete, athleteId, onOpenSession }) {
       {/* Modal bienestar diario */}
       {showWellness && (
         <div style={{ position: 'fixed', inset: 0, zIndex: 100, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', animation: 'fadeIn 0.2s ease' }}>
-          <div onClick={() => setShowWellness(false)} style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.45)' }} />
+          <div onClick={() => { localStorage.setItem('wellness_dismissed_date', new Date().toDateString()); setShowWellness(false) }} style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.45)' }} />
           <div style={{ position: 'relative', background: 'var(--surface)', borderRadius: '20px 20px 0 0', padding: '8px 0 24px', maxHeight: '90vh', overflowY: 'auto', animation: 'slideUp 0.3s cubic-bezier(0.32,0.72,0,1)' }}>
             <div style={{ width: 36, height: 4, borderRadius: 2, background: 'var(--border)', margin: '0 auto 16px' }} />
             <div style={{ padding: '0 16px' }}>
-              <WellnessCheckin athleteId={athleteId} onDone={() => setShowWellness(false)} />
-              <button className="btn btn-ghost btn-full" style={{ marginTop: 8, color: 'var(--text-muted)', fontSize: 13 }} onClick={() => setShowWellness(false)}>
+              <WellnessCheckin athleteId={athleteId} onDone={() => { localStorage.removeItem('wellness_dismissed_date'); setShowWellness(false) }} />
+              <button className="btn btn-ghost btn-full" style={{ marginTop: 8, color: 'var(--text-muted)', fontSize: 13 }} onClick={() => { localStorage.setItem('wellness_dismissed_date', new Date().toDateString()); setShowWellness(false) }}>
                 Ahora no
               </button>
             </div>
@@ -631,6 +637,9 @@ function AthleteHealth({ athleteId }) {
   const [cycleLength, setCycleLengthState] = useState(athleteProfile?.cycle_length || 28)
   const [editingCycleLength, setEditingCycleLength] = useState(false)
   const [cycleLengthInput, setCycleLengthInput] = useState(String(athleteProfile?.cycle_length || 28))
+  const [reportingInjury, setReportingInjury] = useState(false)
+  const [injuryForm, setInjuryForm] = useState({ type: '', body_part: '', date_start: new Date().toISOString().slice(0,10), notes: '' })
+  const [savingInjury, setSavingInjury] = useState(false)
 
   // Sincronizar cycleLength cuando el perfil cargue async
   useEffect(() => {
@@ -712,6 +721,32 @@ function AthleteHealth({ athleteId }) {
     } else {
       toast('Introduce un valor entre 21 y 45 días', 'error')
     }
+  }
+
+  const saveInjury = async () => {
+    if (!injuryForm.type.trim() || !injuryForm.body_part.trim()) {
+      toast('Rellena el tipo y la zona afectada', 'error')
+      return
+    }
+    setSavingInjury(true)
+    try {
+      await Injuries.create({
+        athlete_id: athleteId,
+        type: injuryForm.type.trim(),
+        body_part: injuryForm.body_part.trim(),
+        date_start: injuryForm.date_start,
+        notes: injuryForm.notes.trim() || null,
+        severity: 'mild',
+        status: 'reported',
+      })
+      const updated = await Injuries.getByAthlete(athleteId)
+      setInjuries(updated)
+      setReportingInjury(false)
+      setInjuryForm({ type: '', body_part: '', date_start: new Date().toISOString().slice(0,10), notes: '' })
+      haptic('success')
+      toast('Lesión reportada ✓ Tu entrenadora la verá pronto')
+    } catch { toast('Error al guardar la lesión', 'error') }
+    setSavingInjury(false)
   }
 
   const handleUpload = async (e) => {
@@ -882,8 +917,13 @@ function AthleteHealth({ athleteId }) {
         })()}
 
         {!docsTab && (
-          <div style={{ fontSize: 11, fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.8px', marginTop: isFemale ? 20 : 0, marginBottom: 8, paddingTop: isFemale ? 16 : 0, borderTop: isFemale ? '1px solid var(--border)' : 'none' }}>
-            🩹 Lesiones
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: isFemale ? 20 : 0, marginBottom: 8, paddingTop: isFemale ? 16 : 0, borderTop: isFemale ? '1px solid var(--border)' : 'none' }}>
+            <div style={{ fontSize: 11, fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.8px' }}>
+              🩹 Lesiones
+            </div>
+            <button className="btn btn-sm btn-primary" onClick={() => setReportingInjury(true)} style={{ fontSize: 12 }}>
+              + Reportar lesión
+            </button>
           </div>
         )}
         {!docsTab ? (
@@ -951,6 +991,77 @@ function AthleteHealth({ athleteId }) {
           </>
         )}
       </div>
+
+      {/* Sheet — Reportar lesión */}
+      {reportingInjury && (
+        <>
+          <div className="overlay" onClick={() => setReportingInjury(false)} />
+          <div className="sheet">
+            <div className="sheet-handle" />
+            <div className="sheet-body">
+              <h3 style={{ marginBottom: 20 }}>Reportar lesión</h3>
+
+              <div style={{ marginBottom: 14 }}>
+                <label style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', display: 'block', marginBottom: 6 }}>
+                  Tipo de lesión *
+                </label>
+                <input
+                  className="input"
+                  placeholder="p.ej. Contractura, Esguince, Tendinitis..."
+                  value={injuryForm.type}
+                  onChange={e => setInjuryForm(f => ({ ...f, type: e.target.value }))}
+                  autoFocus
+                />
+              </div>
+
+              <div style={{ marginBottom: 14 }}>
+                <label style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', display: 'block', marginBottom: 6 }}>
+                  Zona afectada *
+                </label>
+                <input
+                  className="input"
+                  placeholder="p.ej. Gemelo derecho, Hombro izquierdo..."
+                  value={injuryForm.body_part}
+                  onChange={e => setInjuryForm(f => ({ ...f, body_part: e.target.value }))}
+                />
+              </div>
+
+              <div style={{ marginBottom: 14 }}>
+                <label style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', display: 'block', marginBottom: 6 }}>
+                  Fecha de inicio
+                </label>
+                <input
+                  className="input"
+                  type="date"
+                  value={injuryForm.date_start}
+                  onChange={e => setInjuryForm(f => ({ ...f, date_start: e.target.value }))}
+                />
+              </div>
+
+              <div style={{ marginBottom: 24 }}>
+                <label style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', display: 'block', marginBottom: 6 }}>
+                  Notas (opcional)
+                </label>
+                <textarea
+                  className="input"
+                  rows={3}
+                  placeholder="Describe cómo ocurrió, qué sientes, nivel de dolor..."
+                  value={injuryForm.notes}
+                  onChange={e => setInjuryForm(f => ({ ...f, notes: e.target.value }))}
+                  style={{ resize: 'vertical' }}
+                />
+              </div>
+
+              <button className="btn btn-primary btn-full" onClick={saveInjury} disabled={savingInjury}>
+                {savingInjury ? 'Guardando...' : 'Reportar lesión'}
+              </button>
+              <button className="btn btn-secondary btn-full" onClick={() => setReportingInjury(false)} style={{ marginTop: 8 }}>
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </>
+      )}
     </div>
   )
 }
@@ -1104,6 +1215,7 @@ function AthleteProgressTab({ athleteId, isFemale }) {
 
 // ---- Entrenos con RPE ----
 function AthleteTrainingWithRPE({ athleteId, initialSessionId, onSessionOpened }) {
+  const { user, profile } = useAuth()
   const [sessions, setSessions] = useState([])
   const [loading, setLoading] = useState(true)
   const [rpeSheet, setRpeSheet] = useState(null)
@@ -1115,6 +1227,8 @@ function AthleteTrainingWithRPE({ athleteId, initialSessionId, onSessionOpened }
   const [moodPost, setMoodPost] = useState(0)
   const [rpeNotes, setRpeNotes] = useState('')
   const [sessionComment, setSessionComment] = useState('')
+  const [savedComment, setSavedComment] = useState('')
+  const [editingComment, setEditingComment] = useState(false)
   const [coachReply, setCoachReply] = useState(null)
   const [savingComment, setSavingComment] = useState(false)
   const [savingPre, setSavingPre] = useState(false)
@@ -1124,7 +1238,11 @@ function AthleteTrainingWithRPE({ athleteId, initialSessionId, onSessionOpened }
   const getSeenReplies = () => { try { return JSON.parse(localStorage.getItem('ns_seen_replies') || '[]') } catch { return [] } }
   const markReplyAsSeen = (sessionId) => {
     const seen = getSeenReplies()
-    if (!seen.includes(sessionId)) { seen.push(sessionId); localStorage.setItem('ns_seen_replies', JSON.stringify(seen)) }
+    if (!seen.includes(sessionId)) {
+      seen.push(sessionId)
+      localStorage.setItem('ns_seen_replies', JSON.stringify(seen))
+      setUnreadReplies(c => Math.max(0, c - 1))
+    }
   }
 
   const loadSessions = () => Sessions.getByAthlete(athleteId).then(data => { setSessions(data); setLoading(false) })
@@ -1181,7 +1299,10 @@ function AthleteTrainingWithRPE({ athleteId, initialSessionId, onSessionOpened }
   useEffect(() => {
     if (!detailSession) return
     RPE.get(detailSession.id, athleteId).then(data => {
-      setSessionComment(data?.rpe_notes || '')
+      const notes = data?.rpe_notes || ''
+      setSessionComment(notes)
+      setSavedComment(notes)
+      setEditingComment(false)
       setCoachReply(data?.coach_reply || null)
       if (data?.coach_reply) markReplyAsSeen(detailSession.id)
     })
@@ -1220,7 +1341,11 @@ function AthleteTrainingWithRPE({ athleteId, initialSessionId, onSessionOpened }
     if (!detailSession) return
     setSavingComment(true)
     try {
-      await RPE.set(detailSession.id, athleteId, { rpe_notes: sessionComment.trim() || null })
+      const trimmed = sessionComment.trim()
+      await RPE.set(detailSession.id, athleteId, { rpe_notes: trimmed || null })
+      setSavedComment(trimmed)
+      setSessionComment('')
+      setEditingComment(false)
       haptic('success')
       toast('Comentario enviado a Celia ✓')
       try {
@@ -1442,21 +1567,43 @@ function AthleteTrainingWithRPE({ athleteId, initialSessionId, onSessionOpened }
                 <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 800, fontSize: 14, textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 8 }}>
                   💬 Comentario para Celia
                 </div>
-                <textarea
-                  value={sessionComment}
-                  onChange={e => setSessionComment(e.target.value)}
-                  placeholder="¿Cómo fue el entreno? ¿Algo que quieras contarle..."
-                  maxLength={300}
-                  rows={3}
-                  style={{ width: '100%', resize: 'none', padding: '10px 12px', borderRadius: 'var(--radius-sm)', background: 'var(--bg)', fontSize: 14, color: 'var(--text)', fontFamily: 'inherit', boxSizing: 'border-box', outline: 'none' }}
-                />
-                <button
-                  className="btn btn-secondary btn-full"
-                  onClick={saveComment}
-                  disabled={savingComment || !sessionComment.trim()}
-                  style={{ marginTop: 8 }}>
-                  {savingComment ? 'Enviando...' : sessionComment.trim() ? '📨 Enviar comentario' : '📨 Escribe algo para enviar'}
-                </button>
+                {savedComment && !editingComment ? (
+                  <div style={{ background: 'var(--surface)', borderRadius: 'var(--radius-sm)', padding: '10px 12px', fontSize: 14, color: 'var(--text)', lineHeight: 1.5 }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.4px', marginBottom: 4 }}>Tu comentario</div>
+                    <div>"{savedComment}"</div>
+                    <button
+                      className="btn btn-secondary btn-full"
+                      onClick={() => { setSessionComment(savedComment); setEditingComment(true) }}
+                      style={{ marginTop: 10, fontSize: 13 }}>
+                      ✏️ Editar comentario
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    <textarea
+                      value={sessionComment}
+                      onChange={e => setSessionComment(e.target.value)}
+                      placeholder="¿Cómo fue el entreno? ¿Algo que quieras contarle..."
+                      maxLength={300}
+                      rows={3}
+                      style={{ width: '100%', resize: 'none', padding: '10px 12px', borderRadius: 'var(--radius-sm)', background: 'var(--bg)', fontSize: 14, color: 'var(--text)', fontFamily: 'inherit', boxSizing: 'border-box', outline: 'none' }}
+                    />
+                    <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+                      {editingComment && (
+                        <button className="btn btn-secondary" onClick={() => { setSessionComment(''); setEditingComment(false) }} style={{ flex: 1 }}>
+                          Cancelar
+                        </button>
+                      )}
+                      <button
+                        className="btn btn-secondary btn-full"
+                        onClick={saveComment}
+                        disabled={savingComment || !sessionComment.trim()}
+                        style={{ flex: 2 }}>
+                        {savingComment ? 'Enviando...' : '📨 Enviar comentario'}
+                      </button>
+                    </div>
+                  </>
+                )}
                 {coachReply && (
                   <div style={{ marginTop: 10, padding: '10px 12px', background: 'var(--accent-dim)', borderRadius: 10, borderLeft: '3px solid var(--accent)' }}>
                     <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: '0.4px', marginBottom: 4 }}>💬 Respuesta de Celia</div>
@@ -1482,6 +1629,7 @@ function AthleteTrainingWithRPE({ athleteId, initialSessionId, onSessionOpened }
           onClose={() => { setPreSheet(null); setFatiguePre(0) }}
           saving={savingPre}
           formatDate={formatDate}
+          isPast={preSheet.date < new Date().toISOString().slice(0,10)}
         />
       )}
 
@@ -1517,7 +1665,7 @@ function AthleteTrainingWithRPE({ athleteId, initialSessionId, onSessionOpened }
   )
 }
 
-function PreSessionSheet({ session, fatiguePre, setFatiguePre, onSave, onClose, saving, formatDate }) {
+function PreSessionSheet({ session, fatiguePre, setFatiguePre, onSave, onClose, saving, formatDate, isPast }) {
   return (
     <>
       <div className="overlay" onClick={onClose} />
@@ -1532,14 +1680,23 @@ function PreSessionSheet({ session, fatiguePre, setFatiguePre, onSave, onClose, 
             <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 800, fontSize: 18, textTransform: 'uppercase' }}>{session.title}</div>
             <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 2 }}>{formatDate(session.date)}</div>
           </div>
-          <ScaleRow label="😴 Cansancio pre-sesión" value={fatiguePre} onChange={setFatiguePre}
-            colors={['','var(--success)','var(--success)','var(--success)','var(--success)','var(--warning)','var(--warning)','var(--warning)','var(--error)','var(--error)','var(--error)']} />
-          {fatiguePre >= 8 && (
+          <div style={{ position: 'relative' }}>
+            <div style={ isPast ? { opacity: 0.4, pointerEvents: 'none', userSelect: 'none' } : {} }>
+              <ScaleRow label="😴 Cansancio pre-sesión" value={fatiguePre} onChange={isPast ? () => {} : setFatiguePre}
+                colors={['','var(--success)','var(--success)','var(--success)','var(--success)','var(--warning)','var(--warning)','var(--warning)','var(--error)','var(--error)','var(--error)']} />
+            </div>
+            {isPast && (
+              <div style={{ fontSize: 12, color: 'var(--text-muted)', fontStyle: 'italic', marginTop: -8, marginBottom: 12, textAlign: 'center' }}>
+                Solo disponible el día de la sesión
+              </div>
+            )}
+          </div>
+          {!isPast && fatiguePre >= 8 && (
             <div style={{ background: 'var(--error-dim)', border: '1px solid rgba(220,38,38,0.3)', borderRadius: 'var(--radius-sm)', padding: '12px 14px', marginBottom: 16, fontSize: 13 }}>
               ⚠️ <strong>Tu cansancio es muy alto.</strong> Valora con tu entrenadora si hacer la sesión.
             </div>
           )}
-          <button className="btn btn-primary btn-full" onClick={onSave} disabled={!fatiguePre || saving} style={{ marginTop: 8 }}>
+          <button className="btn btn-primary btn-full" onClick={onSave} disabled={isPast || !fatiguePre || saving} style={{ marginTop: 8 }}>
             {saving ? 'Guardando...' : 'Guardar'}
           </button>
         </div>

@@ -13,7 +13,7 @@ export function AuthProvider({ children }) {
   const loadProfile = async (userId, email) => {
     const { data } = await supabase
       .from('profiles')
-      .select('*, athletes(*)')
+      .select('*, athletes!profiles_athlete_id_fkey(*)')
       .eq('id', userId)
       .single()
 
@@ -43,7 +43,7 @@ export function AuthProvider({ children }) {
       await supabase.from('profiles').insert(newProfile)
       const { data: created } = await supabase
         .from('profiles')
-        .select('*, athletes(*)')
+        .select('*, athletes!profiles_athlete_id_fkey(*)')
         .eq('id', userId)
         .single()
       setProfile(created)
@@ -81,6 +81,7 @@ export function AuthProvider({ children }) {
   const signIn = (email, password) => supabase.auth.signInWithPassword({ email, password })
   const signOut = () => supabase.auth.signOut()
   const isCoach = profile?.role === 'coach'
+  const isNutritionist = profile?.role === 'nutritionist'
 
   const updateAvatar = async (file) => {
     if (!user) return
@@ -99,7 +100,7 @@ export function AuthProvider({ children }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, profile, loading, isCoach, signIn, signOut, updateAvatar, updateAthleteAvatar }}>
+    <AuthContext.Provider value={{ user, profile, loading, isCoach, isNutritionist, signIn, signOut, updateAvatar, updateAthleteAvatar }}>
       {children}
     </AuthContext.Provider>
   )

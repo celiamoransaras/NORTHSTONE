@@ -14,6 +14,7 @@ const Payments   = lazy(() => import('./pages/Payments'))
 const Messages   = lazy(() => import('./pages/Messages'))
 const AthleteView = lazy(() => import('./pages/AthleteView'))
 const Documents  = lazy(() => import('./pages/Documents'))
+const NutritionistView = lazy(() => import('./pages/NutritionistView'))
 
 class ErrorBoundary extends Component {
   state = { error: null }
@@ -174,7 +175,7 @@ function CoachApp() {
 }
 
 function AppContent() {
-  const { user, profile, loading, isCoach } = useAuth()
+  const { user, profile, loading, isCoach, isNutritionist } = useAuth()
 
   if (loading) {
     return (
@@ -189,6 +190,13 @@ function AppContent() {
 
   if (!user) return <Login />
   if (isCoach) return <CoachApp />
+  if (isNutritionist) return (
+    <ErrorBoundary>
+      <Suspense fallback={<PageLoader />}>
+        <NutritionistView />
+      </Suspense>
+    </ErrorBoundary>
+  )
   return (
     <ErrorBoundary>
       <Suspense fallback={<PageLoader />}>

@@ -26,6 +26,8 @@ export default function Health() {
   const [editing, setEditing] = useState(null)
   const [saving, setSaving] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(null)
+  const [followUpText, setFollowUpText] = useState('')
+  const [savingFollowUp, setSavingFollowUp] = useState(false)
   const toast = useToast()
 
   const load = async () => {
@@ -41,8 +43,35 @@ export default function Health() {
   const resolved = injuries.filter(i => i.date_end && i.date_end <= today)
   const displayed = tab === 'active' ? active : resolved
 
-  const openNew = () => { setForm({ ...emptyForm, athlete_id: athletes[0]?.id || '' }); setEditing(null); setSheet('form') }
-  const openEdit = (inj) => { setForm({ ...inj }); setEditing(inj.id); setSheet('form') }
+  const openNew = () => { setForm({ ...emptyForm, athlete_id: athletes[0]?.id || '' }); setEditing(null); setFollowUpText(''); setSheet('form') }
+  const openEdit = (inj) => { setForm({ ...inj }); setEditing(inj.id); setFollowUpText(''); setSheet('form') }
+
+  const getFollowUpNotes = (inj) => {
+    try { return Array.isArray(inj?.follow_up_notes) ? inj.follow_up_notes : JSON.parse(inj?.follow_up_notes || '[]') } catch { return [] }
+  }
+
+  const addFollowUpNote = async () => {
+    if (!followUpText.trim() || !editing) return
+    setSavingFollowUp(true)
+    try {
+      const current = injuries.find(i => i.id === editing)
+      const existing = getFollowUpNotes(current)
+      const updated = [...existing, { date: new Date().toISOString().slice(0,10), text: followUpText.trim() }]
+      await Injuries.update(editing, { follow_up_notes: updated })
+      setFollowUpText('')
+      await load()
+      // Update form to reflect new notes
+      const refreshed = injuries.find(i => i.id === editing)
+      if (refreshed) setForm({ ...refreshed, follow_up_notes: updated })
+      haptic('success')
+      toast('Nota de seguimiento añadida')
+    } catch {
+      toast('Error al guardar nota', 'error')
+      haptic('error')
+    } finally {
+      setSavingFollowUp(false)
+    }
+  }
 
   const save = async () => {
     if (!form.athlete_id) return
@@ -301,6 +330,37 @@ export default function Health() {
                 <textarea className="input" placeholder="Observaciones, fisioterapia..." value={form.notes}
                   onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} />
               </div>
+
+              {editing && (() => {
+                const currentInj = injuries.find(i => i.id === editing)
+                const followUps = getFollowUpNotes(currentInj)
+                return (
+                  <div className="input-group">
+                    <label className="input-label">Seguimiento</label>
+                    {followUps.length > 0 && (
+                      <div style={{ marginBottom: 10, display: 'flex', flexDirection: 'column', gap: 6 }}>
+                        {followUps.map((entry, idx) => (
+                          <div key={idx} style={{ background: 'var(--bg)', borderRadius: 10, padding: '8px 12px', fontSize: 13 }}>
+                            <div style={{ fontWeight: 600, fontSize: 11, color: 'var(--text-muted)', marginBottom: 2 }}>
+                              {new Date(entry.date + 'T12:00:00').toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' })}
+                            </div>
+                            <div>{entry.text}</div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <input className="input" style={{ flex: 1 }} placeholder="Añadir nota de seguimiento..." value={followUpText}
+                        onChange={e => setFollowUpText(e.target.value)}
+                        onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addFollowUpNote() } }} />
+                      <button className="btn btn-secondary btn-sm" onClick={addFollowUpNote} disabled={savingFollowUp || !followUpText.trim()}>
+                        {savingFollowUp ? '...' : '+ Añadir'}
+                      </button>
+                    </div>
+                  </div>
+                )
+              })()}
+
               <button className="btn btn-primary btn-full" onClick={save} disabled={saving}>
                 {saving ? 'Guardando...' : editing ? 'Guardar cambios' : 'Registrar lesión'}
               </button>

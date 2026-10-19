@@ -23,11 +23,13 @@ export const Athletes = {
     return data
   },
   create: async (athlete) => {
-    const { data } = await supabase.from('athletes').insert(athlete).select().single()
+    const { data, error } = await supabase.from('athletes').insert(athlete).select().single()
+    if (error) throw error
     return data
   },
   update: async (id, updates) => {
-    const { data } = await supabase.from('athletes').update(updates).eq('id', id).select().single()
+    const { data, error } = await supabase.from('athletes').update(updates).eq('id', id).select().single()
+    if (error) throw error
     return data
   },
   delete: async (id) => {
@@ -77,8 +79,9 @@ export const Sessions = {
     if (!data) return null
     return { ...data, exercises: mapExercises(data.exercises), athlete_ids: (data.session_athletes || []).map(sa => sa.athlete_id) }
   },
-  create: async ({ exercises = [], athlete_ids = [], ...session }) => {
-    const { data: newSession } = await supabase.from('sessions').insert(session).select().single()
+  create: async ({ exercises = [], athlete_ids = [], attendance, session_athletes, ratings, id: _id, ...session }) => {
+    const { data: newSession, error: sessionError } = await supabase.from('sessions').insert(session).select().single()
+    if (sessionError) throw sessionError
     if (!newSession) return null
 
     if (exercises.length) {
@@ -186,11 +189,14 @@ export const Payments = {
     return data || []
   },
   ensureMonth: async (athletes, month, year) => {
+    const today = new Date().getDate()
     const existing = await Payments.getByMonth(month, year)
     const existingIds = existing.map(p => p.athlete_id)
     const missing = athletes.filter(a => {
       if (existingIds.includes(a.id)) return false
-      return a.monthly_fee != null && a.monthly_fee >= 0
+      if (a.monthly_fee == null || a.monthly_fee < 0) return false
+      const billingDay = a.billing_day || 1
+      return today >= billingDay
     })
     if (missing.length) {
       await supabase.from('payments').insert(missing.map(a => ({
@@ -225,6 +231,14 @@ export const Storage = {
     if (error) throw error
     const { data } = supabase.storage.from('documents').getPublicUrl(path)
     return { url: data.publicUrl, name: file.name, size: file.size }
+  },
+  uploadProgressPhoto: async (athleteId, file) => {
+    const ext = file.name.split('.').pop()
+    const path = `progress/${athleteId}_${Date.now()}.${ext}`
+    const { error } = await supabase.storage.from('documents').upload(path, file)
+    if (error) throw error
+    const { data } = supabase.storage.from('documents').getPublicUrl(path)
+    return { url: data.publicUrl, name: file.name }
   }
 }
 
@@ -258,14 +272,23 @@ export const Documents = {
   }
 }
 
+// ---- BODY MEASUREMENTS ----
+export const BodyMeasurements = {
+  getByAthlete: async (athleteId) => {
+    const { data } = await supabase.from('body_measurements').select('*').eq('athlete_id', athleteId).order('date')
+    return data || []
+  },
+  add: async (athleteId, date, values) => {
+    await supabase.from('body_measurements').upsert({ athlete_id: athleteId, date, ...values }, { onConflict: 'athlete_id,date' })
+  },
+}
+
 // ---- MESSAGES ----
 export const Messages = {
-  getGroup: async (group) => {
-    const { data } = await supabase
-      .from('messages')
-      .select('*')
-      .eq('group_id', group)
-      .order('created_at')
+  getGroup: async (group, sinceDate = null) => {
+    let q = supabase.from('messages').select('*').eq('group_id', group)
+    if (sinceDate) q = q.gte('created_at', sinceDate)
+    const { data } = await q.order('created_at')
     return (data || []).map(m => ({
       id: m.id,
       group: m.group_id,
@@ -421,8 +444,8 @@ export const Cycle = {
       .eq('athlete_id', athleteId)
       .eq('type', 'cycle')
       .order('date_start', { ascending: false })
-    if (all && all.length > 3) {
-      const toDelete = all.slice(3).map(c => c.id)
+    if (all && all.length > 12) {
+      const toDelete = all.slice(12).map(c => c.id)
       await supabase.from('injuries').delete().in('id', toDelete)
     }
     return data
@@ -457,7 +480,7 @@ export const Cycle = {
     return data || []
   },
   // Duración del ciclo — guardado en Supabase (campo cycle_length en athletes)
-  getCycleLength: (athleteId) => 28, // fallback, valor real viene del perfil
+  getCycleLength: (cycleLength) => cycleLength || 28, // usa el valor del perfil o 28 como fallback
   setCycleLength: async (athleteId, length) => {
     await supabase.from('athletes').update({ cycle_length: length }).eq('id', athleteId)
   },

@@ -76,7 +76,8 @@ export default function Messages() {
   }, [])
 
   const loadMessages = async () => {
-    const msgs = await DB.getGroup(activeChat)
+    const sinceDate = (!isCoach && profile?.athletes?.created_at) ? profile.athletes.created_at : null
+    const msgs = await DB.getGroup(activeChat, sinceDate)
     setMessages(msgs)
     markRead(activeChat)
     if (!msgs.length) { setReactions({}); return }

@@ -1,5 +1,5 @@
-import { useState, useEffect, useMemo } from 'react'
-import { Records, Goals, Wellness, WeightLog } from '../lib/db'
+import { useState, useEffect, useMemo, useRef } from 'react'
+import { Records, Goals, Wellness, WeightLog, Storage, Documents, BodyMeasurements } from '../lib/db'
 import { supabase } from '../lib/supabase'
 import ConfirmSheet from '../components/ConfirmSheet'
 import { useToast } from '../contexts/ToastContext'
@@ -1322,6 +1322,72 @@ export function WeightSection({ athleteId }) {
   )
 }
 
+// ---- Evolución de peso por mes (coach / nutricionista) ----
+export function WeightMonthly({ athleteId }) {
+  const [logs, setLogs] = useState([])
+
+  useEffect(() => {
+    WeightLog.getByAthlete(athleteId).then(setLogs)
+  }, [athleteId])
+
+  if (!logs.length) return (
+    <div className="card" style={{ padding: '14px 16px' }}>
+      <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 800, fontSize: 15, textTransform: 'uppercase', marginBottom: 6 }}>Evolución de peso</div>
+      <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>Sin registros de peso aún</div>
+    </div>
+  )
+
+  const firstDate = new Date(logs[0].date + 'T12:00:00')
+
+  const grouped = {}
+  logs.forEach(log => {
+    const d = new Date(log.date + 'T12:00:00')
+    const m = (d.getFullYear() - firstDate.getFullYear()) * 12 + (d.getMonth() - firstDate.getMonth()) + 1
+    if (!grouped[m]) grouped[m] = []
+    grouped[m].push(log)
+  })
+
+  const monthData = Object.keys(grouped).map(Number).sort((a, b) => a - b).map(m => {
+    const sorted = grouped[m].sort((a, b) => a.date.localeCompare(b.date))
+    return { month: m, last: sorted[sorted.length - 1].weight }
+  })
+
+  const firstW = monthData[0]?.last
+  const lastW = monthData[monthData.length - 1]?.last
+  const diff = monthData.length > 1 ? (lastW - firstW).toFixed(1) : null
+
+  return (
+    <div className="card" style={{ padding: '14px 16px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+        <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 800, fontSize: 15, textTransform: 'uppercase' }}>Evolución de peso</div>
+        {diff !== null && (
+          <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 900, fontSize: 17, color: parseFloat(diff) < 0 ? 'var(--success)' : parseFloat(diff) > 0 ? 'var(--error)' : 'var(--text-muted)' }}>
+            {parseFloat(diff) > 0 ? '+' : ''}{diff} kg
+          </span>
+        )}
+      </div>
+      <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4 }}>
+        {monthData.map(({ month, last }, i) => {
+          const prev = monthData[i - 1]?.last
+          const change = prev ? last - prev : null
+          return (
+            <div key={month} style={{ flex: '0 0 auto', background: 'var(--bg)', borderRadius: 12, padding: '10px 14px', textAlign: 'center', minWidth: 72 }}>
+              <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 900, fontSize: 22, color: 'var(--accent)', lineHeight: 1 }}>{last}</div>
+              <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 10, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>kg</div>
+              {change !== null && (
+                <div style={{ fontSize: 10, fontWeight: 700, color: change < 0 ? 'var(--success)' : change > 0 ? 'var(--error)' : 'var(--text-muted)', marginTop: 2 }}>
+                  {change > 0 ? '+' : ''}{change.toFixed(1)}
+                </div>
+              )}
+              <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', marginTop: 4 }}>Mes {month}</div>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
 // ---- Último peso para el coach ----
 export function WeightCoach({ athleteId, athleteName }) {
   const [last, setLast] = useState(undefined)
@@ -1347,6 +1413,211 @@ export function WeightCoach({ athleteId, athleteName }) {
           {last.weight} <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-muted)' }}>kg</span>
         </div>
       </div>
+    </div>
+  )
+}
+
+// ---- Fotos de progreso (3 poses por mes) ----
+const POSES = [
+  { key: 'frente',  label: 'Frente'  },
+  { key: 'perfil',  label: 'Perfil'  },
+  { key: 'espalda', label: 'Espalda' },
+]
+
+function parseProgressPhoto(p) {
+  const m = (p.title || '').match(/^mes_(\d+)_(frente|perfil|espalda)$/)
+  if (!m) return null
+  return { ...p, monthNum: parseInt(m[1]), pose: m[2] }
+}
+
+export function ProgressPhotos({ athleteId, canUpload = false, canDelete = false }) {
+  const toast = useToast()
+  const inputRef = useRef()
+  const [photos, setPhotos] = useState([])
+  const [uploading, setUploading] = useState(false)
+  const [lightbox, setLightbox] = useState(null)
+  const [sheetMonth, setSheetMonth] = useState(null)
+  const [pendingUpload, setPendingUpload] = useState(null)
+
+  const load = () => {
+    supabase.from('documents').select('*')
+      .eq('athlete_id', athleteId).eq('category', 'progress')
+      .order('created_at', { ascending: true })
+      .then(({ data }) => setPhotos(data || []))
+  }
+
+  useEffect(() => { load() }, [athleteId])
+
+  const parsed = useMemo(() => photos.map(parseProgressPhoto).filter(Boolean), [photos])
+
+  const photoMap = useMemo(() => {
+    const m = {}
+    parsed.forEach(p => { m[`${p.monthNum}_${p.pose}`] = p })
+    return m
+  }, [parsed])
+
+  const months = useMemo(() => {
+    const nums = new Set(parsed.map(p => p.monthNum))
+    if (canUpload) {
+      // Always include the current upload month (first with any empty slot, or next)
+      let cur = 1
+      while ([...nums].includes(cur) && POSES.every(p => photoMap[`${cur}_${p.key}`])) cur++
+      nums.add(cur)
+    }
+    return [...nums].sort((a, b) => b - a)
+  }, [parsed, photoMap, canUpload])
+
+  const currentUploadMonth = useMemo(() => {
+    let m = 1
+    while (parsed.some(p => p.monthNum === m) && POSES.every(p => photoMap[`${m}_${p.key}`])) m++
+    return m
+  }, [parsed, photoMap])
+
+  const triggerInput = () => setTimeout(() => inputRef.current?.click(), 60)
+
+  const handleSlotClick = (month, pose) => {
+    const photo = photoMap[`${month}_${pose}`]
+    if (photo) { setLightbox(photo); return }
+    if (!canUpload) return
+    setPendingUpload({ month, pose })
+    triggerInput()
+  }
+
+  const handleUpload = async (e) => {
+    const file = e.target.files?.[0]
+    if (!file || !pendingUpload) return
+    if (!file.type.startsWith('image/')) { toast('Solo se pueden subir imágenes', 'error'); return }
+    setUploading(true)
+    try {
+      const { url, name } = await Storage.uploadProgressPhoto(athleteId, file)
+      await Documents.create({
+        title: `mes_${pendingUpload.month}_${pendingUpload.pose}`,
+        file_url: url, file_name: name,
+        category: 'progress', athlete_id: athleteId,
+      })
+      toast('Foto subida ✓'); load()
+    } catch { toast('Error al subir la foto', 'error') }
+    finally { setUploading(false); setPendingUpload(null); if (inputRef.current) inputRef.current.value = '' }
+  }
+
+  return (
+    <div>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+        <div className="section-title" style={{ margin: 0 }}>Fotos de progreso</div>
+        {canUpload && (
+          <>
+            <button className="btn btn-primary btn-sm" onClick={() => setSheetMonth(currentUploadMonth)} disabled={uploading}>
+              {uploading ? 'Subiendo...' : '+ Foto'}
+            </button>
+            <input ref={inputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleUpload} />
+          </>
+        )}
+      </div>
+
+      {months.length === 0 ? (
+        <div style={{ padding: '24px 20px', textAlign: 'center', background: 'var(--card)', borderRadius: 16, border: '1.5px solid var(--border)' }}>
+          <div style={{ fontSize: 36, marginBottom: 8 }}>📸</div>
+          <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 800, fontSize: 15, textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 4 }}>Sin fotos aún</div>
+          {canUpload && <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>Sube las 3 fotos de cada mes para ver tu evolución</div>}
+        </div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {months.map(month => (
+            <div key={month} className="card" style={{ padding: '14px 16px' }}>
+              <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 800, fontSize: 14, textTransform: 'uppercase', color: 'var(--accent)', marginBottom: 10, letterSpacing: '0.5px' }}>
+                Mes {month}
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+                {POSES.map(pose => {
+                  const photo = photoMap[`${month}_${pose.key}`]
+                  const clickable = photo || canUpload
+                  return (
+                    <div key={pose.key} onClick={() => handleSlotClick(month, pose.key)}
+                      style={{ aspectRatio: '3/4', borderRadius: 10, overflow: 'hidden', cursor: clickable ? 'pointer' : 'default', background: 'var(--bg)', border: photo ? 'none' : '1.5px dashed var(--border)', position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                      {photo ? (
+                        <>
+                          <img src={photo.file_url} alt={pose.label} style={{ width: '100%', height: '100%', objectFit: 'cover', position: 'absolute', inset: 0 }} loading="lazy" />
+                          <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: 'linear-gradient(transparent, rgba(0,0,0,0.6))', padding: '12px 6px 6px', textAlign: 'center' }}>
+                            <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700, fontSize: 11, color: '#fff', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{pose.label}</span>
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <div style={{ fontSize: 18, opacity: 0.3, marginBottom: 4 }}>📷</div>
+                          <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700, fontSize: 10, textTransform: 'uppercase', color: 'var(--text-muted)', letterSpacing: '0.3px' }}>{pose.label}</div>
+                          {canUpload && <div style={{ fontSize: 9, color: 'var(--text-dim)', marginTop: 2 }}>Toca para subir</div>}
+                        </>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Sheet: selector de pose */}
+      {sheetMonth !== null && (
+        <>
+          <div className="overlay" onClick={() => setSheetMonth(null)} />
+          <div className="sheet">
+            <div className="sheet-handle" />
+            <div className="sheet-header">
+              <h3>Mes {sheetMonth} — Elige la pose</h3>
+              <button className="btn btn-ghost btn-sm" onClick={() => setSheetMonth(null)}>✕</button>
+            </div>
+            <div className="sheet-body">
+              {POSES.map(pose => {
+                const existing = photoMap[`${sheetMonth}_${pose.key}`]
+                return (
+                  <button key={pose.key} disabled={!!existing}
+                    onClick={() => { setSheetMonth(null); setPendingUpload({ month: sheetMonth, pose: pose.key }); triggerInput() }}
+                    style={{ display: 'flex', alignItems: 'center', gap: 14, width: '100%', padding: '14px 16px', borderRadius: 12, background: existing ? 'var(--bg)' : 'var(--surface)', border: '1.5px solid var(--border)', marginBottom: 8, cursor: existing ? 'default' : 'pointer', opacity: existing ? 0.55 : 1, textAlign: 'left' }}>
+                    <span style={{ fontSize: 28 }}>{existing ? '✅' : '📷'}</span>
+                    <div>
+                      <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 800, fontSize: 16, textTransform: 'uppercase' }}>{pose.label}</div>
+                      <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 1 }}>{existing ? 'Ya subida' : 'Sin foto aún — toca para subir'}</div>
+                    </div>
+                  </button>
+                )
+              })}
+              {POSES.every(p => photoMap[`${sheetMonth}_${p.key}`]) && (
+                <button onClick={() => setSheetMonth(sheetMonth + 1)}
+                  style={{ display: 'flex', alignItems: 'center', gap: 14, width: '100%', padding: '14px 16px', borderRadius: 12, background: 'var(--accent)', border: 'none', cursor: 'pointer', marginTop: 4 }}>
+                  <span style={{ fontSize: 24 }}>➕</span>
+                  <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 800, fontSize: 16, textTransform: 'uppercase', color: '#fff' }}>Empezar Mes {sheetMonth + 1}</div>
+                </button>
+              )}
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* Lightbox */}
+      {lightbox && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.92)', zIndex: 1000, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+          <div onClick={() => setLightbox(null)} style={{ position: 'absolute', top: 16, right: 16, fontSize: 28, color: '#fff', cursor: 'pointer' }}>✕</div>
+          <img src={lightbox.file_url} alt="" style={{ maxWidth: '100%', maxHeight: '75vh', objectFit: 'contain', borderRadius: 12 }} />
+          <div style={{ color: '#fff', fontSize: 14, marginTop: 12, fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+            {POSES.find(p => p.key === lightbox.pose)?.label} — Mes {lightbox.monthNum}
+          </div>
+          {(canUpload || canDelete) && (
+            <button
+              onClick={async () => {
+                try {
+                  await Documents.delete(lightbox.id)
+                  setLightbox(null)
+                  load()
+                  toast('Foto eliminada')
+                } catch { toast('Error al eliminar', 'error') }
+              }}
+              style={{ marginTop: 16, padding: '10px 24px', borderRadius: 10, background: '#EF4444', color: '#fff', fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 800, fontSize: 14, textTransform: 'uppercase', letterSpacing: '0.5px', border: 'none', cursor: 'pointer' }}>
+              🗑 Eliminar foto
+            </button>
+          )}
+        </div>
+      )}
     </div>
   )
 }
@@ -1378,6 +1649,12 @@ export default function Progress({ athleteId, sessions = [], isCoach = false, is
 
         {/* Peso corporal */}
         {!isCoach && <WeightSection athleteId={athleteId} />}
+
+        {/* Medidas corporales */}
+        {!isCoach && <MeasurementsSection athleteId={athleteId} />}
+
+        {/* Fotos de progreso */}
+        <ProgressPhotos athleteId={athleteId} canUpload={!isCoach} canDelete={!isCoach} />
 
         {/* Objetivos */}
         <GoalsSection athleteId={athleteId} canCreate={isCoach} />
@@ -1441,6 +1718,193 @@ setEntry(data?.[0] || null)
           </div>
         ))}
       </div>
+    </div>
+  )
+}
+
+// ---- Medidas corporales (deportista) ----
+const MEASURES = [
+  { key: 'body_fat', label: 'Grasa corporal', unit: '%',  placeholder: 'ej. 22.5' },
+  { key: 'cintura',  label: 'Cintura',         unit: 'cm', placeholder: 'ej. 72' },
+  { key: 'pecho',    label: 'Pecho',            unit: 'cm', placeholder: 'ej. 90' },
+  { key: 'muslo',    label: 'Muslo',            unit: 'cm', placeholder: 'ej. 55' },
+  { key: 'cadera',   label: 'Cadera',           unit: 'cm', placeholder: 'ej. 95' },
+]
+
+export function MeasurementsSection({ athleteId }) {
+  const toast = useToast()
+  const [logs, setLogs] = useState([])
+  const [form, setForm] = useState({})
+  const [date, setDate] = useState(new Date().toISOString().slice(0, 10))
+  const [saving, setSaving] = useState(false)
+  const [showForm, setShowForm] = useState(false)
+
+  const load = () => BodyMeasurements.getByAthlete(athleteId).then(setLogs)
+  useEffect(() => { load() }, [athleteId])
+
+  const save = async () => {
+    const vals = Object.fromEntries(Object.entries(form).map(([k, v]) => [k, parseFloat(v) || null]).filter(([, v]) => v !== null))
+    if (!Object.keys(vals).length) { toast('Introduce al menos un valor', 'error'); return }
+    setSaving(true)
+    try {
+      await BodyMeasurements.add(athleteId, date, vals)
+      toast('Medidas guardadas ✓')
+      setForm({})
+      setShowForm(false)
+      load()
+    } catch { toast('Error al guardar', 'error') }
+    finally { setSaving(false) }
+  }
+
+  // Agrupar por mes de progreso
+  const firstDate = logs.length ? new Date(logs[0].date + 'T12:00:00') : null
+  const monthData = useMemo(() => {
+    if (!logs.length) return []
+    const grouped = {}
+    logs.forEach(log => {
+      const d = new Date(log.date + 'T12:00:00')
+      const m = (d.getFullYear() - firstDate.getFullYear()) * 12 + (d.getMonth() - firstDate.getMonth()) + 1
+      if (!grouped[m]) grouped[m] = []
+      grouped[m].push(log)
+    })
+    return Object.keys(grouped).map(Number).sort((a, b) => a - b).map(m => {
+      const sorted = grouped[m].sort((a, b) => a.date.localeCompare(b.date))
+      const last = sorted[sorted.length - 1]
+      return { month: m, ...last }
+    })
+  }, [logs])
+
+  return (
+    <div>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+        <div className="section-title" style={{ margin: 0 }}>Medidas corporales</div>
+        <button className="btn btn-primary btn-sm" onClick={() => setShowForm(f => !f)}>{showForm ? 'Cancelar' : '+ Registrar'}</button>
+      </div>
+
+      {showForm && (
+        <div className="card" style={{ padding: '14px 16px', marginBottom: 10 }}>
+          <div className="input-group" style={{ marginBottom: 10 }}>
+            <label className="input-label">Fecha</label>
+            <input className="input" type="date" value={date} onChange={e => setDate(e.target.value)} max={new Date().toISOString().slice(0,10)} />
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 12 }}>
+            {MEASURES.map(m => (
+              <div key={m.key}>
+                <label style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)', letterSpacing: '0.5px', display: 'block', marginBottom: 4 }}>{m.label}</label>
+                <div style={{ position: 'relative' }}>
+                  <input className="input" type="number" step="0.1" placeholder={m.placeholder}
+                    value={form[m.key] || ''}
+                    onChange={e => setForm(f => ({ ...f, [m.key]: e.target.value }))}
+                    style={{ paddingRight: 32 }} />
+                  <span style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', fontSize: 11, color: 'var(--text-muted)', fontWeight: 700 }}>{m.unit}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+          <button className="btn btn-primary btn-full" onClick={save} disabled={saving}>{saving ? 'Guardando...' : 'Guardar medidas'}</button>
+        </div>
+      )}
+
+      {monthData.length === 0 ? (
+        <div style={{ padding: '20px', textAlign: 'center', background: 'var(--card)', borderRadius: 14, border: '1.5px solid var(--border)', color: 'var(--text-muted)', fontSize: 13 }}>
+          Registra tus medidas para ver la evolución mes a mes
+        </div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {MEASURES.map(m => {
+            const hasData = monthData.some(d => d[m.key] != null)
+            if (!hasData) return null
+            const first = monthData.find(d => d[m.key] != null)?.[m.key]
+            const last = [...monthData].reverse().find(d => d[m.key] != null)?.[m.key]
+            const diff = first !== last ? (last - first).toFixed(1) : null
+            return (
+              <div key={m.key} className="card" style={{ padding: '12px 16px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                  <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 800, fontSize: 14, textTransform: 'uppercase' }}>{m.label}</div>
+                  {diff !== null && (
+                    <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 900, fontSize: 15,
+                      color: parseFloat(diff) < 0 ? 'var(--success)' : parseFloat(diff) > 0 ? 'var(--error)' : 'var(--text-muted)' }}>
+                      {parseFloat(diff) > 0 ? '+' : ''}{diff} {m.unit}
+                    </span>
+                  )}
+                </div>
+                <div style={{ display: 'flex', gap: 6, overflowX: 'auto', paddingBottom: 2 }}>
+                  {monthData.map(d => d[m.key] != null && (
+                    <div key={d.month} style={{ flex: '0 0 auto', background: 'var(--bg)', borderRadius: 10, padding: '8px 12px', textAlign: 'center', minWidth: 60 }}>
+                      <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 900, fontSize: 18, color: 'var(--accent)', lineHeight: 1 }}>{d[m.key]}</div>
+                      <div style={{ fontSize: 9, color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase' }}>{m.unit}</div>
+                      <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 10, fontWeight: 700, color: 'var(--text-muted)', marginTop: 3 }}>Mes {d.month}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ---- Medidas corporales (coach / nutricionista — solo lectura) ----
+export function MeasurementsMonthly({ athleteId }) {
+  const [logs, setLogs] = useState([])
+  useEffect(() => { BodyMeasurements.getByAthlete(athleteId).then(setLogs) }, [athleteId])
+
+  const firstDate = logs.length ? new Date(logs[0].date + 'T12:00:00') : null
+  const monthData = useMemo(() => {
+    if (!logs.length) return []
+    const grouped = {}
+    logs.forEach(log => {
+      const d = new Date(log.date + 'T12:00:00')
+      const m = (d.getFullYear() - firstDate.getFullYear()) * 12 + (d.getMonth() - firstDate.getMonth()) + 1
+      if (!grouped[m]) grouped[m] = []
+      grouped[m].push(log)
+    })
+    return Object.keys(grouped).map(Number).sort((a, b) => a - b).map(m => {
+      const sorted = grouped[m].sort((a, b) => a.date.localeCompare(b.date))
+      return { month: m, ...sorted[sorted.length - 1] }
+    })
+  }, [logs])
+
+  if (!logs.length) return (
+    <div className="card" style={{ padding: '14px 16px' }}>
+      <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 800, fontSize: 15, textTransform: 'uppercase', marginBottom: 6 }}>Medidas corporales</div>
+      <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>Sin medidas registradas aún</div>
+    </div>
+  )
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+      {MEASURES.map(m => {
+        const hasData = monthData.some(d => d[m.key] != null)
+        if (!hasData) return null
+        const first = monthData.find(d => d[m.key] != null)?.[m.key]
+        const last = [...monthData].reverse().find(d => d[m.key] != null)?.[m.key]
+        const diff = first !== last ? (last - first).toFixed(1) : null
+        return (
+          <div key={m.key} className="card" style={{ padding: '12px 16px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+              <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 800, fontSize: 14, textTransform: 'uppercase' }}>{m.label}</div>
+              {diff !== null && (
+                <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 900, fontSize: 15,
+                  color: parseFloat(diff) < 0 ? 'var(--success)' : parseFloat(diff) > 0 ? 'var(--error)' : 'var(--text-muted)' }}>
+                  {parseFloat(diff) > 0 ? '+' : ''}{diff} {m.unit}
+                </span>
+              )}
+            </div>
+            <div style={{ display: 'flex', gap: 6, overflowX: 'auto', paddingBottom: 2 }}>
+              {monthData.map(d => d[m.key] != null && (
+                <div key={d.month} style={{ flex: '0 0 auto', background: 'var(--bg)', borderRadius: 10, padding: '8px 12px', textAlign: 'center', minWidth: 60 }}>
+                  <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 900, fontSize: 18, color: 'var(--accent)', lineHeight: 1 }}>{d[m.key]}</div>
+                  <div style={{ fontSize: 9, color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase' }}>{m.unit}</div>
+                  <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 10, fontWeight: 700, color: 'var(--text-muted)', marginTop: 3 }}>Mes {d.month}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )
+      })}
     </div>
   )
 }

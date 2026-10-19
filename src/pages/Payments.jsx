@@ -3,6 +3,7 @@ import { Payments as DB, Athletes } from '../lib/db'
 import { supabase } from '../lib/supabase'
 import { useToast } from '../contexts/ToastContext'
 import { haptic } from '../lib/haptic'
+import { initials } from '../lib/utils'
 
 const MONTHS = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
 
@@ -15,22 +16,23 @@ function AnnualSummary({ year, athletes }) {
       const byAthlete = {}
       athletes.forEach(a => { byAthlete[a.id] = { name: a.name, color: a.color, paid: 0, pending: 0, amountPaid: 0, amountPending: 0 } })
 
-      for (let m = 1; m <= 12; m++) {
-        const pays = await DB.getByMonth(m, year)
-        pays.forEach(p => {
-          if (!byAthlete[p.athlete_id]) return
-          if (p.status === 'paid') { byAthlete[p.athlete_id].paid++; byAthlete[p.athlete_id].amountPaid += p.amount; totalPaid += p.amount }
-          else { byAthlete[p.athlete_id].pending++; byAthlete[p.athlete_id].amountPending += p.amount; totalPending += p.amount }
-        })
-      }
+      const { data: pays } = await supabase
+        .from('payments')
+        .select('athlete_id, status, amount')
+        .gte('month', 1)
+        .lte('month', 12)
+        .eq('year', year)
+      ;(pays || []).forEach(p => {
+        if (!byAthlete[p.athlete_id]) return
+        if (p.status === 'paid') { byAthlete[p.athlete_id].paid++; byAthlete[p.athlete_id].amountPaid += p.amount; totalPaid += p.amount }
+        else { byAthlete[p.athlete_id].pending++; byAthlete[p.athlete_id].amountPending += p.amount; totalPending += p.amount }
+      })
       setData({ totalPaid, totalPending, byAthlete: Object.values(byAthlete) })
     }
     if (athletes.length) load()
   }, [year, athletes])
 
   if (!data) return <div style={{ textAlign: 'center', padding: 16, color: 'var(--text-muted)', fontSize: 13 }}>Cargando resumen...</div>
-
-  const initials = (name) => name?.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase() || '?'
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -136,7 +138,6 @@ export default function Payments() {
   const prevMonth = () => { if (month === 1) { setMonth(12); setYear(y => y-1) } else setMonth(m => m-1) }
   const nextMonth = () => { if (month === 12) { setMonth(1); setYear(y => y+1) } else setMonth(m => m+1) }
   const getAthlete = (id) => athletes.find(a => a.id === id)
-  const initials = (name) => name?.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase() || '?'
 
   if (loading) return (
     <div className="page">

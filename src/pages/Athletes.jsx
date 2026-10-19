@@ -3,9 +3,10 @@ import { useLocation } from 'react-router-dom'
 import { Athletes as DB, Sessions, Storage, Cycle, Nutrition, Documents } from '../lib/db'
 import { supabase } from '../lib/supabase'
 import Training from './Training'
-import { GoalsSection, RecordsSection, LoadChart, WellnessTodayCoach, WellnessHistory, MonthlyReport, WeightCoach } from './Progress'
+import { GoalsSection, RecordsSection, LoadChart, WellnessTodayCoach, WellnessHistory, MonthlyReport, WeightCoach, WeightMonthly, MeasurementsMonthly, ProgressPhotos } from './Progress'
 import { useToast } from '../contexts/ToastContext'
 import { sendPushToAthletes } from '../lib/pushNotifications'
+import { initials } from '../lib/utils'
 
 function getWeekRange() {
   const now = new Date()
@@ -66,7 +67,7 @@ function useCoachAlerts(athletes, weeklyStats) {
 
 const COLORS = ['#F59E0B','#10B981','#3B82F6','#EC4899','#8B5CF6','#EF4444','#14B8A6','#F97316']
 const STATUS_OPTS = [{ value: 'active', label: 'Activo' }, { value: 'injured', label: 'Lesionado' }, { value: 'inactive', label: 'Baja' }]
-const emptyForm = { name: '', email: '', phone: '', dob: '', sport: 'Híbrido', color: COLORS[0], status: 'active', notes: '', gender: '' }
+const emptyForm = { name: '', email: '', phone: '', dob: '', sport: 'Híbrido', color: COLORS[0], status: 'active', notes: '', gender: '', monthly_fee: '', billing_day: 1 }
 
 export default function Athletes() {
   const toast = useToast()
@@ -124,8 +125,9 @@ export default function Athletes() {
       await load()
       setSheet(null)
       toast(editing ? 'Deportista actualizada' : 'Deportista añadida')
-    } catch {
-      toast('Error al guardar', 'error')
+    } catch (err) {
+      console.error('Error al guardar deportista:', err)
+      toast('Error al guardar: ' + (err?.message || err), 'error')
     } finally {
       setSaving(false)
     }
@@ -164,7 +166,6 @@ export default function Athletes() {
     }
   }
 
-  const initials = (name) => name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()
   const statusBadge = (s) => s === 'active' ? 'badge-green' : s === 'injured' ? 'badge-red' : 'badge-gray'
   const statusLabel = (s) => s === 'active' ? 'Activo' : s === 'injured' ? 'Lesionado' : 'Baja'
 
@@ -310,6 +311,7 @@ export default function Athletes() {
               <button className={`pill-tab ${detailTab==='nutrition'?'active':''}`} onClick={() => setDetailTab('nutrition')}>Nutrición</button>
               <button className={`pill-tab ${detailTab==='training'?'active':''}`} onClick={() => setDetailTab('training')}>Entrenos</button>
               <button className={`pill-tab ${detailTab==='progress'?'active':''}`} onClick={() => { setDetailTab('progress'); setProgressKey(k => k + 1) }}>Progreso</button>
+              <button className={`pill-tab ${detailTab==='docs'?'active':''}`} onClick={() => setDetailTab('docs')}>Docs</button>
             </div>
             <div className="sheet-body" style={{ paddingTop: 0 }}>
               {detailTab === 'profile' && (
@@ -344,6 +346,7 @@ export default function Athletes() {
               )}
               {detailTab === 'nutrition' && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                  <NutritionistAssign athleteId={sheet.id} />
                   <NutritionCoach athleteId={sheet.id} />
                   <MedicalDocsCoach athleteId={sheet.id} />
                 </div>
@@ -353,6 +356,9 @@ export default function Athletes() {
               )}
               {detailTab === 'progress' && (
                 <AthleteProgress key={`${sheet.id}-${progressKey}`} athleteId={sheet.id} isFemale={sheet.gender === 'female'} />
+              )}
+              {detailTab === 'docs' && (
+                <AthleteDocsCoach athleteId={sheet.id} />
               )}
             </div>
           </div>
@@ -440,6 +446,16 @@ export default function Athletes() {
                       style={{ width: 32, height: 32, borderRadius: '50%', background: c, border: form.color === c ? '3px solid white' : '3px solid transparent', cursor: 'pointer' }} />
                   ))}
                 </div>
+              </div>
+              <div className="input-group">
+                <label className="input-label">Cuota mensual (€)</label>
+                <input className="input" type="number" min="0" placeholder="0" value={form.monthly_fee}
+                  onChange={e => setForm(f => ({ ...f, monthly_fee: e.target.value }))} />
+              </div>
+              <div className="input-group">
+                <label className="input-label">Día de facturación</label>
+                <input className="input" type="number" min="1" max="28" placeholder="1" value={form.billing_day || ''}
+                  onChange={e => setForm(f => ({ ...f, billing_day: e.target.value ? parseInt(e.target.value) : null }))} />
               </div>
               <div className="input-group">
                 <label className="input-label">Notas</label>
@@ -748,14 +764,11 @@ function NutritionCoach({ athleteId }) {
             </div>
           ))}
 
-          {/* Notas generales (solo en lunes) */}
-          {activeDay === 'monday' && (
-            <div style={{ marginTop: 8 }}>
-              <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 4 }}>📝 Notas generales del plan</div>
-              <textarea className="input" rows={2} placeholder="Hidratación, observaciones..." value={notes}
-                onChange={e => setNotes(e.target.value)} style={{ resize: 'vertical', fontSize: 13 }} />
-            </div>
-          )}
+          <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid var(--border)' }}>
+            <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 4 }}>📝 Notas generales del plan</div>
+            <textarea className="input" rows={2} placeholder="Hidratación, observaciones..." value={notes}
+              onChange={e => setNotes(e.target.value)} style={{ resize: 'vertical', fontSize: 13 }} />
+          </div>
 
           <button className="btn btn-primary btn-full" onClick={save} disabled={saving} style={{ marginTop: 12 }}>
             {saving ? 'Guardando...' : 'Guardar plan'}
@@ -893,8 +906,169 @@ function AthleteProgress({ athleteId, isFemale }) {
       <WellnessTodayCoach athleteId={athleteId} />
       <WellnessHistory athleteId={athleteId} />
       <LoadChart sessions={sessions} />
+      <WeightMonthly athleteId={athleteId} />
+      <MeasurementsMonthly athleteId={athleteId} />
+      <ProgressPhotos athleteId={athleteId} canUpload={false} canDelete={true} />
       <GoalsSection athleteId={athleteId} canCreate={true} />
       <RecordsSection athleteId={athleteId} canEdit={true} />
+    </div>
+  )
+}
+
+const DOC_CATEGORIES = [
+  { value: 'athlete', label: 'General' },
+  { value: 'medical', label: 'Médico' },
+  { value: 'nutrition', label: 'Nutrición' },
+  { value: 'training', label: 'Entrenamiento' },
+]
+
+function AthleteDocsCoach({ athleteId }) {
+  const toast = useToast()
+  const [docs, setDocs] = useState([])
+  const [uploading, setUploading] = useState(false)
+  const [title, setTitle] = useState('')
+  const [category, setCategory] = useState('athlete')
+  const [showForm, setShowForm] = useState(false)
+
+  const load = () => {
+    supabase.from('documents').select('*')
+      .eq('athlete_id', athleteId)
+      .neq('category', 'progress')
+      .order('created_at', { ascending: false })
+      .then(({ data }) => setDocs(data || []))
+  }
+
+  useEffect(() => { load() }, [athleteId])
+
+  const handleUpload = async (e) => {
+    const file = e.target.files?.[0]
+    if (!file || !title.trim()) { toast('Añade un título antes de subir', 'error'); return }
+    setUploading(true)
+    try {
+      const { url, name } = await Storage.uploadDocument(file)
+      await Documents.create({ title: title.trim(), file_url: url, file_name: name, category, athlete_id: athleteId })
+      toast('Documento subido ✓')
+      setTitle('')
+      setShowForm(false)
+      load()
+    } catch { toast('Error al subir', 'error') }
+    finally { setUploading(false) }
+  }
+
+  const remove = async (id) => {
+    await supabase.from('documents').delete().eq('id', id)
+    load()
+    toast('Documento eliminado')
+  }
+
+  const catLabel = (v) => DOC_CATEGORIES.find(c => c.value === v)?.label || v
+  const catIcon = (v) => ({ athlete: '📄', medical: '🩺', nutrition: '🥗', training: '🏋️' })[v] || '📄'
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={{ fontSize: 11, fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.8px' }}>Documentos</div>
+        <button className="btn btn-primary btn-sm" onClick={() => setShowForm(f => !f)}>
+          {showForm ? 'Cancelar' : '+ Subir'}
+        </button>
+      </div>
+
+      {showForm && (
+        <div className="card" style={{ padding: 14, display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <input className="input" placeholder="Título del documento" value={title} onChange={e => setTitle(e.target.value)} />
+          <select className="input" value={category} onChange={e => setCategory(e.target.value)}>
+            {DOC_CATEGORIES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
+          </select>
+          <label className={`btn btn-outline btn-full ${uploading ? 'disabled' : ''}`} style={{ textAlign: 'center', cursor: 'pointer' }}>
+            {uploading ? 'Subiendo...' : '📎 Seleccionar archivo'}
+            <input type="file" style={{ display: 'none' }} onChange={handleUpload} disabled={uploading} />
+          </label>
+        </div>
+      )}
+
+      {docs.length === 0 && !showForm ? (
+        <div style={{ textAlign: 'center', padding: '24px 0', color: 'var(--text-muted)', fontSize: 13 }}>Sin documentos aún</div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {docs.map(doc => (
+            <div key={doc.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', background: 'var(--card)', borderRadius: 10 }}>
+              <span style={{ fontSize: 20 }}>{catIcon(doc.category)}</span>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <a href={doc.file_url} target="_blank" rel="noopener noreferrer" style={{ fontWeight: 600, fontSize: 13, color: 'var(--text)', textDecoration: 'none', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{doc.title}</a>
+                <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{catLabel(doc.category)} · {new Date(doc.created_at).toLocaleDateString('es-ES')}</div>
+              </div>
+              <div style={{ display: 'flex', gap: 6 }}>
+                <a href={doc.file_url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12, color: 'var(--accent)', fontWeight: 700, textDecoration: 'none' }}>Ver</a>
+                <button onClick={() => remove(doc.id)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: 14, padding: 0 }}>✕</button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function NutritionistAssign({ athleteId }) {
+  const toast = useToast()
+  const [assigned, setAssigned] = useState(false)
+  const [loading, setLoading] = useState(true)
+  const [nutritionistId, setNutritionistId] = useState(null)
+
+  useEffect(() => {
+    supabase.from('profiles').select('id').eq('role', 'nutritionist').single()
+      .then(({ data }) => {
+        const nid = data?.id
+        setNutritionistId(nid)
+        if (!nid) { setLoading(false); return }
+        supabase.from('nutritionist_athletes')
+          .select('athlete_id')
+          .eq('nutritionist_id', nid)
+          .eq('athlete_id', athleteId)
+          .maybeSingle()
+          .then(({ data: rel }) => { setAssigned(!!rel); setLoading(false) })
+      })
+  }, [athleteId])
+
+  const toggle = async () => {
+    if (!nutritionistId) return
+    setLoading(true)
+    try {
+      if (assigned) {
+        await supabase.from('nutritionist_athletes')
+          .delete()
+          .eq('nutritionist_id', nutritionistId)
+          .eq('athlete_id', athleteId)
+        setAssigned(false)
+        toast('Nutricionista desasignada')
+      } else {
+        await supabase.from('nutritionist_athletes')
+          .insert({ nutritionist_id: nutritionistId, athlete_id: athleteId })
+        setAssigned(true)
+        toast('Nutricionista asignada ✓')
+      }
+    } catch {
+      toast('Error al actualizar', 'error')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div className="card" style={{ padding: '12px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+      <div>
+        <div style={{ fontWeight: 600, fontSize: 14 }}>🥗 Nutricionista</div>
+        <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>
+          {assigned ? 'Asignada a este deportista' : 'Sin nutricionista asignada'}
+        </div>
+      </div>
+      <button
+        className={`btn btn-sm ${assigned ? 'btn-danger' : 'btn-primary'}`}
+        onClick={toggle}
+        disabled={loading}
+      >
+        {loading ? '...' : assigned ? 'Desasignar' : 'Asignar'}
+      </button>
     </div>
   )
 }
