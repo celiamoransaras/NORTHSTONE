@@ -1,3 +1,4 @@
+import { ymd } from '../lib/dates'
 import { useState, useEffect, lazy, Suspense } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
@@ -498,7 +499,7 @@ export default function NutritionistView() {
         // Carga todos los logs de los últimos 3 días de una vez
         const threeDaysAgo = new Date()
         threeDaysAgo.setDate(threeDaysAgo.getDate() - 3)
-        const dateStr = threeDaysAgo.toISOString().split('T')[0]
+        const dateStr = ymd(threeDaysAgo)
         const athleteIds = list.map(a => a.id)
         supabase
           .from('nutrition_logs')

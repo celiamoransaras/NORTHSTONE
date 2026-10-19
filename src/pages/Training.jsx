@@ -1,3 +1,4 @@
+import { ymd } from '../lib/dates'
 import { useState, useEffect } from 'react'
 import { Sessions, Athletes, RPE } from '../lib/db'
 import ConfirmSheet from '../components/ConfirmSheet'
@@ -18,7 +19,7 @@ const TYPE_OPTS = [
   { value: 'cardio',     label: '❤️ Cardio' },
   { value: 'rest_day',   label: '😴 Rest Day' },
 ]
-const emptyForm = { title: '', date: new Date().toISOString().slice(0,10), type: 'run', duration: 60, notes: '', exercises: [], athlete_ids: [] }
+const emptyForm = { title: '', date: ymd(new Date()), type: 'run', duration: 60, notes: '', exercises: [], athlete_ids: [] }
 const emptyExercise = { name: '', notes: '', videos: [] }
 const emptyVideo = { label: '', url: '' }
 
@@ -100,7 +101,7 @@ export default function Training({ athleteId = null, coachView = false, embedded
     }
   }, [athleteId])
 
-  const today = new Date().toISOString().slice(0,10)
+  const today = ymd(new Date())
   const upcoming = sessions.filter(s => s.date >= today)
   const past = sessions.filter(s => s.date < today).reverse()
   const baseList = tab === 'upcoming' ? upcoming : past
@@ -115,7 +116,7 @@ export default function Training({ athleteId = null, coachView = false, embedded
   const duplicateSession = (s) => {
     const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate() + 1)
     const { id: _id, ...rest } = s
-    setForm({ ...rest, date: tomorrow.toISOString().slice(0,10), exercises: [...(s.exercises||[])], athlete_ids: [...(s.athlete_ids||[])] })
+    setForm({ ...rest, date: ymd(tomorrow), exercises: [...(s.exercises||[])], athlete_ids: [...(s.athlete_ids||[])] })
     setEditing(null)
     setSheet('form')
   }
@@ -428,7 +429,7 @@ export default function Training({ athleteId = null, coachView = false, embedded
                             <span style={{ fontSize: 14, fontWeight: 500, flex: 1 }}>{a.name}</span>
                             <span style={{ fontSize: 12, color: attended ? 'var(--success)' : 'var(--text-muted)' }}>{attended ? 'Asistió' : 'No asistió'}</span>
                           </div>
-                          {detailSession.date < new Date().toISOString().slice(0,10) && !r && (
+                          {detailSession.date < ymd(new Date()) && !r && (
                             <div style={{ marginTop: 4, marginLeft: 12, fontSize: 12, color: 'var(--text-muted)', fontStyle: 'italic' }}>
                               Sin valorar aún
                             </div>
@@ -612,7 +613,7 @@ function SessionCard({ session, athletes, onPress, formatDate }) {
   const typeOpt = TYPE_OPTS.find(t=>t.value===session.type)
   const typeLabel = typeOpt?.label?.replace(/^[^ ]+ /, '') || session.type
   const typeIcon = TYPE_ICONS[session.type] || '📅'
-  const isToday = session.date === new Date().toISOString().slice(0,10)
+  const isToday = session.date === ymd(new Date())
   const date = new Date(session.date + 'T12:00:00')
   const days = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb']
   const months = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic']
@@ -660,7 +661,7 @@ function CalendarView({ sessions, onSelectDay }) {
 
   const firstDay = (new Date(year, month, 1).getDay() + 6) % 7
   const daysInMonth = new Date(year, month + 1, 0).getDate()
-  const today = new Date().toISOString().slice(0,10)
+  const today = ymd(new Date())
 
   const byDay = {}
   sessions.forEach(s => {

@@ -1,3 +1,4 @@
+import { ymd } from '../lib/dates'
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Athletes, Sessions, Injuries, Payments, Wellness } from '../lib/db'
@@ -28,7 +29,7 @@ export default function Dashboard() {
       const now = new Date()
       const month = now.getMonth() + 1
       const year = now.getFullYear()
-      const today = now.toISOString().slice(0, 10)
+      const today = ymd(now)
 
       const athletes = await Athletes.getActive()
       if (athletes.length > 0) await Payments.ensureMonth(athletes, month, year)
@@ -43,7 +44,7 @@ export default function Dashboard() {
           .then(({ data }) => {
             const twoDaysFromNow = new Date()
             twoDaysFromNow.setDate(twoDaysFromNow.getDate() + 2)
-            const limit = twoDaysFromNow.toISOString().slice(0, 10)
+            const limit = ymd(twoDaysFromNow)
             return (data || []).filter(d => d.sessions && d.sessions.date >= today && d.sessions.date <= limit)
           })
       ])
@@ -378,7 +379,7 @@ function TeamWellnessSection() {
 
   if (!entries.length) return null
 
-  const today = new Date().toISOString().slice(0, 10)
+  const today = ymd(new Date())
   const moodEmojis    = ['😔','😐','🙂','😄','🤩']
   const fatigueEmojis = ['🔥','💪','🙂','😐','😴']
   const sorenessEmojis= ['✅','😊','😐','😬','🤕']
@@ -388,7 +389,7 @@ function TeamWellnessSection() {
   const dateLabel = (date) => {
     if (date === today) return 'Hoy'
     const yesterday = new Date(); yesterday.setDate(yesterday.getDate() - 1)
-    if (date === yesterday.toISOString().slice(0,10)) return 'Ayer'
+    if (date === ymd(yesterday)) return 'Ayer'
     return new Date(date + 'T12:00:00').toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })
   }
 
@@ -462,8 +463,8 @@ function WeeklyAdherenceSection({ athleteMap }) {
       mon.setDate(now.getDate() - ((now.getDay() + 6) % 7))
       const sun = new Date(mon)
       sun.setDate(mon.getDate() + 6)
-      const weekStart = mon.toISOString().slice(0,10)
-      const weekEnd = sun.toISOString().slice(0,10)
+      const weekStart = ymd(mon)
+      const weekEnd = ymd(sun)
 
       const sessions = await Sessions.getAll()
       const weekSessions = sessions.filter(s => s.date >= weekStart && s.date <= weekEnd)
@@ -548,7 +549,7 @@ function SessionRow({ session, last, onClick }) {
   const date = new Date(session.date + 'T12:00:00')
   const days = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb']
   const months = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic']
-  const isToday = session.date === new Date().toISOString().slice(0,10)
+  const isToday = session.date === ymd(new Date())
   const color = TYPE_COLORS[session.type] || 'var(--accent)'
   const icon = TYPE_ICONS[session.type] || '📅'
   const label = TYPE_LABELS[session.type] || session.type

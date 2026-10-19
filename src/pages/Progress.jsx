@@ -1,3 +1,4 @@
+import { ymd } from '../lib/dates'
 import { useState, useEffect, useMemo, useRef } from 'react'
 import { Records, Goals, Wellness, WeightLog, Storage, Documents, BodyMeasurements } from '../lib/db'
 import { supabase } from '../lib/supabase'
@@ -5,6 +6,7 @@ import ConfirmSheet from '../components/ConfirmSheet'
 import { useToast } from '../contexts/ToastContext'
 import { haptic } from '../lib/haptic'
 import { sendPushToCoach } from '../lib/pushNotifications'
+import { FEATURES } from '../lib/constants'
 
 // ─────────────────────────────────────────────
 // INFORME MENSUAL
@@ -44,11 +46,13 @@ export function MonthlyReport({ athleteId, sessions, isFemale }) {
   }, [athleteId, targetDate, isFemale])
 
   const { year, month, monthNum } = targetDate
+  // Solo cuentan las sesiones que ya han pasado (una sesión de mañana no es una "falta")
+  const todayKey = ymd(new Date())
   const monthSessions = useMemo(() =>
     sessions.filter(s => {
       const d = new Date(s.date + 'T12:00:00')
-      return d.getFullYear() === year && d.getMonth() === month
-    }), [sessions, year, month])
+      return d.getFullYear() === year && d.getMonth() === month && s.date <= todayKey
+    }), [sessions, year, month, todayKey])
 
   // RPE promedio del mes + sesiones asistidas
   const [monthRpe, setMonthRpe] = useState(null)
@@ -124,11 +128,14 @@ export function MonthlyReport({ athleteId, sessions, isFemale }) {
     // Sesiones: asistidas / asignadas (si hay sesiones asignadas)
     if (monthSessions.length > 0 && attendedCount !== null) {
       points += (attendedCount / monthSessions.length) * 40
-      factors++
+      factors += 40
     }
-    if (nutritionPct !== null) { points += nutritionPct * 0.35; factors++ }
-    if (avgMood !== null) { points += ((parseFloat(avgMood) - 1) / 4) * 25; factors++ }
-    return factors > 0 ? Math.round(points) : null
+    if (FEATURES.nutrition && nutritionPct !== null) { points += nutritionPct * 0.35; factors += 35 }
+    if (avgMood !== null) { points += ((parseFloat(avgMood) - 1) / 4) * 25; factors += 25 }
+    // Mes con poca información (deportista nueva o inicio de mes): no puntuamos
+    if (monthSessions.length < 2) return null
+    // Normalizar sobre los factores disponibles para que la nota sea siempre sobre 100
+    return factors > 0 ? Math.round((points / factors) * 100) : null
   }, [monthSessions, attendedCount, nutritionPct, avgMood])
 
   const scoreLabel = score === null ? null : score >= 80 ? { text: '🏆 Mes excelente', color: '#059669' }
@@ -162,6 +169,14 @@ export function MonthlyReport({ athleteId, sessions, isFemale }) {
         <div style={{ textAlign: 'center', padding: '16px 0', color: 'var(--text-muted)', fontSize: 13 }}>Cargando...</div>
       ) : (
         <>
+          {/* Mes en marcha: todavía no hay datos suficientes para puntuar */}
+          {!scoreLabel && isCurrentMonth && (
+            <div style={{ background: '#0C4A6E10', border: '1.5px solid #0C4A6E25', borderRadius: 12, padding: '10px 14px', marginBottom: 14 }}>
+              <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 800, fontSize: 15, color: '#0C4A6E' }}>🚀 Mes en marcha</div>
+              <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>Tu resumen aparecerá cuando completes tus primeras sesiones.</div>
+            </div>
+          )}
+
           {/* Puntuación global */}
           {scoreLabel && (
             <div style={{ background: `${scoreLabel.color}15`, border: `1.5px solid ${scoreLabel.color}30`, borderRadius: 12, padding: '10px 14px', marginBottom: 14 }}>
@@ -179,7 +194,9 @@ export function MonthlyReport({ athleteId, sessions, isFemale }) {
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: isFemale && dominantPhase ? 12 : 0 }}>
             {[
               { icon: '📅', label: 'Sesiones', value: attendedCount !== null ? `${attendedCount}/${monthSessions.length}` : monthSessions.length, sub: 'asistidas / asignadas', color: '#0C4A6E' },
-              { icon: '🥗', label: 'Nutrición', value: nutritionPct !== null ? `${nutritionPct}%` : '—', sub: 'adherencia', color: '#059669' },
+              FEATURES.nutrition
+                ? { icon: '🥗', label: 'Nutrición', value: nutritionPct !== null ? `${nutritionPct}%` : '—', sub: 'adherencia', color: '#059669' }
+                : { icon: '📝', label: 'Check-ins', value: wellnessData.length || '—', sub: 'días registrados', color: '#059669' },
               { icon: '💪', label: 'Intensidad media', value: monthRpe ?? '—', sub: 'sobre 10', color: '#EF4444' },
               { icon: '😊', label: 'Ánimo', value: avgMood ? `${avgMood}/5` : '—', sub: 'bienestar', color: '#8B5CF6' },
             ].map(({ icon, label, value, sub, color }) => (
@@ -199,10 +216,10 @@ export function MonthlyReport({ athleteId, sessions, isFemale }) {
               <div>
                 <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 800, fontSize: 13, color: '#9D174D' }}>Fase predominante: {dominantPhase}</div>
                 <div style={{ fontSize: 11, color: '#BE185D', marginTop: 1 }}>
-                  {dominantPhase === 'Menstrual' && 'Escucha tu cuerpo'}
-                  {dominantPhase === 'Folicular' && 'Semana ideal para intensidad alta'}
-                  {dominantPhase === 'Ovulación' && 'Pico de rendimiento y fuerza'}
-                  {dominantPhase === 'Lútea' && 'Semana de técnica y resistencia moderada'}
+                  {dominantPhase === 'Menstrual' && 'Escucha tu cuerpo y cuéntale a Celia cómo te encuentras'}
+                  {dominantPhase === 'Folicular' && 'Muchas mujeres notan más energía en esta fase'}
+                  {dominantPhase === 'Ovulación' && 'Algunas mujeres notan más energía estos días'}
+                  {dominantPhase === 'Lútea' && 'Puede aparecer más fatiga; ajustamos según cómo te sientas'}
                 </div>
               </div>
             </div>
@@ -234,7 +251,7 @@ function TrendsDashboard({ athleteId, sessions, isFemale }) {
       })
     // Nutrición últimos 60 días
     const from = new Date(); from.setDate(from.getDate() - 59)
-    supabase.from('nutrition_logs').select('date,adherence').eq('athlete_id', athleteId).gte('date', from.toISOString().slice(0,10))
+    supabase.from('nutrition_logs').select('date,adherence').eq('athlete_id', athleteId).gte('date', ymd(from))
       .then(({ data }) => setNutritionLogs(data || []))
   }, [athleteId, sessions])
 
@@ -245,7 +262,7 @@ function TrendsDashboard({ athleteId, sessions, isFemale }) {
     let streak = 0
     const d = new Date()
     while (true) {
-      const key = d.toISOString().slice(0,10)
+      const key = ymd(d)
       if (logSet.has(key)) { streak++; d.setDate(d.getDate() - 1) }
       else break
       if (streak > 60) break
@@ -259,7 +276,7 @@ function TrendsDashboard({ athleteId, sessions, isFemale }) {
     const logMap = Object.fromEntries(nutritionLogs.map(l => [l.date, l.adherence]))
     for (let i = 29; i >= 0; i--) {
       const d = new Date(); d.setDate(d.getDate() - i)
-      const key = d.toISOString().slice(0,10)
+      const key = ymd(d)
       days.push({ key, adherence: logMap[key] || null, day: d.getDate(), isToday: i === 0 })
     }
     return days
@@ -313,7 +330,7 @@ function TrendsDashboard({ athleteId, sessions, isFemale }) {
       )}
 
       {/* Nutrición */}
-      {nutritionLogs.length > 0 && (
+      {FEATURES.nutrition && nutritionLogs.length > 0 && (
         <div className="card" style={{ padding: '16px 18px', marginBottom: 10 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
             <div>
@@ -394,6 +411,7 @@ function RpeSparkline({ data }) {
 
 // ---- Check-in diario ----
 function WellnessCheckin({ athleteId, onDone }) {
+  const toast = useToast()
   const [today, setToday] = useState(null)
   const [saving, setSaving] = useState(false)
   const [done, setDone] = useState(false)
@@ -409,7 +427,13 @@ function WellnessCheckin({ athleteId, onDone }) {
   const save = async () => {
     if (!today?.fatigue || !today?.soreness || !today?.mood) return
     setSaving(true)
-    await Wellness.upsert({ athlete_id: athleteId, date: new Date().toISOString().slice(0,10), ...today })
+    try {
+      await Wellness.upsert({ athlete_id: athleteId, date: ymd(new Date()), ...today })
+    } catch {
+      setSaving(false)
+      toast('No se ha podido guardar. Revisa tu conexión e inténtalo de nuevo.', 'error')
+      return
+    }
     setSaving(false)
     setDone(true)
     setTimeout(() => onDone?.(), 1200)
@@ -528,7 +552,7 @@ function StatsGrid({ athleteId, sessions }) {
     let s = 0
     let check = new Date()
     while (true) {
-      const key = getWeekKey(check.toISOString().slice(0,10))
+      const key = getWeekKey(ymd(check))
       if (weeksWithSessions.has(key)) { s++; check.setDate(check.getDate() - 7) }
       else break
     }
@@ -861,7 +885,7 @@ function GoalsSection({ athleteId, canCreate }) {
               </div>
               <div className="input-group">
                 <label className="input-label">Fecha límite</label>
-                <input className="input" type="date" min={new Date().toISOString().slice(0,10)} value={form.deadline} onChange={e => setForm(f => ({...f, deadline: e.target.value}))} />
+                <input className="input" type="date" min={ymd(new Date())} value={form.deadline} onChange={e => setForm(f => ({...f, deadline: e.target.value}))} />
               </div>
               <button className="btn btn-primary btn-full" onClick={save} disabled={saving}>
                 {saving ? 'Guardando...' : 'Crear objetivo'}
@@ -974,7 +998,7 @@ function RecordsSection({ athleteId, canEdit }) {
   const [confirmDelete, setConfirmDelete] = useState(null)
   const [nameError, setNameError] = useState(false)
   const toast = useToast() // {name, recs, unit}
-  const emptyForm = { name: '', value: '', unit: 'min', date: new Date().toISOString().slice(0,10), notes: '' }
+  const emptyForm = { name: '', value: '', unit: 'min', date: ymd(new Date()), notes: '' }
   const [form, setForm] = useState(emptyForm)
   const [saving, setSaving] = useState(false)
 
@@ -1225,7 +1249,7 @@ export function WeightSection({ athleteId }) {
   const [logs, setLogs] = useState([])
   const [input, setInput] = useState('')
   const [saving, setSaving] = useState(false)
-  const today = new Date().toISOString().slice(0, 10)
+  const today = ymd(new Date())
 
   useEffect(() => {
     WeightLog.getByAthlete(athleteId).then(setLogs)
@@ -1681,10 +1705,10 @@ setEntry(data?.[0] || null)
 
   if (!loaded) return null
 
-  const today = new Date().toISOString().slice(0, 10)
+  const today = ymd(new Date())
   const yesterday = new Date(); yesterday.setDate(yesterday.getDate() - 1)
   const dateLabel = !entry ? '' : entry.date === today ? 'Hoy'
-    : entry.date === yesterday.toISOString().slice(0,10) ? 'Ayer'
+    : entry.date === ymd(yesterday) ? 'Ayer'
     : new Date(entry.date + 'T12:00:00').toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })
 
   if (!entry) return (
@@ -1735,7 +1759,7 @@ export function MeasurementsSection({ athleteId }) {
   const toast = useToast()
   const [logs, setLogs] = useState([])
   const [form, setForm] = useState({})
-  const [date, setDate] = useState(new Date().toISOString().slice(0, 10))
+  const [date, setDate] = useState(ymd(new Date()))
   const [saving, setSaving] = useState(false)
   const [showForm, setShowForm] = useState(false)
 
@@ -1785,7 +1809,7 @@ export function MeasurementsSection({ athleteId }) {
         <div className="card" style={{ padding: '14px 16px', marginBottom: 10 }}>
           <div className="input-group" style={{ marginBottom: 10 }}>
             <label className="input-label">Fecha</label>
-            <input className="input" type="date" value={date} onChange={e => setDate(e.target.value)} max={new Date().toISOString().slice(0,10)} />
+            <input className="input" type="date" value={date} onChange={e => setDate(e.target.value)} max={ymd(new Date())} />
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 12 }}>
             {MEASURES.map(m => (

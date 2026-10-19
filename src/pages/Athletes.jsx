@@ -1,5 +1,7 @@
+import { ymd } from '../lib/dates'
 import { useState, useEffect } from 'react'
 import { useLocation } from 'react-router-dom'
+import { FEATURES } from '../lib/constants'
 import { Athletes as DB, Sessions, Storage, Cycle, Nutrition, Documents } from '../lib/db'
 import { supabase } from '../lib/supabase'
 import Training from './Training'
@@ -14,7 +16,7 @@ function getWeekRange() {
   mon.setDate(now.getDate() - ((now.getDay() + 6) % 7))
   const sun = new Date(mon)
   sun.setDate(mon.getDate() + 6)
-  return [mon.toISOString().slice(0,10), sun.toISOString().slice(0,10)]
+  return [ymd(mon), ymd(sun)]
 }
 
 function useWeeklyStats(athletes) {
@@ -47,7 +49,7 @@ function useCoachAlerts(athletes, weeklyStats) {
     setNoActivity(noAct)
     // RPE alto (>= 8) en los últimos 3 días
     const threeDaysAgo = new Date(); threeDaysAgo.setDate(threeDaysAgo.getDate() - 3)
-    const cutoff = threeDaysAgo.toISOString().slice(0, 10)
+    const cutoff = ymd(threeDaysAgo)
     supabase.from('session_athletes')
       .select('athlete_id, rpe, session_id')
       .gte('updated_at', cutoff + 'T00:00:00')
@@ -308,7 +310,7 @@ export default function Athletes() {
             {/* Tabs */}
             <div style={{ display: 'flex', gap: 4, padding: '0 16px 12px', overflowX: 'auto' }}>
               <button className={`pill-tab ${detailTab==='profile'?'active':''}`} onClick={() => setDetailTab('profile')}>Perfil</button>
-              <button className={`pill-tab ${detailTab==='nutrition'?'active':''}`} onClick={() => setDetailTab('nutrition')}>Nutrición</button>
+              {FEATURES.nutrition && <button className={`pill-tab ${detailTab==='nutrition'?'active':''}`} onClick={() => setDetailTab('nutrition')}>Nutrición</button>}
               <button className={`pill-tab ${detailTab==='training'?'active':''}`} onClick={() => setDetailTab('training')}>Entrenos</button>
               <button className={`pill-tab ${detailTab==='progress'?'active':''}`} onClick={() => { setDetailTab('progress'); setProgressKey(k => k + 1) }}>Progreso</button>
               <button className={`pill-tab ${detailTab==='docs'?'active':''}`} onClick={() => setDetailTab('docs')}>Docs</button>
@@ -344,7 +346,7 @@ export default function Athletes() {
                   }
                 </>
               )}
-              {detailTab === 'nutrition' && (
+              {detailTab === 'nutrition' && FEATURES.nutrition && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                   <NutritionistAssign athleteId={sheet.id} />
                   <NutritionCoach athleteId={sheet.id} />

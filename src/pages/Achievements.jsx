@@ -1,3 +1,4 @@
+import { ymd } from '../lib/dates'
 import { useState, useEffect } from 'react'
 import { Achievements, Records } from '../lib/db'
 import { supabase } from '../lib/supabase'
@@ -70,7 +71,7 @@ export function calculateStreak(sessions) {
   let streak = 0
   let check = new Date(today)
   while (true) {
-    const key = getWeekKey(check.toISOString().slice(0,10))
+    const key = getWeekKey(ymd(check))
     if (weeksWithSessions.has(key)) { streak++; check.setDate(check.getDate() - 7) }
     else break
   }
@@ -250,7 +251,7 @@ export function WeeklyPlan({ sessions, athleteId, onOpenSession }) {
   const TYPE_ICONS = { run: '🏃', fuerza: '💪', series: '⚡', endurance: '🫁', especifico: '🎯', ergometros: '🚣', cardio: '❤️', rest_day: '😴' }
 
   const today = new Date()
-  const todayStr = today.toISOString().slice(0,10)
+  const todayStr = ymd(today)
   const dow = today.getDay()
   const mondayOffset = dow === 0 ? -6 : 1 - dow
   const monday = new Date(today)
@@ -270,7 +271,7 @@ export function WeeklyPlan({ sessions, athleteId, onOpenSession }) {
       <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 800, fontSize: 12, textTransform: 'uppercase', letterSpacing: '1.5px', color: 'var(--text-muted)', marginBottom: 14 }}>Semana actual</div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 6 }}>
         {week.map((day, i) => {
-          const dateStr = day.toISOString().slice(0,10)
+          const dateStr = ymd(day)
           const daySessions = sessions.filter(s => s.date === dateStr)
           const isToday = dateStr === todayStr
           const isPast = dateStr < todayStr

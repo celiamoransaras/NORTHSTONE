@@ -21,7 +21,7 @@ export function AuthProvider({ children }) {
       setProfile(data)
     } else {
       // Crear perfil automáticamente si no existe
-      const isCoach = email === COACH_EMAIL
+      const isCoach = email?.toLowerCase() === COACH_EMAIL.toLowerCase()
       let athleteId = null
 
       if (!isCoach) {
@@ -29,7 +29,7 @@ export function AuthProvider({ children }) {
         const { data: athlete } = await supabase
           .from('athletes')
           .select('id')
-          .eq('email', email)
+          .ilike('email', email)
           .single()
         athleteId = athlete?.id || null
       }

@@ -1,3 +1,4 @@
+import { ymd } from '../lib/dates'
 import { useState, useEffect } from 'react'
 import { Injuries, Athletes } from '../lib/db'
 import { supabase } from '../lib/supabase'
@@ -12,7 +13,7 @@ const SEVERITY = [
   { value: 'moderate', label: 'Moderada', color: 'var(--warning)', bg: 'rgba(217,119,6,0.1)' },
   { value: 'severe',   label: 'Grave',    color: 'var(--error)',   bg: 'var(--error-dim)' },
 ]
-const emptyForm = { athlete_id: '', date_start: new Date().toISOString().slice(0,10), date_end: '', type: 'Esguince', body_part: 'Tobillo', severity: 'mild', notes: '' }
+const emptyForm = { athlete_id: '', date_start: ymd(new Date()), date_end: '', type: 'Esguince', body_part: 'Tobillo', severity: 'mild', notes: '' }
 
 const BODY_EMOJI = { Tobillo:'🦶', Rodilla:'🦵', Cadera:'🦿', 'Espalda baja':'🔻', 'Espalda alta':'🔺', Hombro:'💪', Codo:'🦾', Muñeca:'✋', Cuello:'🦒', Muslo:'🦵', Gemelo:'🦵', Pie:'🦶', Mano:'✋', Cabeza:'🧠' }
 
@@ -38,7 +39,7 @@ export default function Health() {
   }
   useEffect(() => { load() }, [])
 
-  const today = new Date().toISOString().slice(0,10)
+  const today = ymd(new Date())
   const active = injuries.filter(i => !i.date_end || i.date_end > today)
   const resolved = injuries.filter(i => i.date_end && i.date_end <= today)
   const displayed = tab === 'active' ? active : resolved
@@ -56,7 +57,7 @@ export default function Health() {
     try {
       const current = injuries.find(i => i.id === editing)
       const existing = getFollowUpNotes(current)
-      const updated = [...existing, { date: new Date().toISOString().slice(0,10), text: followUpText.trim() }]
+      const updated = [...existing, { date: ymd(new Date()), text: followUpText.trim() }]
       await Injuries.update(editing, { follow_up_notes: updated })
       setFollowUpText('')
       await load()

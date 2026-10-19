@@ -1,3 +1,4 @@
+import { ymd } from '../lib/dates'
 import { useState, useEffect, useRef } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { Sessions, Injuries, Payments, Storage, RPE, Athletes as AthletesDB, Cycle, Nutrition, Documents, Wellness } from '../lib/db'
@@ -12,7 +13,7 @@ import { usePushNotifications } from '../hooks/usePushNotifications'
 import { useToast } from '../contexts/ToastContext'
 import { haptic } from '../lib/haptic'
 import { sendPushToCoach } from '../lib/pushNotifications'
-import { TYPE_ICONS, TYPE_COLORS, TYPE_LABELS } from '../lib/constants'
+import { TYPE_ICONS, TYPE_COLORS, TYPE_LABELS, FEATURES } from '../lib/constants'
 import { initials } from '../lib/utils'
 
 // 7 tabs
@@ -23,7 +24,7 @@ const NAV = [
   { id: 'progress',  icon: '📈', label: 'Progreso' },
   { id: 'messages',  icon: '💬', label: 'Chat' },
   { id: 'more',      icon: '⋯',  label: 'Más' },
-]
+].filter(t => t.id !== 'nutrition' || FEATURES.nutrition)
 
 export default function AthleteView() {
   const { profile, signOut, updateAthleteAvatar } = useAuth()
@@ -33,7 +34,8 @@ export default function AthleteView() {
   // Leer tab inicial desde query param (viene de notificación push) o por defecto 'home'
   const [tab, setTab] = useState(() => {
     const params = new URLSearchParams(window.location.search)
-    return params.get('tab') || 'home'
+    const t = params.get('tab')
+    return (t === 'nutrition' && !FEATURES.nutrition) ? 'home' : (t || 'home')
   })
   const [unreadMessages, setUnreadMessages] = useState(0)
   const [unratedCount, setUnratedCount] = useState(0)
@@ -48,7 +50,7 @@ export default function AthleteView() {
   const [moreOpen, setMoreOpen] = useState(false)
   const [tabDir, setTabDir] = useState(1)
   const [tabKey, setTabKey] = useState(0)
-  const TAB_ORDER = ['home', 'training', 'nutrition', 'progress', 'messages']
+  const TAB_ORDER = ['home', 'training', 'nutrition', 'progress', 'messages'].filter(t => t !== 'nutrition' || FEATURES.nutrition)
 
   // Mensajes no leídos — usa la misma clave que Messages.jsx
   useEffect(() => {
@@ -84,7 +86,7 @@ export default function AthleteView() {
   useEffect(() => {
     if (!athleteId) return
     const fetchUnrated = async () => {
-      const today = new Date().toISOString().slice(0, 10)
+      const today = ymd(new Date())
       const { data: assigned } = await supabase
         .from('session_athletes').select('session_id, rpe, coach_reply, sessions!inner(date)')
         .eq('athlete_id', athleteId)
@@ -132,8 +134,8 @@ export default function AthleteView() {
   const ONBOARDING_STEPS = [
     { icon: null, title: `¡Hola, ${athlete?.name?.split(' ')[0] || ''}!`, text: 'Bienvenida a Northstone, tu plataforma de entrenamiento personalizado. Celia lo tiene todo preparado para ti.', welcome: true },
     { icon: '📅', title: 'Tus entrenos', text: 'En "Entrenos" verás todas las sesiones que Celia te prepare. Puedes confirmar asistencia y valorar cada sesión.' },
-    { icon: '🥗', title: 'Tu nutrición', text: 'En "Nutrición" encontrarás tu plan semanal personalizado. Cada día verás qué comer y podrás marcar cómo lo has seguido.' },
-    ...(athlete?.gender === 'female' ? [{ icon: '🌸', title: 'Tu ciclo menstrual', text: 'En "Salud" registra tu ciclo. Celia adaptará tus entrenos y nutrición según tu fase para sacar el máximo rendimiento.' }] : []),
+    ...(FEATURES.nutrition ? [{ icon: '🥗', title: 'Tu nutrición', text: 'En "Nutrición" encontrarás tu plan semanal personalizado. Cada día verás qué comer y podrás marcar cómo lo has seguido.' }] : []),
+    ...(athlete?.gender === 'female' ? [{ icon: '🌸', title: 'Tu ciclo menstrual', text: 'En "Salud" registra tu ciclo. Celia lo tendrá en cuenta para ajustar tus entrenos a cómo te encuentras.' }] : []),
     { icon: '📈', title: 'Tu progreso', text: 'En "Progreso" registra cómo te sientes cada día. Celia verá tu estado de forma y podrá adaptar los entrenos.' },
     { icon: '💬', title: 'Chat directo', text: 'Habla con Celia y con el resto del equipo en "Chat". Recibirás notificaciones cuando te escriba.' },
   ]
@@ -179,7 +181,7 @@ export default function AthleteView() {
             <div style={{ fontSize: 52, marginBottom: 16 }}>🔔</div>
             <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 900, fontSize: 24, textTransform: 'uppercase', marginBottom: 10 }}>Activa las notificaciones</div>
             <div style={{ fontSize: 15, color: 'var(--text-muted)', lineHeight: 1.5, marginBottom: 28, maxWidth: 300, margin: '0 auto 28px' }}>
-              Así te avisamos cuando Celia te asigne un entreno, un plan de nutrición, o te mande un mensaje.
+              Así te avisamos cuando Celia te asigne un entreno o te mande un mensaje.
             </div>
             <button className="btn btn-primary btn-full" onClick={async () => {
               localStorage.setItem('ns_push_prompted', '1')
@@ -215,9 +217,9 @@ export default function AthleteView() {
       <main style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
         <div key={tabKey} style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', animation: `tabSlide${tabDir > 0 ? 'Right' : 'Left'} 0.22s cubic-bezier(0.16,1,0.3,1) both` }}>
           {tab === 'home'      && <AthleteHome athlete={athlete} athleteId={athleteId} onOpenSession={s => { setTabDir(1); setTabKey(k=>k+1); setTab('training'); setOpenSessionId(s.id) }} />}
-          {tab === 'training'  && <AthleteTrainingWithRPE athleteId={athleteId} initialSessionId={openSessionId} onSessionOpened={() => setOpenSessionId(null)} />}
+          {tab === 'training'  && <AthleteTrainingWithRPE athleteId={athleteId} initialSessionId={openSessionId} onSessionOpened={() => setOpenSessionId(null)} onReplySeen={() => setUnreadReplies(c => Math.max(0, c - 1))} />}
           {tab === 'health'    && <AthleteHealth athleteId={athleteId} />}
-          {tab === 'nutrition' && <AthleteNutrition athleteId={athleteId} />}
+          {tab === 'nutrition' && FEATURES.nutrition && <AthleteNutrition athleteId={athleteId} />}
           {tab === 'progress'  && <AthleteProgressTab athleteId={athleteId} isFemale={athlete?.gender === 'female'} />}
           {tab === 'payments'  && <AthletePayments athleteId={athleteId} />}
           {tab === 'docs'      && <AthleteDocs athleteId={athleteId} />}
@@ -355,7 +357,7 @@ function AthleteHome({ athlete, athleteId, onOpenSession }) {
           Injuries.getByAthlete(athleteId),
           Records.getByAthlete(athleteId),
         ])
-        const today = new Date().toISOString().slice(0,10)
+        const today = ymd(new Date())
         setAllSessions(sessions)
         const upcomingSessions = sessions.filter(s => s.date >= today).slice(0, 3)
         setUpcoming(upcomingSessions)
@@ -386,7 +388,7 @@ function AthleteHome({ athlete, athleteId, onOpenSession }) {
             for (let i = 0; i < 7; i++) {
               const d = new Date(today2)
               d.setDate(today2.getDate() - i)
-              if (!wellnessDays.includes(d.toISOString().slice(0,10))) { perfectWellness = false; break }
+              if (!wellnessDays.includes(ymd(d))) { perfectWellness = false; break }
             }
           }
           const firstSession = sessions.length > 0 ? new Date(sessions[0].date + 'T12:00:00') : null
@@ -453,20 +455,20 @@ function AthleteHome({ athlete, athleteId, onOpenSession }) {
   // Estado vacío: deportista nuevo sin datos
   const hasAnything = upcoming.length > 0 || allSessions.length > 0 || streak > 0
 
-  const todayStr = now.toISOString().slice(0,10)
+  const todayStr = ymd(now)
   const todaySession = upcoming.find(s => s.date === todayStr)
   const nextSessions = upcoming.filter(s => s.date !== todayStr).slice(0, 2)
 
   // Stats rápidos de la semana
   const weekStart = new Date(now)
   weekStart.setDate(now.getDate() - ((now.getDay() + 6) % 7))
-  const weekStr = weekStart.toISOString().slice(0,10)
+  const weekStr = ymd(weekStart)
   const weekSessions = allSessions.filter(s => s.date >= weekStr && s.date <= todayStr)
   const weekDone = weekSessions.length
   const weekTotal = allSessions.filter(s => {
     const d = new Date(s.date + 'T12:00:00')
     const wEnd = new Date(weekStart); wEnd.setDate(weekStart.getDate() + 6)
-    return s.date >= weekStr && s.date <= wEnd.toISOString().slice(0,10)
+    return s.date >= weekStr && s.date <= ymd(wEnd)
   }).length
 
   return (
@@ -638,7 +640,7 @@ function AthleteHealth({ athleteId }) {
   const [editingCycleLength, setEditingCycleLength] = useState(false)
   const [cycleLengthInput, setCycleLengthInput] = useState(String(athleteProfile?.cycle_length || 28))
   const [reportingInjury, setReportingInjury] = useState(false)
-  const [injuryForm, setInjuryForm] = useState({ type: '', body_part: '', date_start: new Date().toISOString().slice(0,10), notes: '' })
+  const [injuryForm, setInjuryForm] = useState({ type: '', body_part: '', date_start: ymd(new Date()), notes: '' })
   const [savingInjury, setSavingInjury] = useState(false)
 
   // Sincronizar cycleLength cuando el perfil cargue async
@@ -651,7 +653,7 @@ function AthleteHealth({ athleteId }) {
   const fileRef = useRef()
   const SEVERITY_COLOR = { mild: 'var(--success)', moderate: 'var(--warning)', severe: 'var(--error)' }
   const SEVERITY_LABEL = { mild: 'Leve', moderate: 'Moderada', severe: 'Grave' }
-  const today = new Date().toISOString().slice(0,10)
+  const today = ymd(new Date())
 
   const loadDocs = async () => {
     const { data } = await supabase.from('documents')
@@ -672,7 +674,7 @@ function AthleteHealth({ athleteId }) {
   const logCycle = async () => {
     setLoggingCycle(true)
     try {
-      const today = new Date().toISOString().slice(0, 10)
+      const today = ymd(new Date())
       await Cycle.log(athleteId, today)
       const updated = await Cycle.getByAthlete(athleteId)
       setCycles(updated)
@@ -686,7 +688,7 @@ function AthleteHealth({ athleteId }) {
     if (!cycles[0]?.id) return
     setEndingCycle(true)
     try {
-      const today = new Date().toISOString().slice(0, 10)
+      const today = ymd(new Date())
       await Cycle.end(cycles[0].id, today)
       const updated = await Cycle.getByAthlete(athleteId)
       setCycles(updated)
@@ -742,7 +744,7 @@ function AthleteHealth({ athleteId }) {
       const updated = await Injuries.getByAthlete(athleteId)
       setInjuries(updated)
       setReportingInjury(false)
-      setInjuryForm({ type: '', body_part: '', date_start: new Date().toISOString().slice(0,10), notes: '' })
+      setInjuryForm({ type: '', body_part: '', date_start: ymd(new Date()), notes: '' })
       haptic('success')
       toast('Lesión reportada ✓ Tu entrenadora la verá pronto')
     } catch { toast('Error al guardar la lesión', 'error') }
@@ -1214,8 +1216,9 @@ function AthleteProgressTab({ athleteId, isFemale }) {
 }
 
 // ---- Entrenos con RPE ----
-function AthleteTrainingWithRPE({ athleteId, initialSessionId, onSessionOpened }) {
+function AthleteTrainingWithRPE({ athleteId, initialSessionId, onSessionOpened, onReplySeen }) {
   const { user, profile } = useAuth()
+  const toast = useToast()
   const [sessions, setSessions] = useState([])
   const [loading, setLoading] = useState(true)
   const [rpeSheet, setRpeSheet] = useState(null)
@@ -1241,7 +1244,7 @@ function AthleteTrainingWithRPE({ athleteId, initialSessionId, onSessionOpened }
     if (!seen.includes(sessionId)) {
       seen.push(sessionId)
       localStorage.setItem('ns_seen_replies', JSON.stringify(seen))
-      setUnreadReplies(c => Math.max(0, c - 1))
+      onReplySeen?.()
     }
   }
 
@@ -1284,7 +1287,7 @@ function AthleteTrainingWithRPE({ athleteId, initialSessionId, onSessionOpened }
     setAttendanceMap(map)
   }, [sessions, athleteId])
 
-  const today = new Date().toISOString().slice(0,10)
+  const today = ymd(new Date())
   const past = sessions.filter(s => s.date < today).reverse()
   const upcoming = sessions.filter(s => s.date >= today)
   const canSave = rpe > 0 || fatiguePost > 0 || moodPost > 0
@@ -1629,7 +1632,7 @@ function AthleteTrainingWithRPE({ athleteId, initialSessionId, onSessionOpened }
           onClose={() => { setPreSheet(null); setFatiguePre(0) }}
           saving={savingPre}
           formatDate={formatDate}
-          isPast={preSheet.date < new Date().toISOString().slice(0,10)}
+          isPast={preSheet.date < ymd(new Date())}
         />
       )}
 
@@ -1709,7 +1712,7 @@ function AthleteSessionRow({ session, last }) {
   const date = new Date(session.date + 'T12:00:00')
   const days = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb']
   const months = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic']
-  const isToday = session.date === new Date().toISOString().slice(0,10)
+  const isToday = session.date === ymd(new Date())
   const color = TYPE_COLORS[session.type] || 'var(--accent)'
   const icon = TYPE_ICONS[session.type] || '📅'
 
@@ -1791,7 +1794,7 @@ function AthleteNutrition({ athleteId }) {
 
   const saveLog = async (adherence) => {
     setSaving(true)
-    const today = new Date().toISOString().slice(0,10)
+    const today = ymd(new Date())
     try {
       await Nutrition.saveLog(athleteId, today, adherence, comment)
       await load()

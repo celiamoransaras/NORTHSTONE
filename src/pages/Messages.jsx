@@ -19,7 +19,8 @@ export default function Messages() {
   // Leer chatId desde query param (notificación push) o desde state (navegación interna)
   const initialChat = (() => {
     const params = new URLSearchParams(location.search)
-    return params.get('chat') || location.state?.chatId || 'general'
+    // Las deportistas abren por defecto su chat privado con Celia (no el de grupo)
+    return params.get('chat') || location.state?.chatId || (!isCoach && profile?.athlete_id) || 'general'
   })()
   const [activeChat, setActiveChat] = useState(initialChat)
   const [fatigueAlert, setFatigueAlert] = useState(location.state?.fatigueAlert || null)
@@ -301,6 +302,11 @@ export default function Messages() {
           <div onClick={() => setReactionTarget(null)}
             style={{ position: 'fixed', inset: 0, zIndex: 5 }} />
         )}
+        {activeChat === 'general' && (
+          <div style={{ background: 'var(--accent-dim)', padding: '8px 16px', fontSize: 12, color: 'var(--accent)', fontWeight: 600, flexShrink: 0, textAlign: 'center' }}>
+            👥 Chat de grupo · lo leen {isCoach ? 'todas tus deportistas' : 'todas las deportistas del equipo'}
+          </div>
+        )}
         {fatigueAlert && activeChat !== 'general' && (
           <div style={{ background: 'var(--error-dim)', borderBottom: '1px solid rgba(220,38,38,0.2)', padding: '10px 16px', display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
             <span style={{ fontSize: 18 }}>⚠️</span>
@@ -419,7 +425,7 @@ export default function Messages() {
                 🎤
               </button>
               <textarea value={input} onChange={e => setInput(e.target.value)} onKeyDown={handleKey}
-                placeholder="Escribe un mensaje..." rows={1}
+                placeholder={activeChat === 'general' ? 'Mensaje para todo el grupo...' : 'Escribe un mensaje...'} rows={1}
                 style={{ flex: 1, resize: 'none', minHeight: 40, maxHeight: 120, padding: '10px 14px', borderRadius: 20, fontSize: 15, background: 'var(--card)', border: '1px solid var(--border)', color: 'var(--text)', outline: 'none', lineHeight: 1.4, fontFamily: 'inherit' }} />
               <button onClick={() => send()} style={{ width: 42, height: 42, borderRadius: '50%', background: input.trim() ? 'var(--accent-gradient)' : 'var(--border)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, cursor: 'pointer', border: 'none', transition: 'all 0.15s', flexShrink: 0 }}>↑</button>
             </>

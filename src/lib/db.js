@@ -1,8 +1,25 @@
+import { ymd } from './dates'
 /**
  * NORTHSTONE — Capa de datos con Supabase
  * Todas las operaciones son async/await
  */
 import { supabase } from './supabase'
+
+// Campos vacíos del formulario → null (Postgres no acepta '' en fechas ni números)
+const ATHLETE_NUMERIC = ['monthly_fee', 'billing_day', 'cycle_length']
+const ATHLETE_READONLY = ['id', 'created_at']
+const cleanAthlete = (a) => {
+  const out = {}
+  for (const [k, v] of Object.entries(a || {})) {
+    if (ATHLETE_READONLY.includes(k)) continue
+    if (v === '' || v === undefined) { out[k] = null; continue }
+    if (ATHLETE_NUMERIC.includes(k)) { const n = Number(v); out[k] = Number.isFinite(n) ? n : null; continue }
+    if (k === 'email' && typeof v === 'string') { out[k] = v.trim().toLowerCase() || null; continue }
+    if (typeof v === 'string' && k !== 'notes') { out[k] = v.trim(); continue }
+    out[k] = v
+  }
+  return out
+}
 
 // ---- ATHLETES ----
 export const Athletes = {
@@ -23,12 +40,12 @@ export const Athletes = {
     return data
   },
   create: async (athlete) => {
-    const { data, error } = await supabase.from('athletes').insert(athlete).select().single()
+    const { data, error } = await supabase.from('athletes').insert(cleanAthlete(athlete)).select().single()
     if (error) throw error
     return data
   },
   update: async (id, updates) => {
-    const { data, error } = await supabase.from('athletes').update(updates).eq('id', id).select().single()
+    const { data, error } = await supabase.from('athletes').update(cleanAthlete(updates)).eq('id', id).select().single()
     if (error) throw error
     return data
   },
@@ -371,7 +388,7 @@ export const Goals = {
 // ---- WELLNESS ----
 export const Wellness = {
   getToday: async (athleteId) => {
-    const today = new Date().toISOString().slice(0,10)
+    const today = ymd(new Date())
     const { data } = await supabase.from('wellness').select('*').eq('athlete_id', athleteId).eq('date', today).single()
     return data
   },
@@ -390,7 +407,8 @@ if (!data) return []
     return data.filter(e => { if (seen.has(e.athlete_id)) return false; seen.add(e.athlete_id); return true })
   },
   upsert: async (entry) => {
-    const { data } = await supabase.from('wellness').upsert(entry, { onConflict: 'athlete_id,date' }).select().single()
+    const { data, error } = await supabase.from('wellness').upsert(entry, { onConflict: 'athlete_id,date' }).select().single()
+    if (error) throw error
     return data
   }
 }
@@ -460,7 +478,7 @@ export const Cycle = {
     let parsed = {}
     try { parsed = JSON.parse(current?.notes || '{}') } catch { parsed = {} }
     const symptoms = parsed.symptoms || []
-    symptoms.unshift({ date: new Date().toISOString().slice(0,10), phase, text })
+    symptoms.unshift({ date: ymd(new Date()), phase, text })
     const newNotes = JSON.stringify({ ...parsed, symptoms })
     await supabase.from('injuries').update({ notes: newNotes }).eq('id', cycleId)
     return symptoms
@@ -504,15 +522,15 @@ export const Cycle = {
       const end = new Date(date_end + 'T12:00:00')
       const periodDays = Math.floor((end - start) / (1000 * 60 * 60 * 24)) + 1
       if (day <= periodDays)   return { phase: 'menstrual', day, label: 'Menstrual', emoji: '🩸', color: '#DC2626', desc: 'Tómate con calma, escucha tu cuerpo', periodEnded: true, periodDays }
-      if (day < ovulationDay)  return { phase: 'folicular', day, label: 'Folicular', emoji: '🌱', color: '#059669', desc: 'Buena energía, ideal para entrenar fuerte', periodEnded: true }
-      if (day === ovulationDay) return { phase: 'ovulacion', day, label: 'Ovulación', emoji: '⚡', color: '#7C3AED', desc: 'Pico de energía y fuerza', periodEnded: true }
-      return                    { phase: 'lutea',    day, label: 'Lútea',    emoji: '🌙', color: '#D97706', desc: 'Puede aparecer más fatiga o sensibilidad', periodEnded: true }
+      if (day < ovulationDay)  return { phase: 'folicular', day, label: 'Folicular', emoji: '🌱', color: '#059669', desc: 'Muchas mujeres notan más energía en esta fase', periodEnded: true }
+      if (day === ovulationDay) return { phase: 'ovulacion', day, label: 'Ovulación', emoji: '⚡', color: '#7C3AED', desc: 'Algunas mujeres notan más energía estos días', periodEnded: true }
+      return                    { phase: 'lutea',    day, label: 'Lútea',    emoji: '🌙', color: '#D97706', desc: 'Puede aparecer más fatiga; cuéntale a Celia cómo estás', periodEnded: true }
     } else {
       // Sin fecha de fin — día ≤5 asume fase menstrual activa
       if (day <= 5)            return { phase: 'menstrual', day, label: 'Menstrual', emoji: '🩸', color: '#DC2626', desc: 'Tómate con calma, escucha tu cuerpo', periodEnded: false }
-      if (day < ovulationDay)  return { phase: 'folicular', day, label: 'Folicular', emoji: '🌱', color: '#059669', desc: 'Buena energía, ideal para entrenar fuerte', periodEnded: null }
-      if (day === ovulationDay) return { phase: 'ovulacion', day, label: 'Ovulación', emoji: '⚡', color: '#7C3AED', desc: 'Pico de energía y fuerza', periodEnded: null }
-      return                    { phase: 'lutea',    day, label: 'Lútea',    emoji: '🌙', color: '#D97706', desc: 'Puede aparecer más fatiga o sensibilidad', periodEnded: null }
+      if (day < ovulationDay)  return { phase: 'folicular', day, label: 'Folicular', emoji: '🌱', color: '#059669', desc: 'Muchas mujeres notan más energía en esta fase', periodEnded: null }
+      if (day === ovulationDay) return { phase: 'ovulacion', day, label: 'Ovulación', emoji: '⚡', color: '#7C3AED', desc: 'Algunas mujeres notan más energía estos días', periodEnded: null }
+      return                    { phase: 'lutea',    day, label: 'Lútea',    emoji: '🌙', color: '#D97706', desc: 'Puede aparecer más fatiga; cuéntale a Celia cómo estás', periodEnded: null }
     }
   }
 }
@@ -520,7 +538,8 @@ export const Cycle = {
 // ---- RPE ----
 export const RPE = {
   set: async (sessionId, athleteId, fields) => {
-    await supabase.from('session_athletes').update(fields).eq('session_id', sessionId).eq('athlete_id', athleteId)
+    const { error } = await supabase.from('session_athletes').update(fields).eq('session_id', sessionId).eq('athlete_id', athleteId)
+    if (error) throw error
   },
   get: async (sessionId, athleteId) => {
     const { data } = await supabase.from('session_athletes').select('rpe, rpe_notes, fatigue_pre, fatigue_post, mood_post, coach_reply').eq('session_id', sessionId).eq('athlete_id', athleteId).single()
@@ -561,7 +580,7 @@ export const Nutrition = {
     const since = new Date(); since.setDate(since.getDate() - 30)
     const { data } = await supabase.from('nutrition_logs').select('*')
       .eq('athlete_id', athleteId)
-      .gte('date', since.toISOString().slice(0,10))
+      .gte('date', ymd(since))
       .order('date', { ascending: false })
     return data || []
   },
@@ -572,7 +591,7 @@ export const Nutrition = {
     )
   },
   getTodayLog: async (athleteId) => {
-    const today = new Date().toISOString().slice(0,10)
+    const today = ymd(new Date())
     const { data } = await supabase.from('nutrition_logs').select('*').eq('athlete_id', athleteId).eq('date', today).single()
     return data || null
   }
