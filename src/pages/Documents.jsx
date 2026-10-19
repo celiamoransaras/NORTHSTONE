@@ -135,7 +135,7 @@ export default function Documents() {
             <div className="sheet-handle" />
             <div className="sheet-header">
               <h3>Subir documento</h3>
-              <button className="btn btn-ghost btn-sm" onClick={() => setSheet(null)}>✕</button>
+              <button className="btn-close" aria-label="Cerrar" onClick={() => setSheet(null)}>✕</button>
             </div>
             <div className="sheet-body">
               {selectedFile && (

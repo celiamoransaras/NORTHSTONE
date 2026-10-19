@@ -5,6 +5,7 @@ import { Sessions, Injuries, Payments, Storage, RPE, Athletes as AthletesDB, Cyc
 import { supabase } from '../lib/supabase'
 import Messages from './Messages'
 import HyroxPlanner from './HyroxPlanner'
+import CycleHistory from '../components/CycleHistory'
 import DocsPage from './Documents'
 import Progress from './Progress'
 import { AchievementsHomeSection, StreakBadge, WeeklyPlan, calculateStreak, checkAndUnlockAchievements } from './Achievements'
@@ -233,7 +234,10 @@ export default function AthleteView() {
       {moreOpen && (
         <div style={{ position: 'fixed', inset: 0, zIndex: 200 }} onClick={() => setMoreOpen(false)}>
           <div style={{ position: 'absolute', bottom: 'calc(var(--nav-height) + env(safe-area-inset-bottom))', left: 0, right: 0, background: 'var(--card)', borderRadius: '20px 20px 0 0', padding: '16px 16px 8px', boxShadow: '0 -4px 24px rgba(0,0,0,0.12)' }} onClick={e => e.stopPropagation()}>
-            <div style={{ width: 36, height: 4, background: 'var(--border)', borderRadius: 2, margin: '0 auto 16px' }} />
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+              <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 800, fontSize: 15, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Más</span>
+              <button className="btn-close" aria-label="Cerrar" onClick={() => setMoreOpen(false)}>✕</button>
+            </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 8 }}>
               {[
                 { id: 'payments', icon: '💳', label: 'Pagos', desc: 'Tus cuotas y pagos' },
@@ -277,7 +281,10 @@ export default function AthleteView() {
           <div className="overlay" onClick={() => setProfileOpen(false)} />
           <div className="sheet">
             <div className="sheet-handle" />
-            <div className="sheet-body" style={{ paddingTop: 12 }}>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '8px 16px 0' }}>
+              <button className="btn-close" aria-label="Cerrar" onClick={() => setProfileOpen(false)}>✕</button>
+            </div>
+            <div className="sheet-body" style={{ paddingTop: 0 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 28 }}>
                 <label style={{ position: 'relative', cursor: 'pointer', flexShrink: 0 }}>
                   {athlete.avatar_url
@@ -493,7 +500,9 @@ function AthleteHome({ athlete, athleteId, onOpenSession, onGoTo }) {
         <div style={{ position: 'fixed', inset: 0, zIndex: 100, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', animation: 'fadeIn 0.2s ease' }}>
           <div onClick={() => { localStorage.setItem('wellness_dismissed_date', new Date().toDateString()); setShowWellness(false) }} style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.45)' }} />
           <div style={{ position: 'relative', background: 'var(--surface)', borderRadius: '20px 20px 0 0', padding: '8px 0 24px', maxHeight: '90vh', overflowY: 'auto', animation: 'slideUp 0.3s cubic-bezier(0.32,0.72,0,1)' }}>
-            <div style={{ width: 36, height: 4, borderRadius: 2, background: 'var(--border)', margin: '0 auto 16px' }} />
+            <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '0 16px 4px' }}>
+              <button className="btn-close" aria-label="Cerrar" onClick={() => { localStorage.setItem('wellness_dismissed_date', new Date().toDateString()); setShowWellness(false) }}>✕</button>
+            </div>
             <div style={{ padding: '0 16px' }}>
               <WellnessCheckin athleteId={athleteId} onDone={() => { localStorage.removeItem('wellness_dismissed_date'); setShowWellness(false); setWellnessDone(true) }} />
               <button className="btn btn-ghost btn-full" style={{ marginTop: 8, color: 'var(--text-muted)', fontSize: 13 }} onClick={() => { localStorage.setItem('wellness_dismissed_date', new Date().toDateString()); setShowWellness(false) }}>
@@ -970,24 +979,8 @@ function AthleteHealth({ athleteId }) {
                   </div>
                 )}
 
-                {/* Historial ciclos */}
-                {cycles.length > 0 && (
-                  <div style={{ marginTop: 12, borderTop: '1px solid var(--border)', paddingTop: 10 }}>
-                    <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.4px', marginBottom: 6 }}>Historial</div>
-                    {cycles.slice(0, 3).map((c, i) => (
-                      <div key={c.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '5px 0' }}>
-                        <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>
-                          {new Date(c.date_start + 'T12:00:00').toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' })}
-                          {c.date_end && <span style={{ marginLeft: 4, color: '#059669' }}>→ {new Date(c.date_end + 'T12:00:00').toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })}</span>}
-                        </span>
-                        {i === 0
-                          ? <span style={{ fontSize: 11, fontWeight: 700, color: phase?.color || 'var(--accent)', background: (phase?.color || 'var(--accent)') + '20', padding: '2px 8px', borderRadius: 8 }}>Último</span>
-                          : cycles[i-1] && <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{Math.round((new Date(cycles[i-1].date_start) - new Date(c.date_start)) / (1000*60*60*24))}d</span>
-                        }
-                      </div>
-                    ))}
-                  </div>
-                )}
+                {/* Historial ciclos (sin borrar ninguno, mostrando pocos cada vez) */}
+                <CycleHistory cycles={cycles} color={phase?.color || 'var(--accent)'} />
               </div>
 
               {/* Config duración del ciclo */}
@@ -1098,7 +1091,10 @@ function AthleteHealth({ athleteId }) {
           <div className="sheet">
             <div className="sheet-handle" />
             <div className="sheet-body">
-              <h3 style={{ marginBottom: 20 }}>Reportar lesión</h3>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+                <h3 style={{ margin: 0 }}>Reportar lesión</h3>
+                <button className="btn-close" aria-label="Cerrar" onClick={() => setReportingInjury(false)}>✕</button>
+              </div>
 
               <div style={{ marginBottom: 14 }}>
                 <label style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', display: 'block', marginBottom: 6 }}>
@@ -1624,7 +1620,7 @@ function AthleteTrainingWithRPE({ athleteId, initialSessionId, onSessionOpened, 
                 <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{formatDate(detailSession.date)}</div>
                 <h3>{detailSession.title}</h3>
               </div>
-              <button className="btn btn-ghost btn-sm" onClick={() => setDetailSession(null)}>✕</button>
+              <button className="btn-close" aria-label="Cerrar" onClick={() => setDetailSession(null)}>✕</button>
             </div>
             <div className="sheet-body">
               <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
@@ -1743,7 +1739,7 @@ function AthleteTrainingWithRPE({ athleteId, initialSessionId, onSessionOpened, 
             <div className="sheet-header">
               <button className="btn btn-ghost btn-sm" onClick={() => { setRpeSheet(null); setDetailSession(rpeSheet) }}>← Volver</button>
               <h3>Valorar sesión</h3>
-              <button className="btn btn-ghost btn-sm" onClick={() => setRpeSheet(null)}>✕</button>
+              <button className="btn-close" aria-label="Cerrar" onClick={() => setRpeSheet(null)}>✕</button>
             </div>
             <div className="sheet-body">
               <div style={{ textAlign: 'center', marginBottom: 20, padding: '12px 16px', background: 'var(--bg)', borderRadius: 'var(--radius-sm)' }}>
@@ -1774,7 +1770,7 @@ function PreSessionSheet({ session, fatiguePre, setFatiguePre, onSave, onClose, 
         <div className="sheet-handle" />
         <div className="sheet-header">
           <h3>¿Cómo llegas?</h3>
-          <button className="btn btn-ghost btn-sm" onClick={onClose}>✕</button>
+          <button className="btn-close" aria-label="Cerrar" onClick={onClose}>✕</button>
         </div>
         <div className="sheet-body">
           <div style={{ textAlign: 'center', marginBottom: 20, padding: '12px 16px', background: 'var(--bg)', borderRadius: 'var(--radius-sm)' }}>

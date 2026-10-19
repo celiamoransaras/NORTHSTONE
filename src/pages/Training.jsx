@@ -365,7 +365,7 @@ export default function Training({ athleteId = null, coachView = false, embedded
             <div className="sheet-handle" />
             <div className="sheet-header">
               <h3>Sesiones del {formatDate(daySessionsToSelect[0].date)}</h3>
-              <button className="btn btn-ghost btn-sm" onClick={() => setSheet(null)}>✕</button>
+              <button className="btn-close" aria-label="Cerrar" onClick={() => setSheet(null)}>✕</button>
             </div>
             <div className="sheet-body">
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -412,6 +412,7 @@ export default function Training({ athleteId = null, coachView = false, embedded
                   <button className="btn btn-ghost btn-sm" onClick={() => openEdit(detailSession)}>✏️</button>
                 </div>
               )}
+              {!embedded && <button className="btn-close" aria-label="Cerrar" onClick={() => setSheet(null)}>✕</button>}
             </div>
             <div className="sheet-body">
               <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
@@ -524,7 +525,7 @@ export default function Training({ athleteId = null, coachView = false, embedded
             <div className="sheet-handle" />
             <div className="sheet-header">
               <h3>{editing ? 'Editar sesión' : 'Nueva sesión'}</h3>
-              <button className="btn btn-ghost btn-sm" onClick={() => setSheet(null)}>✕</button>
+              <button className="btn-close" aria-label="Cerrar" onClick={() => setSheet(null)}>✕</button>
             </div>
             <div className="sheet-body">
               {/* Botón plantillas */}

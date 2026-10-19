@@ -455,7 +455,7 @@ export const Achievements = {
 export const Cycle = {
   // Registrar inicio de regla
   log: async (athleteId, startDate) => {
-    const { data } = await supabase.from('injuries').insert({
+    const { data, error } = await supabase.from('injuries').insert({
       athlete_id: athleteId,
       date_start: startDate,
       type: 'cycle',
@@ -463,16 +463,8 @@ export const Cycle = {
       severity: 'mild',
       notes: ''
     }).select().single()
-    // Mantener solo los últimos 3 ciclos — borrar los más antiguos
-    const { data: all } = await supabase.from('injuries')
-      .select('id')
-      .eq('athlete_id', athleteId)
-      .eq('type', 'cycle')
-      .order('date_start', { ascending: false })
-    if (all && all.length > 12) {
-      const toDelete = all.slice(12).map(c => c.id)
-      await supabase.from('injuries').delete().in('id', toDelete)
-    }
+    if (error) throw error
+    // Se conserva todo el historial: es clave para detectar irregularidades o ausencia de regla
     return data
   },
   // Marcar fin de la regla

@@ -101,7 +101,7 @@ export default function CopyWeekSheet({ sessions, athletes, onClose, onDone, toa
         <div className="sheet-handle" />
         <div className="sheet-header">
           <h3>Copiar semana</h3>
-          <button className="btn btn-ghost btn-sm" onClick={onClose}>✕</button>
+          <button className="btn-close" aria-label="Cerrar" onClick={onClose}>✕</button>
         </div>
         <div className="sheet-body">
           <div className="section-title" style={{ marginTop: 0 }}>1 · Qué semana copias</div>

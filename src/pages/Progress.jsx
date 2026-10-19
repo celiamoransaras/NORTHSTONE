@@ -858,7 +858,7 @@ function GoalsSection({ athleteId, canCreate }) {
             <div className="sheet-handle" />
             <div className="sheet-header">
               <h3>Nuevo objetivo</h3>
-              <button className="btn btn-ghost btn-sm" onClick={() => setSheet(false)}>✕</button>
+              <button className="btn-close" aria-label="Cerrar" onClick={() => setSheet(false)}>✕</button>
             </div>
             <div className="sheet-body">
               <div className="input-group">
@@ -1130,7 +1130,7 @@ function RecordsSection({ athleteId, canEdit }) {
                 <h3>{chartGroup.name}</h3>
                 <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>{chartGroup.recs.length} registros · en {chartGroup.unit}</div>
               </div>
-              <button className="btn btn-ghost btn-sm" onClick={() => setChartGroup(null)}>✕</button>
+              <button className="btn-close" aria-label="Cerrar" onClick={() => setChartGroup(null)}>✕</button>
             </div>
             <div className="sheet-body">
               {/* Stats rápidas */}
@@ -1204,7 +1204,7 @@ function RecordsSection({ athleteId, canEdit }) {
               <h3>{editing ? 'Editar marca' : 'Nueva marca'}</h3>
               <div style={{ display: 'flex', gap: 8 }}>
                 {editing && <button className="btn btn-danger btn-sm" onClick={() => setConfirmDelete(editing)}>🗑</button>}
-                <button className="btn btn-ghost btn-sm" onClick={() => setSheet(false)}>✕</button>
+                <button className="btn-close" aria-label="Cerrar" onClick={() => setSheet(false)}>✕</button>
               </div>
             </div>
             <div className="sheet-body">
@@ -1589,7 +1589,7 @@ export function ProgressPhotos({ athleteId, canUpload = false, canDelete = false
             <div className="sheet-handle" />
             <div className="sheet-header">
               <h3>Mes {sheetMonth} — Elige la pose</h3>
-              <button className="btn btn-ghost btn-sm" onClick={() => setSheetMonth(null)}>✕</button>
+              <button className="btn-close" aria-label="Cerrar" onClick={() => setSheetMonth(null)}>✕</button>
             </div>
             <div className="sheet-body">
               {POSES.map(pose => {
@@ -1621,7 +1621,7 @@ export function ProgressPhotos({ athleteId, canUpload = false, canDelete = false
       {/* Lightbox */}
       {lightbox && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.92)', zIndex: 1000, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-          <div onClick={() => setLightbox(null)} style={{ position: 'absolute', top: 16, right: 16, fontSize: 28, color: '#fff', cursor: 'pointer' }}>✕</div>
+          <button onClick={() => setLightbox(null)} aria-label="Cerrar" className="btn-close btn-close--dark" style={{ position: 'absolute', top: 'calc(env(safe-area-inset-top, 0px) + 16px)', right: 16 }}>✕</button>
           <img src={lightbox.file_url} alt="" style={{ maxWidth: '100%', maxHeight: '75vh', objectFit: 'contain', borderRadius: 12 }} />
           <div style={{ color: '#fff', fontSize: 14, marginTop: 12, fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
             {POSES.find(p => p.key === lightbox.pose)?.label} — Mes {lightbox.monthNum}

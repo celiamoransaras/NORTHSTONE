@@ -277,7 +277,7 @@ export default function Health() {
               <h3>{editing ? 'Editar lesión' : 'Nueva lesión'}</h3>
               <div style={{ display: 'flex', gap: 8 }}>
                 {editing && <button className="btn btn-danger btn-sm" onClick={() => setConfirmDelete(editing)}>🗑</button>}
-                <button className="btn btn-ghost btn-sm" onClick={() => setSheet(null)}>✕</button>
+                <button className="btn-close" aria-label="Cerrar" onClick={() => setSheet(null)}>✕</button>
               </div>
             </div>
             <div className="sheet-body">

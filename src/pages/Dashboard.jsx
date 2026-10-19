@@ -297,7 +297,7 @@ function TeamStatsSheet({ onClose }) {
         <div className="sheet-handle" />
         <div className="sheet-header">
           <h3>Estadísticas del equipo</h3>
-          <button className="btn btn-ghost btn-sm" onClick={onClose}>✕</button>
+          <button className="btn-close" aria-label="Cerrar" onClick={onClose}>✕</button>
         </div>
         <div className="sheet-body">
           {loading ? (

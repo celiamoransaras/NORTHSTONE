@@ -2,6 +2,7 @@ import { ymd } from '../lib/dates'
 import { useState, useEffect } from 'react'
 import { useLocation } from 'react-router-dom'
 import { FEATURES } from '../lib/constants'
+import CycleHistory from '../components/CycleHistory'
 import { Athletes as DB, Sessions, Storage, Cycle, Nutrition, Documents } from '../lib/db'
 import { supabase } from '../lib/supabase'
 import Training from './Training'
@@ -305,7 +306,10 @@ export default function Athletes() {
             <div className="sheet-handle" />
             <div className="sheet-header">
               <h3>{sheet.name}</h3>
-              <button className="btn btn-ghost btn-sm" onClick={() => openEdit(sheet)}>✏️ Editar</button>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <button className="btn btn-ghost btn-sm" onClick={() => openEdit(sheet)}>✏️ Editar</button>
+                <button className="btn-close" aria-label="Cerrar" onClick={() => setSheet(null)}>✕</button>
+              </div>
             </div>
             {/* Tabs */}
             <div style={{ display: 'flex', gap: 4, padding: '0 16px 12px', overflowX: 'auto' }}>
@@ -375,7 +379,7 @@ export default function Athletes() {
             <div className="sheet-handle" />
             <div className="sheet-header">
               <h3>{editing ? 'Editar deportista' : 'Nuevo deportista'}</h3>
-              <button className="btn btn-ghost btn-sm" onClick={() => setSheet(null)}>✕</button>
+              <button className="btn-close" aria-label="Cerrar" onClick={() => setSheet(null)}>✕</button>
             </div>
             <div className="sheet-body">
               {/* Foto de perfil */}
@@ -555,24 +559,8 @@ function CyclePhaseCoach({ athleteId }) {
           </div>
         )}
 
-        {/* Historial ciclos */}
-        {cycles.length > 0 && (
-          <div style={{ marginTop: 12, borderTop: '1px solid var(--border)', paddingTop: 10 }}>
-            <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.4px', marginBottom: 6 }}>Historial</div>
-            {cycles.map((c, i) => (
-              <div key={c.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '5px 0', borderBottom: i < cycles.length - 1 ? '1px solid var(--border)' : 'none' }}>
-                <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>
-                  {new Date(c.date_start + 'T12:00:00').toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' })}
-                  {c.date_end && <span style={{ marginLeft: 4, color: '#059669' }}>→ {new Date(c.date_end + 'T12:00:00').toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })}</span>}
-                </span>
-                {i === 0
-                  ? <span style={{ fontSize: 11, fontWeight: 700, color: phase?.color || 'var(--accent)', background: (phase?.color || 'var(--accent)') + '20', padding: '2px 8px', borderRadius: 8 }}>Actual</span>
-                  : cycles[i-1] && <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{Math.round((new Date(cycles[i-1].date_start) - new Date(c.date_start)) / (1000*60*60*24))}d antes</span>
-                }
-              </div>
-            ))}
-          </div>
-        )}
+        {/* Historial ciclos (sin borrar ninguno, mostrando pocos cada vez) */}
+        <CycleHistory cycles={cycles} color={phase?.color || 'var(--accent)'} />
       </div>
 
       {/* Duración configurada — solo lectura */}
