@@ -540,16 +540,20 @@ textarea { resize: vertical; min-height: 88px; }
 }
 
 /* ---- Animations ---- */
-.fade-in { animation: fadeInUp 0.22s cubic-bezier(0.16,1,0.3,1) both; }
-.fade-in-1 { animation: fadeInUp 0.28s cubic-bezier(0.16,1,0.3,1) 0.04s both; }
-.fade-in-2 { animation: fadeInUp 0.28s cubic-bezier(0.16,1,0.3,1) 0.08s both; }
-.fade-in-3 { animation: fadeInUp 0.28s cubic-bezier(0.16,1,0.3,1) 0.12s both; }
-.fade-in-4 { animation: fadeInUp 0.28s cubic-bezier(0.16,1,0.3,1) 0.16s both; }
-.fade-in-5 { animation: fadeInUp 0.28s cubic-bezier(0.16,1,0.3,1) 0.20s both; }
+.fade-in { animation: fadeInUp 0.22s cubic-bezier(0.16,1,0.3,1) backwards; }
+.fade-in-1 { animation: fadeInUp 0.28s cubic-bezier(0.16,1,0.3,1) 0.04s backwards; }
+.fade-in-2 { animation: fadeInUp 0.28s cubic-bezier(0.16,1,0.3,1) 0.08s backwards; }
+.fade-in-3 { animation: fadeInUp 0.28s cubic-bezier(0.16,1,0.3,1) 0.12s backwards; }
+.fade-in-4 { animation: fadeInUp 0.28s cubic-bezier(0.16,1,0.3,1) 0.16s backwards; }
+.fade-in-5 { animation: fadeInUp 0.28s cubic-bezier(0.16,1,0.3,1) 0.20s backwards; }
 
+/* Las animaciones de entrada usan fill-mode "backwards" (no "both") y terminan en "none":
+   si el transform se queda aplicado al acabar, un transform (aunque sea 0) convierte
+   convierte al contenedor en referencia de los elementos position:fixed y las ventanas emergentes
+   (.sheet) quedaban descolocadas y cortadas, con la ✕ fuera de la pantalla. */
 @keyframes fadeInUp {
   from { opacity: 0; transform: translateY(14px); }
-  to { opacity: 1; transform: translateY(0); }
+  to { opacity: 1; transform: none; }
 }
 
 @keyframes pulse {
@@ -558,20 +562,20 @@ textarea { resize: vertical; min-height: 88px; }
 }
 
 /* ---- Page transition ---- */
-.page { animation: pageIn 0.2s cubic-bezier(0.16,1,0.3,1) both; }
+.page { animation: pageIn 0.2s cubic-bezier(0.16,1,0.3,1) backwards; }
 @keyframes pageIn {
   from { opacity: 0; transform: translateY(8px); }
-  to { opacity: 1; transform: translateY(0); }
+  to { opacity: 1; transform: none; }
 }
 
 /* ---- Tab slide transitions ---- */
 @keyframes tabSlideRight {
   from { opacity: 0; transform: translateX(28px); }
-  to { opacity: 1; transform: translateX(0); }
+  to { opacity: 1; transform: none; }
 }
 @keyframes tabSlideLeft {
   from { opacity: 0; transform: translateX(-28px); }
-  to { opacity: 1; transform: translateX(0); }
+  to { opacity: 1; transform: none; }
 }
 
 /* ---- Card hover ---- */

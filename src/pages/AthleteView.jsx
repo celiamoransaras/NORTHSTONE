@@ -217,7 +217,7 @@ export default function AthleteView() {
 
       {/* Content */}
       <main style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-        <div key={tabKey} style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', animation: `tabSlide${tabDir > 0 ? 'Right' : 'Left'} 0.22s cubic-bezier(0.16,1,0.3,1) both` }}>
+        <div key={tabKey} style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', animation: `tabSlide${tabDir > 0 ? 'Right' : 'Left'} 0.22s cubic-bezier(0.16,1,0.3,1) backwards` }}>
           {tab === 'home'      && <AthleteHome athlete={athlete} athleteId={athleteId} onOpenSession={s => { setTabDir(1); setTabKey(k=>k+1); setTab('training'); setOpenSessionId(s.id) }} onGoTo={t => { setTabDir(1); setTabKey(k=>k+1); setTab(t) }} />}
           {tab === 'training'  && <AthleteTrainingWithRPE athleteId={athleteId} initialSessionId={openSessionId} onSessionOpened={() => setOpenSessionId(null)} onReplySeen={() => setUnreadReplies(c => Math.max(0, c - 1))} />}
           {tab === 'health'    && <AthleteHealth athleteId={athleteId} />}
