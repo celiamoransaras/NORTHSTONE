@@ -162,9 +162,10 @@ export const Sessions = {
     await supabase.from('sessions').delete().eq('id', id)
   },
   toggleAttendance: async (sessionId, athleteId, current) => {
-    await supabase.from('session_athletes')
+    const { error } = await supabase.from('session_athletes')
       .update({ attended: !current })
       .eq('session_id', sessionId).eq('athlete_id', athleteId)
+    if (error) throw error
   }
 }
 
@@ -192,6 +193,9 @@ export const Injuries = {
 }
 
 // ---- PAYMENTS ----
+// Un pago solo cuenta como pendiente si hay algo que pagar
+export const isPendingPayment = (p) => p?.status === 'pending' && Number(p.amount) > 0
+
 export const Payments = {
   getAll: async () => {
     const { data } = await supabase.from('payments').select('*')
@@ -219,7 +223,8 @@ export const Payments = {
       await supabase.from('payments').insert(missing.map(a => ({
         athlete_id: a.id, month, year,
         amount: a.monthly_fee,
-        status: 'pending'
+        // Cuota de 0 € (deportista invitada, prueba...) → no genera deuda
+        status: Number(a.monthly_fee) > 0 ? 'pending' : 'exempt'
       })))
     }
     return Payments.getByMonth(month, year)

@@ -1,9 +1,10 @@
 import { ymd } from '../lib/dates'
 import { useState, useEffect, useRef } from 'react'
 import { useAuth } from '../contexts/AuthContext'
-import { Sessions, Injuries, Payments, Storage, RPE, Athletes as AthletesDB, Cycle, Nutrition, Documents, Wellness } from '../lib/db'
+import { Sessions, Injuries, Payments, Storage, RPE, Athletes as AthletesDB, Cycle, Nutrition, Documents, Wellness, isPendingPayment } from '../lib/db'
 import { supabase } from '../lib/supabase'
 import Messages from './Messages'
+import HyroxPlanner from './HyroxPlanner'
 import DocsPage from './Documents'
 import Progress from './Progress'
 import { AchievementsHomeSection, StreakBadge, WeeklyPlan, calculateStreak, checkAndUnlockAchievements } from './Achievements'
@@ -223,6 +224,7 @@ export default function AthleteView() {
           {tab === 'progress'  && <AthleteProgressTab athleteId={athleteId} isFemale={athlete?.gender === 'female'} />}
           {tab === 'payments'  && <AthletePayments athleteId={athleteId} />}
           {tab === 'docs'      && <AthleteDocs athleteId={athleteId} />}
+          {tab === 'hyrox'     && <HyroxPlanner />}
           {tab === 'messages'  && <Messages />}
         </div>
       </main>
@@ -237,6 +239,7 @@ export default function AthleteView() {
                 { id: 'payments', icon: '💳', label: 'Pagos', desc: 'Tus cuotas y pagos' },
                 { id: 'docs',     icon: '📂', label: 'Documentos', desc: 'Docs de tu entrenadora' },
                 { id: 'health',   icon: '🩺', label: 'Salud', desc: 'Lesiones y ciclo' },
+                { id: 'hyrox',    icon: '🏁', label: 'Mi Hyrox', desc: 'Parciales para tu objetivo' },
               ].map(({ id, icon, label, desc }) => (
                 <button key={id} onClick={() => { const d = TAB_ORDER.indexOf(id) >= TAB_ORDER.indexOf(tab) ? 1 : -1; setTabDir(d); setTabKey(k=>k+1); setTab(id); setMoreOpen(false) }}
                   style={{ background: tab === id ? 'var(--accent-dim)' : 'var(--bg)', border: `1.5px solid ${tab === id ? 'var(--accent)' : 'var(--border)'}`, borderRadius: 14, padding: '14px 12px', cursor: 'pointer', textAlign: 'left' }}>
@@ -1136,7 +1139,7 @@ function AthletePayments({ athleteId }) {
     Payments.getByAthlete(athleteId).then(data => { setPayments(data); setLoading(false) })
   }, [athleteId])
 
-  const pending = payments.filter(p => p.status === 'pending')
+  const pending = payments.filter(isPendingPayment)
   const paid    = payments.filter(p => p.status === 'paid')
 
   if (loading) return (
@@ -1427,7 +1430,8 @@ function AthleteTrainingWithRPE({ athleteId, initialSessionId, onSessionOpened, 
                     </div>
                   </div>
                   <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
-                    <button onClick={async e => {
+                    {/* Solo se puede marcar como hecha el mismo día (no antes) */}
+                    {isToday && <button onClick={async e => {
                       e.stopPropagation()
                       const attended = attendanceMap[s.id] || false
                       setAttendanceMap(m => ({...m, [s.id]: !attended}))
@@ -1444,7 +1448,7 @@ function AthleteTrainingWithRPE({ athleteId, initialSessionId, onSessionOpened, 
                         fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700, fontSize: 12,
                         textTransform: 'uppercase', letterSpacing: '0.5px', cursor: 'pointer' }}>
                       {attendanceMap[s.id] ? '✓ Realizada' : '¿Ya la realizaste?'}
-                    </button>
+                    </button>}
                     <button onClick={e => { e.stopPropagation(); setPreSheet(s); setFatiguePre(0) }}
                       style={{ flex: 1, padding: '8px 12px', borderRadius: 10, background: 'var(--accent-dim)', color: 'var(--accent)', border: '1px solid var(--accent)', fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700, fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.5px', cursor: 'pointer' }}>
                       😴 ¿Cómo llegas?

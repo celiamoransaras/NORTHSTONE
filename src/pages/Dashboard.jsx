@@ -1,7 +1,7 @@
 import { ymd } from '../lib/dates'
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Athletes, Sessions, Injuries, Payments, Wellness } from '../lib/db'
+import { Athletes, Sessions, Injuries, Payments, Wellness, isPendingPayment } from '../lib/db'
 import { supabase } from '../lib/supabase'
 import { getDismissed, dismissFatigueAlert, isFatigueDismissed, subscribeAlerts } from '../lib/alertState'
 import { TYPE_ICONS, TYPE_COLORS, TYPE_LABELS } from '../lib/constants'
@@ -56,7 +56,7 @@ export default function Dashboard() {
       const upcoming = sessions.filter(s => s.date >= today).slice(0, 3)
       const activeInjuries = injuries.filter(i => !i.date_end || i.date_end > today)
       const paidCount = payments.filter(p => p.status === 'paid').length
-      const pendingPayments = payments.filter(p => p.status === 'pending').length
+      const pendingPayments = payments.filter(isPendingPayment).length
 
       setStats({
         active: athletes.filter(a => a.status === 'active').length,

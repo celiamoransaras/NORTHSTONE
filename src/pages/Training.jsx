@@ -19,7 +19,7 @@ const TYPE_OPTS = [
   { value: 'cardio',     label: '❤️ Cardio' },
   { value: 'rest_day',   label: '😴 Rest Day' },
 ]
-const emptyForm = { title: '', date: ymd(new Date()), type: 'run', duration: 60, notes: '', exercises: [], athlete_ids: [] }
+const newEmptyForm = () => ({ title: '', date: ymd(new Date()), type: 'run', duration: 60, notes: '', exercises: [], athlete_ids: [] })
 const emptyExercise = { name: '', notes: '', videos: [] }
 const emptyVideo = { label: '', url: '' }
 
@@ -33,7 +33,7 @@ export default function Training({ athleteId = null, coachView = false, embedded
   const [athletes, setAthletes] = useState([])
   const [loading, setLoading] = useState(true)
   const [sheet, setSheet] = useState(null)
-  const [form, setForm] = useState(emptyForm)
+  const [form, setForm] = useState(newEmptyForm)
   const [editing, setEditing] = useState(null)
   const [detailSession, setDetailSession] = useState(null)
   const [saving, setSaving] = useState(false)
@@ -108,7 +108,7 @@ export default function Training({ athleteId = null, coachView = false, embedded
   const displayed = filterType ? baseList.filter(s => s.type === filterType) : baseList
 
   const openNew = () => {
-    const base = { ...emptyForm }
+    const base = newEmptyForm()
     if (athleteId) base.athlete_ids = [athleteId]
     setForm(base); setEditing(null); setSheet('form')
   }

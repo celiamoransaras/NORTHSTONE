@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Payments as DB, Athletes } from '../lib/db'
+import { Payments as DB, Athletes, isPendingPayment } from '../lib/db'
 import { supabase } from '../lib/supabase'
 import { useToast } from '../contexts/ToastContext'
 import { haptic } from '../lib/haptic'
@@ -25,7 +25,7 @@ function AnnualSummary({ year, athletes }) {
       ;(pays || []).forEach(p => {
         if (!byAthlete[p.athlete_id]) return
         if (p.status === 'paid') { byAthlete[p.athlete_id].paid++; byAthlete[p.athlete_id].amountPaid += p.amount; totalPaid += p.amount }
-        else { byAthlete[p.athlete_id].pending++; byAthlete[p.athlete_id].amountPending += p.amount; totalPending += p.amount }
+        else if (isPendingPayment(p)) { byAthlete[p.athlete_id].pending++; byAthlete[p.athlete_id].amountPending += p.amount; totalPending += p.amount }
       })
       setData({ totalPaid, totalPending, byAthlete: Object.values(byAthlete) })
     }
@@ -128,7 +128,7 @@ export default function Payments() {
   const paid = payments.filter(p => p.status === 'paid').length
   const total = payments.length
   const pct = total ? Math.round((paid / total) * 100) : 0
-  const pending = payments.filter(p => p.status === 'pending')
+  const pending = payments.filter(isPendingPayment)
   const paidList = payments.filter(p => p.status === 'paid')
   const totalCobrado = paidList.reduce((s, p) => s + p.amount, 0)
 
