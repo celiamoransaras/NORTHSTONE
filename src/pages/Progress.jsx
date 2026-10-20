@@ -1,5 +1,6 @@
 import { ymd } from '../lib/dates'
 import { useState, useEffect, useMemo, useRef } from 'react'
+import { daysUntil } from '../components/GoalCountdown'
 import { Records, Goals, Wellness, WeightLog, Storage, Documents, BodyMeasurements } from '../lib/db'
 import { supabase } from '../lib/supabase'
 import ConfirmSheet from '../components/ConfirmSheet'
@@ -791,7 +792,7 @@ function GoalsSection({ athleteId, canCreate }) {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {goals.map(g => {
             const p = pct(g)
-            const daysLeft = g.deadline ? Math.ceil((new Date(g.deadline+'T12:00:00') - new Date()) / (1000*60*60*24)) : null
+            const daysLeft = g.deadline ? daysUntil(g.deadline) : null
             const isOverdue = daysLeft !== null && daysLeft < 0 && !g.completed
             return (
               <div key={g.id} className="card" style={{ padding: '16px 18px', opacity: g.completed ? 0.65 : 1 }}>
