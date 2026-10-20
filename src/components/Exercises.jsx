@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 import { supabase } from '../lib/supabase'
 import { CATEGORIES, mergeLibrary, youtubeSearch } from '../lib/exercises'
 import { useToast } from '../contexts/ToastContext'
+import { YouTubeEmbed } from './VideoEmbed'
 
 // ─────────────────────────────────────────────
 // Biblioteca de ejercicios: carga, ficha de técnica, selector y gestión (entrenadora)
@@ -48,13 +49,9 @@ export function ExerciseInfoSheet({ ex, onClose }) {
             </div>
           )}
           {yt ? (
-            <a href={`https://www.youtube.com/watch?v=${yt}`} target="_blank" rel="noopener noreferrer"
-              style={{ display: 'block', borderRadius: 12, overflow: 'hidden', position: 'relative', marginBottom: 10 }}>
-              <img src={`https://img.youtube.com/vi/${yt}/hqdefault.jpg`} alt={`Vídeo de ${ex.name}`} style={{ width: '100%', display: 'block' }} />
-              <span style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 48, color: '#fff', textShadow: '0 2px 12px rgba(0,0,0,0.6)' }}>▶</span>
-            </a>
+            <YouTubeEmbed id={yt} title={ex.name} />
           ) : ex.video_url ? (
-            <a className="btn btn-primary btn-full" href={ex.video_url} target="_blank" rel="noopener noreferrer">▶ Ver vídeo de Celia</a>
+            <a className="btn btn-primary btn-full" href={ex.video_url} target="_blank" rel="noopener noreferrer">▶ Ver vídeo ↗</a>
           ) : (
             <a className="btn btn-secondary btn-full" href={youtubeSearch(ex.name)} target="_blank" rel="noopener noreferrer">▶ Buscar vídeos en YouTube</a>
           )}

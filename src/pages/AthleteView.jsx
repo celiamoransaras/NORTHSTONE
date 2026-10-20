@@ -6,6 +6,7 @@ import { isStandalone } from '../lib/install'
 import ZonesPanel from '../components/ZonesPanel'
 import { LoggableBlock, LogSheet, useSessionLog } from '../components/WorkoutLog'
 import { useLibrary } from '../components/Exercises'
+import { VideoList } from '../components/VideoEmbed'
 import SessionActions from '../components/SessionActions'
 import { IntakeFlow, PrivacyActions, loadIntake, intakeComplete, intakeNeedsUpdate } from '../components/Intake'
 import { downloadICS } from '../lib/ics'
@@ -1700,20 +1701,7 @@ function AthleteTrainingWithRPE({ athleteId, athleteName, initialSessionId, onSe
                             canLog={detailSession.date <= ymd(new Date())} onLog={slog.setEditing}
                             mutedNote={i === 0 && detailSession.date > ymd(new Date()) ? 'Podrás apuntar tus series, pesos y tiempos el día del entreno.' : null} />
                         : ex.notes && <div style={{ fontSize: 13, color: 'var(--text-muted)', whiteSpace: 'pre-line' }}>{ex.notes}</div>}
-                      {ex.videos?.length > 0 && (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 10 }}>
-                          {ex.videos.map((v, vi) => {
-                            const ytId = v.url?.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/))([A-Za-z0-9_-]{11})/)?.[1]
-                            if (!ytId) return null
-                            return (
-                              <a key={vi} href={`https://www.youtube.com/watch?v=${ytId}`} target="_blank" rel="noopener noreferrer"
-                                style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#FF0000', color: '#fff', padding: '6px 12px', borderRadius: 8, fontSize: 13, fontWeight: 700, textDecoration: 'none' }}>
-                                ▶ {v.label || 'Ver en YouTube'}
-                              </a>
-                            )
-                          })}
-                        </div>
-                      )}
+                      <VideoList videos={ex.videos} />
                     </div>
                   ))}
                 </>

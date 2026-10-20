@@ -8,6 +8,7 @@ import CopyWeekSheet from '../components/CopyWeekSheet'
 import WeekView, { addDays } from '../components/WeekView'
 import { ExercisePicker, useLibrary } from '../components/Exercises'
 import { SessionResults } from '../components/WorkoutLog'
+import { VideoList } from '../components/VideoEmbed'
 import { loadGroups, loadBlocks, saveBlock, BlockPicker, GroupsSheet } from '../components/PlanningLibrary'
 import { useToast } from '../contexts/ToastContext'
 import { haptic } from '../lib/haptic'
@@ -979,20 +980,7 @@ function ExerciseCard({ exercise }) {
     <div style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: 14, marginBottom: 10 }}>
       <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 6 }}>{exercise.name}</div>
       {exercise.notes && <div style={{ fontSize: 13, color: 'var(--text-muted)', whiteSpace: 'pre-line' }}>{exercise.notes}</div>}
-      {exercise.videos?.length > 0 && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 10 }}>
-          {exercise.videos.map((v, i) => {
-            const ytId = getYouTubeId(v.url)
-            if (!ytId) return null
-            return (
-              <a key={v.id || i} href={`https://www.youtube.com/watch?v=${ytId}`} target="_blank" rel="noopener noreferrer"
-                style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#FF0000', color: '#fff', padding: '6px 12px', borderRadius: 8, fontSize: 13, fontWeight: 700, textDecoration: 'none' }}>
-                ▶ {v.label || 'Ver en YouTube'}
-              </a>
-            )
-          })}
-        </div>
-      )}
+      <VideoList videos={exercise.videos} />
     </div>
   )
 }
