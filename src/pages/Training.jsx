@@ -421,7 +421,7 @@ export default function Training({ athleteId = null, coachView = false, embedded
                 <span className="badge badge-gray">⏱ {detailSession.duration} min</span>
                 <span className="badge badge-blue">👥 {detailSession.athlete_ids?.length||0} deportistas</span>
               </div>
-              {detailSession.notes && <div style={{ color: 'var(--text-muted)', fontSize: 14, marginBottom: 20 }}>{detailSession.notes}</div>}
+              {detailSession.notes && <div style={{ color: 'var(--text-muted)', fontSize: 14, whiteSpace: 'pre-line', lineHeight: 1.5, marginBottom: 20 }}>{detailSession.notes}</div>}
 
               {(!athleteId || coachView) && (
                 <SessionTargets session={detailSession}

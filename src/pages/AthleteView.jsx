@@ -1648,7 +1648,7 @@ function AthleteTrainingWithRPE({ athleteId, initialSessionId, onSessionOpened, 
                   </span>
                 )}
               </div>
-              {detailSession.notes && <div style={{ color: 'var(--text-muted)', fontSize: 14, marginBottom: 16 }}>{detailSession.notes}</div>}
+              {detailSession.notes && <div style={{ color: 'var(--text-muted)', fontSize: 14, whiteSpace: 'pre-line', lineHeight: 1.5, marginBottom: 16 }}>{detailSession.notes}</div>}
               <SessionTargets session={detailSession} athletes={[{ id: athleteId }]} mine />
               {detailSession.exercises?.length > 0 ? (
                 <>
