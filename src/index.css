@@ -662,6 +662,14 @@ textarea { resize: vertical; min-height: 88px; }
   --shadow-sm: 0 2px 8px rgba(0,0,0,0.3);
 }
 :root[data-theme="dark"] .glass-nav { background: rgba(15,17,21,0.88); border-top: 1px solid rgba(255,255,255,0.06); }
+:root[data-theme="dark"] .page-header { background: rgba(15,17,21,0.9); }
+/* La pantalla de entrar mantiene su diseño claro */
+:root[data-theme="dark"] .login-screen {
+  --bg: #F0EFED; --surface: #FFFFFF; --card: #FFFFFF; --card-hover: #F8F7F5; --border: #E2E0DC; --border-light: #ECEAE7;
+  --accent: #0C4A6E; --accent-dim: rgba(12, 74, 110, 0.1); --accent-gradient: linear-gradient(135deg, #0C4A6E 0%, #0369A1 100%);
+  --text: #0F0F0F; --text-muted: #686868; --text-dim: #A3A3A3; --error: #DC2626; --success: #059669;
+  color-scheme: light; color: var(--text);
+}
 :root[data-theme="dark"] img { opacity: 0.95; }
 :root[data-theme="dark"] input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0.85); }
 

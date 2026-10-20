@@ -34,7 +34,7 @@ export default function Login() {
   }
 
   return (
-    <div style={{
+    <div className="login-screen" style={{
       minHeight: '100dvh', display: 'flex', flexDirection: 'column',
       alignItems: 'center', justifyContent: 'center',
       background: 'linear-gradient(160deg, #EEF2FF 0%, #F0EFED 50%, #E8F5F0 100%)',
