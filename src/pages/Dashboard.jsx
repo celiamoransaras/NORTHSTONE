@@ -5,6 +5,7 @@ import { Athletes, Sessions, Injuries, Payments, Wellness, Cycle, isPendingPayme
 import { supabase } from '../lib/supabase'
 import { getDismissed, dismissFatigueAlert, isFatigueDismissed, subscribeAlerts } from '../lib/alertState'
 import { TYPE_ICONS, TYPE_COLORS, TYPE_LABELS } from '../lib/constants'
+import { daysUntil, goalIcon, countdownLabel, formatGoalDate } from '../components/GoalCountdown'
 
 export default function Dashboard() {
   const navigate = useNavigate()
@@ -246,6 +247,9 @@ export default function Dashboard() {
         </button>
 
         {statsOpen && <TeamStatsSheet onClose={() => setStatsOpen(false)} />}
+
+        {/* Próximas competiciones y objetivos con fecha */}
+        <UpcomingGoalsSection athleteMap={athleteMap} />
 
         {/* Adherencia semanal */}
         <WeeklyAdherenceSection athleteMap={athleteMap} />
@@ -649,6 +653,49 @@ function TeamCycleSection({ athleteMap }) {
             )}
           </div>
         ))}
+      </div>
+    </div>
+  )
+}
+
+function UpcomingGoalsSection({ athleteMap }) {
+  const navigate = useNavigate()
+  const [goals, setGoals] = useState(null)
+
+  useEffect(() => {
+    const today = ymd(new Date())
+    const limit = new Date(); limit.setDate(limit.getDate() + 90)
+    supabase.from('goals').select('id, athlete_id, title, deadline')
+      .not('completed', 'is', true).gte('deadline', today).lte('deadline', ymd(limit))
+      .order('deadline', { ascending: true }).limit(8)
+      .then(({ data }) => setGoals(data || []), () => setGoals([]))
+  }, [])
+
+  if (!goals?.length) return null
+  return (
+    <div className="card" style={{ padding: '16px 18px' }}>
+      <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 800, fontSize: 16, textTransform: 'uppercase' }}>🏁 Próximas fechas clave</div>
+      <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2, marginBottom: 12 }}>Objetivos con fecha en los próximos 3 meses</div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        {goals.map(g => {
+          const a = athleteMap?.[g.athlete_id]
+          const d = daysUntil(g.deadline)
+          const soon = d <= 14
+          return (
+            <div key={g.id} onClick={() => navigate('/athletes', { state: { openAthlete: g.athlete_id } })}
+              style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 12px', borderRadius: 'var(--radius-sm)', cursor: 'pointer',
+                background: soon ? 'var(--accent-dim, var(--bg))' : 'var(--bg)', border: `1px solid ${soon ? 'var(--accent)' : 'var(--border)'}` }}>
+              <span style={{ fontSize: 18 }}>{goalIcon(g.title)}</span>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontWeight: 700, fontSize: 14, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{g.title}</div>
+                <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>
+                  <span style={{ color: a?.color || 'var(--text-muted)', fontWeight: 700 }}>{a?.name || 'Deportista'}</span> · {formatGoalDate(g.deadline)}
+                </div>
+              </div>
+              <span style={{ fontSize: 12, fontWeight: 800, color: soon ? 'var(--accent)' : 'var(--text-muted)', whiteSpace: 'nowrap' }}>{countdownLabel(d)}</span>
+            </div>
+          )
+        })}
       </div>
     </div>
   )

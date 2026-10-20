@@ -886,6 +886,9 @@ function GoalsSection({ athleteId, canCreate }) {
               <div className="input-group">
                 <label className="input-label">Fecha límite</label>
                 <input className="input" type="date" min={ymd(new Date())} value={form.deadline} onChange={e => setForm(f => ({...f, deadline: e.target.value}))} />
+                <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 6, lineHeight: 1.4 }}>
+                  Con fecha, la deportista verá la cuenta atrás en su inicio (p. ej. «Hyrox Madrid» el día de la carrera).
+                </div>
               </div>
               <button className="btn btn-primary btn-full" onClick={save} disabled={saving}>
                 {saving ? 'Guardando...' : 'Crear objetivo'}

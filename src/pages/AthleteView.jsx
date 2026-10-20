@@ -1,3 +1,4 @@
+import GoalCountdown from '../components/GoalCountdown'
 import { ymd } from '../lib/dates'
 import { useState, useEffect, useRef } from 'react'
 import { useAuth } from '../contexts/AuthContext'
@@ -353,6 +354,15 @@ function AthleteHome({ athlete, athleteId, onOpenSession, onGoTo }) {
     try { return (localStorage.getItem('ns_cycle_snooze') || '') > ymd(new Date()) } catch { return false }
   })
   const [savingCycle, setSavingCycle] = useState(false)
+  const [nextGoal, setNextGoal] = useState(null)
+
+  useEffect(() => {
+    if (!athleteId) return
+    supabase.from('goals').select('id, title, deadline, target_value, current_value, unit')
+      .eq('athlete_id', athleteId).not('completed', 'is', true).gte('deadline', ymd(new Date()))
+      .order('deadline', { ascending: true }).limit(1)
+      .then(({ data }) => setNextGoal(data?.[0] || null), () => setNextGoal(null))
+  }, [athleteId])
 
   useEffect(() => {
     if (!athleteId || athlete?.gender !== 'female') return
@@ -667,6 +677,9 @@ function AthleteHome({ athlete, athleteId, onOpenSession, onGoTo }) {
                 </div>
               )
             })()}
+
+            {/* CUENTA ATRÁS AL PRÓXIMO OBJETIVO */}
+            {nextGoal && <GoalCountdown goal={nextGoal} color={athlete?.color || 'var(--accent)'} onClick={() => onGoTo?.('progress')} />}
 
             {/* 2. STATS DE LA SEMANA */}
             <div className="section-title" style={{ marginTop: 4 }}>Esta semana</div>
