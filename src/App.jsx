@@ -18,6 +18,7 @@ const Payments   = lazy(() => import('./pages/Payments'))
 const Messages   = lazy(() => import('./pages/Messages'))
 const AthleteView = lazy(() => import('./pages/AthleteView'))
 const Documents  = lazy(() => import('./pages/Documents'))
+const Library    = lazy(() => import('./components/Exercises'))
 const NutritionistView = lazy(() => import('./pages/NutritionistView'))
 
 class ErrorBoundary extends Component {
@@ -57,6 +58,7 @@ const MORE = [
   { to: '/health',    icon: 'health', label: 'Salud',      desc: 'Lesiones y ciclo del equipo' },
   { to: '/payments',  icon: 'card',   label: 'Pagos',      desc: 'Cuotas del mes' },
   { to: '/documents', icon: 'folder', label: 'Documentos', desc: 'Archivos y documentos' },
+  { to: '/library',   icon: 'target', label: 'Biblioteca', desc: 'Ejercicios, técnica y tus vídeos' },
 ]
 
 function useUnreadMessages() {
@@ -163,6 +165,7 @@ function CoachApp() {
               <Route path="/payments"  element={<Payments />} />
               <Route path="/documents" element={<Documents />} />
               <Route path="/messages"  element={<Messages />} />
+              <Route path="/library"   element={<Library />} />
               <Route path="*"          element={<Dashboard />} />
             </Routes>
           </Suspense>
@@ -204,7 +207,7 @@ function CoachApp() {
               <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 800, fontSize: 15, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Más</span>
               <button className="btn-close" aria-label="Cerrar" onClick={() => setMoreOpen(false)}>✕</button>
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10, marginBottom: 14 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 10, marginBottom: 14 }}>
               {MORE.map(m => {
                 const active = location.pathname.startsWith(m.to)
                 return (

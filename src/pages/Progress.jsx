@@ -6,6 +6,7 @@ import { supabase } from '../lib/supabase'
 import ConfirmSheet from '../components/ConfirmSheet'
 import { useToast } from '../contexts/ToastContext'
 import { RECORDS_CHANGED, notifyRecordsChanged } from '../components/ZonesPanel'
+import { ExerciseProgress } from '../components/WorkoutLog'
 import { haptic } from '../lib/haptic'
 import { sendPushToCoach } from '../lib/pushNotifications'
 import { FEATURES } from '../lib/constants'
@@ -1698,6 +1699,9 @@ export default function Progress({ athleteId, sessions = [], isCoach = false, is
 
         {/* Objetivos */}
         <GoalsSection athleteId={athleteId} canCreate={isCoach} />
+
+        {/* Lo apuntado en los entrenos */}
+        <ExerciseProgress athleteId={athleteId} title={isCoach ? '📈 Evolución por ejercicio' : '📈 Mi evolución'} />
 
         {/* Marcas */}
         <RecordsSection athleteId={athleteId} canEdit={!isCoach} />

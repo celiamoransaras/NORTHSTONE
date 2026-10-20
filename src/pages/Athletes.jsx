@@ -7,6 +7,7 @@ import { Athletes as DB, Sessions, Storage, Cycle, Nutrition, Documents } from '
 import { supabase } from '../lib/supabase'
 import Training from './Training'
 import ZonesPanel from '../components/ZonesPanel'
+import { ExerciseProgress } from '../components/WorkoutLog'
 import { IntakeSummary } from '../components/Intake'
 import CoachNotes from '../components/CoachNotes'
 import { GoalsSection, RecordsSection, LoadChart, WellnessTodayCoach, WellnessHistory, MonthlyReport, WeightCoach, WeightMonthly, MeasurementsMonthly, ProgressPhotos } from './Progress'
@@ -907,6 +908,7 @@ function AthleteProgress({ athleteId, isFemale }) {
       <MeasurementsMonthly athleteId={athleteId} />
       <ProgressPhotos athleteId={athleteId} canUpload={false} canDelete={true} />
       <GoalsSection athleteId={athleteId} canCreate={true} />
+      <ExerciseProgress athleteId={athleteId} />
       <div className="section-title" style={{ marginBottom: 0 }}>🎯 Zonas y RM</div>
       <ZonesPanel athleteId={athleteId} isCoach embedded />
       <RecordsSection athleteId={athleteId} canEdit={true} />

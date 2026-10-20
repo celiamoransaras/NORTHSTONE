@@ -6,6 +6,8 @@ import { Sessions, Athletes, RPE } from '../lib/db'
 import ConfirmSheet from '../components/ConfirmSheet'
 import CopyWeekSheet from '../components/CopyWeekSheet'
 import WeekView, { addDays } from '../components/WeekView'
+import { ExercisePicker, useLibrary } from '../components/Exercises'
+import { SessionResults } from '../components/WorkoutLog'
 import { loadGroups, loadBlocks, saveBlock, BlockPicker, GroupsSheet } from '../components/PlanningLibrary'
 import { useToast } from '../contexts/ToastContext'
 import { haptic } from '../lib/haptic'
@@ -71,6 +73,8 @@ export default function Training({ athleteId = null, coachView = false, embedded
   const [confirmDiscard, setConfirmDiscard] = useState(false)
   const [movingId, setMovingId] = useState(null)
   const [templateQuery, setTemplateQuery] = useState('')
+  const [exercisePickerFor, setExercisePickerFor] = useState(null)
+  const { library } = useLibrary()
   const canPlan = !athleteId || coachView
   useEffect(() => {
     if (!canPlan) return
@@ -550,6 +554,7 @@ export default function Training({ athleteId = null, coachView = false, embedded
                 <>
                   <div className="section-title">Entrenamientos</div>
                   {detailSession.exercises.map((ex, i) => <ExerciseCard key={i} exercise={ex} />)}
+                  {(!athleteId || coachView) && <SessionResults session={detailSession} athletes={athletes} />}
                 </>
               )}
 
@@ -730,6 +735,7 @@ export default function Training({ athleteId = null, coachView = false, embedded
                       <button type="button" className="btn btn-ghost btn-sm" disabled={idx === 0} onClick={() => moveExercise(idx, -1)}>↑ Subir</button>
                       <button type="button" className="btn btn-ghost btn-sm" disabled={idx === form.exercises.length - 1} onClick={() => moveExercise(idx, 1)}>↓ Bajar</button>
                       <button type="button" className="btn btn-ghost btn-sm" onClick={() => duplicateExercise(idx)}>⧉ Duplicar</button>
+                      <button type="button" className="btn btn-ghost btn-sm" onClick={() => setExercisePickerFor(idx)}>📚 Ejercicio</button>
                       {blocks !== null && <button type="button" className="btn btn-ghost btn-sm" onClick={() => saveExerciseAsBlock(ex)}>💾 Guardar bloque</button>}
                     </div>
                     <textarea className="input" placeholder={"Escribe aquí el detalle, una línea por ejercicio:\nej. Sentadilla 4x10\nPeso muerto 3x8\nPlancha 3x30s"}
@@ -830,6 +836,20 @@ export default function Training({ athleteId = null, coachView = false, embedded
           onConfirm={() => { setConfirmDiscard(false); setExtraDates([]); setSheet(null) }}
           onCancel={() => setConfirmDiscard(false)}
         />
+      )}
+      {exercisePickerFor !== null && (
+        <ExercisePicker library={library} onClose={() => setExercisePickerFor(null)}
+          onPick={(ex, scheme) => {
+            const idx = exercisePickerFor
+            setForm(f => ({ ...f, exercises: f.exercises.map((e, i) => {
+              if (i !== idx) return e
+              const line = `${ex.name}${scheme ? ' ' + scheme : ''}`
+              const notes = e.notes ? `${e.notes.replace(/\s+$/, '')}\n${line}` : line
+              const videos = ex.video_url && !(e.videos || []).some(v => v.url === ex.video_url) ? [...(e.videos || []), { id: crypto.randomUUID(), label: ex.name, url: ex.video_url }] : (e.videos || [])
+              return { ...e, name: e.name || ex.name, notes, videos }
+            }) }))
+            toast(`«${ex.name}» añadido`)
+          }} />
       )}
       {blockPickerOpen && blocks !== null && (
         <BlockPicker blocks={blocks} onPick={addBlock} onClose={() => setBlockPickerOpen(false)} onDeleted={id => setBlocks(b => b.filter(x => x.id !== id))} />

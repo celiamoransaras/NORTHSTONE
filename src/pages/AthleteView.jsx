@@ -4,6 +4,8 @@ import ThemeToggle from '../components/ThemeToggle'
 import { InstallGuide, InstallBanner } from '../components/InstallGuide'
 import { isStandalone } from '../lib/install'
 import ZonesPanel from '../components/ZonesPanel'
+import { LoggableBlock, LogSheet, useSessionLog } from '../components/WorkoutLog'
+import { useLibrary } from '../components/Exercises'
 import SessionActions from '../components/SessionActions'
 import { IntakeFlow, PrivacyActions, loadIntake, intakeComplete, intakeNeedsUpdate } from '../components/Intake'
 import { downloadICS } from '../lib/ics'
@@ -1359,6 +1361,8 @@ function AthleteTrainingWithRPE({ athleteId, athleteName, initialSessionId, onSe
   const [rpeSheet, setRpeSheet] = useState(null)
   const [preSheet, setPreSheet] = useState(null)
   const [detailSession, setDetailSession] = useState(null)
+  const { library } = useLibrary()
+  const slog = useSessionLog(detailSession, athleteId)
   const [rpe, setRpe] = useState(0)
   const [fatiguePre, setFatiguePre] = useState(0)
   const [fatiguePost, setFatiguePost] = useState(0)
@@ -1657,6 +1661,10 @@ function AthleteTrainingWithRPE({ athleteId, athleteName, initialSessionId, onSe
       </div>
 
       {/* Sheet: detalle sesión */}
+      {slog.editing && detailSession && (
+        <LogSheet session={detailSession} athleteId={athleteId} target={slog.editing}
+          onClose={() => slog.setEditing(null)} onSaved={slog.onSaved} onDeleted={slog.onDeleted} />
+      )}
       {detailSession && (
         <>
           <div className="overlay" onClick={() => setDetailSession(null)} />
@@ -1687,7 +1695,11 @@ function AthleteTrainingWithRPE({ athleteId, athleteName, initialSessionId, onSe
                   {detailSession.exercises.map((ex, i) => (
                     <div key={i} style={{ background: 'var(--bg)', borderRadius: 'var(--radius-sm)', padding: 14, marginBottom: 10 }}>
                       <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 6 }}>{ex.name}</div>
-                      {ex.notes && <div style={{ fontSize: 13, color: 'var(--text-muted)', whiteSpace: 'pre-line' }}>{ex.notes}</div>}
+                      {slog.available
+                        ? <LoggableBlock block={ex} blockIdx={i} logs={slog.logs || {}} library={library}
+                            canLog={detailSession.date <= ymd(new Date())} onLog={slog.setEditing}
+                            mutedNote={i === 0 && detailSession.date > ymd(new Date()) ? 'Podrás apuntar tus series, pesos y tiempos el día del entreno.' : null} />
+                        : ex.notes && <div style={{ fontSize: 13, color: 'var(--text-muted)', whiteSpace: 'pre-line' }}>{ex.notes}</div>}
                       {ex.videos?.length > 0 && (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 10 }}>
                           {ex.videos.map((v, vi) => {
