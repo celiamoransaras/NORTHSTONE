@@ -63,7 +63,7 @@ export function BlockPicker({ blocks, onPick, onClose, onDeleted }) {
                     <button onClick={() => onPick(b)} style={{ flex: 1, minWidth: 0, textAlign: 'left', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text)' }}>
                       <div style={{ fontWeight: 700, fontSize: 14 }}>{b.name}</div>
                       {b.notes && <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2, whiteSpace: 'pre-line', maxHeight: 54, overflow: 'hidden' }}>{b.notes}</div>}
-                      {b.videos?.length > 0 && <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>🎬 {b.videos.length} vídeo{b.videos.length > 1 ? 's' : ''}</div>}
+                      {b.videos?.length > 0 && <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>🎬 {b.videos.length} vídeo{b.videos.length > 1 ? 's' : ''}</div>}
                     </button>
                     <button className="btn btn-primary btn-sm" onClick={() => onPick(b)}>+ Añadir</button>
                     <button onClick={() => del(b)} aria-label={`Borrar ${b.name}`} style={{ background: 'none', border: 'none', color: 'var(--text-dim)', cursor: 'pointer', fontSize: 15, padding: 4 }}>🗑</button>

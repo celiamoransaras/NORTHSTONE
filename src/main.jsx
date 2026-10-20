@@ -4,6 +4,9 @@ import { BrowserRouter } from 'react-router-dom'
 import App from './App'
 import './index.css'
 import './lib/install'
+import { initTheme } from './lib/theme'
+
+initTheme()
 
 // Cuando el service worker nuevo toma el control, recarga para aplicar la actualización
 if ('serviceWorker' in navigator) {

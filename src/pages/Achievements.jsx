@@ -175,14 +175,14 @@ export default function AchievementsSection({ athleteId }) {
             <div key={def.type} className="card" style={{ padding: '12px 14px', opacity: isUnlocked ? 1 : 0.35, filter: isUnlocked ? 'none' : 'grayscale(1)', transition: 'all 0.3s' }}>
               <div style={{ fontSize: 28, marginBottom: 6 }}>{def.icon}</div>
               <div style={{ fontWeight: 700, fontSize: 13 }}>{def.title}</div>
-              <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>{def.description}</div>
+              <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>{def.description}</div>
               {isUnlocked && data && (
-                <div style={{ fontSize: 10, color: 'var(--accent)', fontWeight: 700, marginTop: 6 }}>
+                <div style={{ fontSize: 11, color: 'var(--accent)', fontWeight: 700, marginTop: 6 }}>
                   ✓ {new Date(data.unlocked_at).toLocaleDateString('es-ES')}
                 </div>
               )}
               {!isUnlocked && (
-                <div style={{ fontSize: 10, color: 'var(--text-dim)', marginTop: 6 }}>🔒 Bloqueado</div>
+                <div style={{ fontSize: 11, color: 'var(--text-dim)', marginTop: 6 }}>🔒 Bloqueado</div>
               )}
             </div>
           )
@@ -217,7 +217,7 @@ export function AchievementsHomeSection({ athleteId }) {
               <div style={{ width: 56, height: 56, borderRadius: 18, background: 'linear-gradient(135deg, #FCD34D, #F59E0B)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 28, boxShadow: '0 4px 16px rgba(245,158,11,0.3)' }}>
                 {def.icon}
               </div>
-              <div style={{ fontSize: 10, fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)', textAlign: 'center', lineHeight: 1.2 }}>
+              <div style={{ fontSize: 11, fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)', textAlign: 'center', lineHeight: 1.2 }}>
                 {def.title}
               </div>
             </div>
@@ -234,7 +234,7 @@ export function AchievementsHomeSection({ athleteId }) {
               {nextDef.icon}
             </div>
             <div style={{ flex: 1 }}>
-              <div style={{ fontSize: 10, color: 'var(--text-muted)', fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 800, textTransform: 'uppercase', letterSpacing: '1px' }}>Próximo logro</div>
+              <div style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 800, textTransform: 'uppercase', letterSpacing: '1px' }}>Próximo logro</div>
               <div style={{ fontWeight: 700, fontSize: 14, marginTop: 2, color: 'var(--text)' }}>{nextDef.title}</div>
               <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>{nextDef.description}</div>
             </div>
@@ -306,11 +306,11 @@ export function WeeklyPlan({ sessions, athleteId, onOpenSession }) {
               onClick={() => s && onOpenSession?.(s)}
               style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, cursor: s ? 'pointer' : 'default' }}
             >
-              <div style={{ fontSize: 9, fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 800, color: isToday ? 'var(--accent)' : 'var(--text-muted)', textTransform: 'uppercase' }}>{DAYS[i]}</div>
+              <div style={{ fontSize: 11, fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 800, color: isToday ? 'var(--accent)' : 'var(--text-muted)', textTransform: 'uppercase' }}>{DAYS[i]}</div>
               <div style={{ width: 34, height: 34, borderRadius: 10, background: circleBg, border: circleBorder, display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.15s' }}>
                 {isPast && attended
                   ? <span style={{ fontSize: 14 }}>✓</span>
-                  : <span style={{ fontSize: 11, fontWeight: 700, color: circleTextColor }}>{day.getDate()}</span>
+                  : <span style={{ fontSize: 12, fontWeight: 700, color: circleTextColor }}>{day.getDate()}</span>
                 }
               </div>
               {s ? (

@@ -205,8 +205,8 @@ export function MonthlyReport({ athleteId, sessions, isFemale }) {
               <div key={label} style={{ background: 'var(--bg)', borderRadius: 12, padding: '12px 14px' }}>
                 <div style={{ fontSize: 18, marginBottom: 4 }}>{icon}</div>
                 <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 900, fontSize: 24, color, lineHeight: 1 }}>{value}</div>
-                <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700, fontSize: 11, color: 'var(--text)', textTransform: 'uppercase', letterSpacing: '0.5px', marginTop: 2 }}>{label}</div>
-                <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 1 }}>{sub}</div>
+                <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700, fontSize: 12, color: 'var(--text)', textTransform: 'uppercase', letterSpacing: '0.5px', marginTop: 2 }}>{label}</div>
+                <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>{sub}</div>
               </div>
             ))}
           </div>
@@ -217,7 +217,7 @@ export function MonthlyReport({ athleteId, sessions, isFemale }) {
               <span style={{ fontSize: 20 }}>🌸</span>
               <div>
                 <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 800, fontSize: 13, color: '#9D174D' }}>Fase predominante: {dominantPhase}</div>
-                <div style={{ fontSize: 11, color: '#BE185D', marginTop: 1 }}>
+                <div style={{ fontSize: 12, color: '#BE185D', marginTop: 1 }}>
                   {dominantPhase === 'Menstrual' && 'Escucha tu cuerpo y cuéntale a Celia cómo te encuentras'}
                   {dominantPhase === 'Folicular' && 'Muchas mujeres notan más energía en esta fase'}
                   {dominantPhase === 'Ovulación' && 'Algunas mujeres notan más energía estos días'}
@@ -310,7 +310,7 @@ function TrendsDashboard({ athleteId, sessions, isFemale }) {
             {rpeTrend && (
               <div style={{ display: 'flex', alignItems: 'center', gap: 4, background: `${rpeTrend.color}15`, borderRadius: 20, padding: '4px 10px', flexShrink: 0, marginLeft: 8 }}>
                 <span style={{ fontSize: 14, color: rpeTrend.color }}>{rpeTrend.icon}</span>
-                <span style={{ fontSize: 11, fontWeight: 700, color: rpeTrend.color }}>{rpeTrend.dir === 'up' ? 'Más duro' : 'Más suave'}</span>
+                <span style={{ fontSize: 12, fontWeight: 700, color: rpeTrend.color }}>{rpeTrend.dir === 'up' ? 'Más duro' : 'Más suave'}</span>
               </div>
             )}
           </div>
@@ -319,14 +319,14 @@ function TrendsDashboard({ athleteId, sessions, isFemale }) {
             {[['#3B82F6','Fácil (1–4)'],['#059669','Medio (5–6)'],['#D97706','Duro (7–8)'],['#EF4444','Muy duro (9–10)']].map(([color, label]) => (
               <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                 <div style={{ width: 8, height: 8, borderRadius: '50%', background: color, flexShrink: 0 }} />
-                <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>{label}</span>
+                <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{label}</span>
               </div>
             ))}
           </div>
           <RpeSparkline data={rpeData} />
           <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4 }}>
-            <span style={{ fontSize: 10, color: 'var(--text-dim)' }}>Primera sesión</span>
-            <span style={{ fontSize: 10, color: 'var(--text-dim)', fontWeight: 700 }}>Última sesión</span>
+            <span style={{ fontSize: 11, color: 'var(--text-dim)' }}>Primera sesión</span>
+            <span style={{ fontSize: 11, color: 'var(--text-dim)', fontWeight: 700 }}>Última sesión</span>
           </div>
         </div>
       )}
@@ -344,7 +344,7 @@ function TrendsDashboard({ athleteId, sessions, isFemale }) {
                 <span style={{ fontSize: 16 }}>🔥</span>
                 <div style={{ textAlign: 'right' }}>
                   <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 900, fontSize: 18, color: '#EA580C', lineHeight: 1 }}>{nutritionStreak}</div>
-                  <div style={{ fontSize: 9, color: '#C2410C', fontWeight: 700 }}>DÍAS</div>
+                  <div style={{ fontSize: 11, color: '#C2410C', fontWeight: 700 }}>DÍAS</div>
                 </div>
               </div>
             )}
@@ -363,7 +363,7 @@ function TrendsDashboard({ athleteId, sessions, isFemale }) {
             {[['#059669','Cumplido'],['#D97706','Parcial'],['#EF444440','No cumplido'],['var(--border)','Sin datos']].map(([color, label]) => (
               <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
                 <div style={{ width: 10, height: 10, borderRadius: 2, background: color }} />
-                <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>{label}</span>
+                <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{label}</span>
               </div>
             ))}
           </div>
@@ -469,7 +469,7 @@ function WellnessCheckin({ athleteId, onDone }) {
             <button key={v} onClick={() => !done && set(field, v)}
               style={{ flex: 1, padding: '8px 2px', borderRadius: 12, background: selected ? color + '20' : 'var(--bg)', border: `2px solid ${selected ? color : 'var(--border)'}`, cursor: done ? 'default' : 'pointer', transition: 'all 0.12s', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
               <span style={{ fontSize: 22 }}>{emojis[i]}</span>
-              <span style={{ fontSize: 9, fontWeight: 600, color: selected ? color : 'var(--text-muted)', lineHeight: 1.2, textAlign: 'center' }}>{FIELD_LABELS[field][i]}</span>
+              <span style={{ fontSize: 11, fontWeight: 600, color: selected ? color : 'var(--text-muted)', lineHeight: 1.2, textAlign: 'center' }}>{FIELD_LABELS[field][i]}</span>
             </button>
           )
         })}
@@ -495,7 +495,7 @@ function WellnessCheckin({ athleteId, onDone }) {
           ].map(({ label, value, emojis }) => (
             <div key={label} className="stat-card" style={{ flex: 1, padding: '12px 8px', textAlign: 'center' }}>
               <div style={{ fontSize: 24, marginBottom: 4 }}>{value ? emojis[value - 1] : '—'}</div>
-              <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 10, fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)', letterSpacing: '0.5px' }}>{label}</div>
+              <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 11, fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)', letterSpacing: '0.5px' }}>{label}</div>
             </div>
           ))}
         </div>
@@ -623,7 +623,7 @@ function LoadChart({ sessions }) {
                 <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 800, fontSize: 12, color }}>{w.count}</div>
               )}
               <div style={{ width: '100%', height: h, borderRadius: 6, background: color, opacity: w.isThisWeek ? 1 : 0.7, transition: 'height 0.4s ease' }} />
-              <div style={{ fontSize: 9, color: w.isThisWeek ? 'var(--accent)' : 'var(--text-dim)', fontWeight: w.isThisWeek ? 800 : 500, fontFamily: "'Barlow Condensed', sans-serif", whiteSpace: 'nowrap' }}>{w.isThisWeek ? 'HOY' : w.label}</div>
+              <div style={{ fontSize: 11, color: w.isThisWeek ? 'var(--accent)' : 'var(--text-dim)', fontWeight: w.isThisWeek ? 800 : 500, fontFamily: "'Barlow Condensed', sans-serif", whiteSpace: 'nowrap' }}>{w.isThisWeek ? 'HOY' : w.label}</div>
             </div>
           )
         })}
@@ -694,8 +694,8 @@ function WellnessHistory({ athleteId }) {
       </svg>
 
       <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-        <span style={{ fontSize: 10, color: 'var(--text-dim)' }}>{data[0] && new Date(data[0].date+'T12:00:00').toLocaleDateString('es-ES', { day:'numeric', month:'short' })}</span>
-        <span style={{ fontSize: 10, color: 'var(--text-dim)' }}>Hoy</span>
+        <span style={{ fontSize: 11, color: 'var(--text-dim)' }}>{data[0] && new Date(data[0].date+'T12:00:00').toLocaleDateString('es-ES', { day:'numeric', month:'short' })}</span>
+        <span style={{ fontSize: 11, color: 'var(--text-dim)' }}>Hoy</span>
       </div>
 
       {/* Resumen último día */}
@@ -709,7 +709,7 @@ function WellnessHistory({ athleteId }) {
             }
             return val ? (
               <div key={f.key} style={{ flex: 1, background: 'var(--bg)', borderRadius: 10, padding: '8px 10px', textAlign: 'center' }}>
-                <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700, fontSize: 10, textTransform: 'uppercase', color: f.color, marginBottom: 2 }}>{f.label}</div>
+                <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700, fontSize: 11, textTransform: 'uppercase', color: f.color, marginBottom: 2 }}>{f.label}</div>
                 <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{labels[f.key][val-1]}</div>
               </div>
             ) : null
@@ -888,7 +888,7 @@ function GoalsSection({ athleteId, canCreate }) {
               <div className="input-group">
                 <label className="input-label">Fecha límite</label>
                 <input className="input" type="date" min={ymd(new Date())} value={form.deadline} onChange={e => setForm(f => ({...f, deadline: e.target.value}))} />
-                <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 6, lineHeight: 1.4 }}>
+                <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 6, lineHeight: 1.4 }}>
                   Con fecha, la deportista verá la cuenta atrás en su inicio (p. ej. «Hyrox Madrid» el día de la carrera).
                 </div>
               </div>
@@ -1158,7 +1158,7 @@ function RecordsSection({ athleteId, canEdit }) {
                 ].map(({ label, value, color }) => (
                   <div key={label} style={{ flex: 1, background: 'var(--bg)', borderRadius: 12, padding: '12px 8px', textAlign: 'center' }}>
                     <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 900, fontSize: 22, color, lineHeight: 1 }}>{value}</div>
-                    <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 10, fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)', marginTop: 4, letterSpacing: '0.5px' }}>{label}</div>
+                    <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 11, fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)', marginTop: 4, letterSpacing: '0.5px' }}>{label}</div>
                   </div>
                 ))}
               </div>
@@ -1413,13 +1413,13 @@ export function WeightMonthly({ athleteId }) {
           return (
             <div key={month} style={{ flex: '0 0 auto', background: 'var(--bg)', borderRadius: 12, padding: '10px 14px', textAlign: 'center', minWidth: 72 }}>
               <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 900, fontSize: 22, color: 'var(--accent)', lineHeight: 1 }}>{last}</div>
-              <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 10, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>kg</div>
+              <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>kg</div>
               {change !== null && (
-                <div style={{ fontSize: 10, fontWeight: 700, color: change < 0 ? 'var(--success)' : change > 0 ? 'var(--error)' : 'var(--text-muted)', marginTop: 2 }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: change < 0 ? 'var(--success)' : change > 0 ? 'var(--error)' : 'var(--text-muted)', marginTop: 2 }}>
                   {change > 0 ? '+' : ''}{change.toFixed(1)}
                 </div>
               )}
-              <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', marginTop: 4 }}>Mes {month}</div>
+              <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', marginTop: 4 }}>Mes {month}</div>
             </div>
           )
         })}
@@ -1535,7 +1535,7 @@ export function ProgressPhotos({ athleteId, canUpload = false, canDelete = false
         file_url: url, file_name: name,
         category: 'progress', athlete_id: athleteId,
       })
-      toast('Foto subida ✓'); load()
+      toast('Foto subida'); load()
     } catch { toast('Error al subir la foto', 'error') }
     finally { setUploading(false); setPendingUpload(null); if (inputRef.current) inputRef.current.value = '' }
   }
@@ -1578,14 +1578,14 @@ export function ProgressPhotos({ athleteId, canUpload = false, canDelete = false
                         <>
                           <img src={photo.file_url} alt={pose.label} style={{ width: '100%', height: '100%', objectFit: 'cover', position: 'absolute', inset: 0 }} loading="lazy" />
                           <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: 'linear-gradient(transparent, rgba(0,0,0,0.6))', padding: '12px 6px 6px', textAlign: 'center' }}>
-                            <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700, fontSize: 11, color: '#fff', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{pose.label}</span>
+                            <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700, fontSize: 12, color: '#fff', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{pose.label}</span>
                           </div>
                         </>
                       ) : (
                         <>
                           <div style={{ fontSize: 18, opacity: 0.3, marginBottom: 4 }}>📷</div>
-                          <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700, fontSize: 10, textTransform: 'uppercase', color: 'var(--text-muted)', letterSpacing: '0.3px' }}>{pose.label}</div>
-                          {canUpload && <div style={{ fontSize: 9, color: 'var(--text-dim)', marginTop: 2 }}>Toca para subir</div>}
+                          <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700, fontSize: 11, textTransform: 'uppercase', color: 'var(--text-muted)', letterSpacing: '0.3px' }}>{pose.label}</div>
+                          {canUpload && <div style={{ fontSize: 11, color: 'var(--text-dim)', marginTop: 2 }}>Toca para subir</div>}
                         </>
                       )}
                     </div>
@@ -1754,7 +1754,7 @@ setEntry(data?.[0] || null)
           <div key={label} className="stat-card" style={{ flex: 1, padding: '12px 8px', textAlign: 'center', border: alert ? '1.5px solid var(--error)' : undefined, background: alert ? 'var(--error-dim)' : undefined }}>
             <div style={{ fontSize: 24, marginBottom: 2 }}>{value ? emojis[value - 1] : '—'}</div>
             <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 13, fontWeight: 900, color: alert ? 'var(--error)' : 'var(--text)', marginBottom: 2 }}>{value ? `${value}/5` : '—'}</div>
-            <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 10, fontWeight: 700, textTransform: 'uppercase', color: alert ? 'var(--error)' : 'var(--text-muted)', letterSpacing: '0.5px' }}>{label}{alert ? ' ⚠️' : ''}</div>
+            <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 11, fontWeight: 700, textTransform: 'uppercase', color: alert ? 'var(--error)' : 'var(--text-muted)', letterSpacing: '0.5px' }}>{label}{alert ? ' ⚠️' : ''}</div>
           </div>
         ))}
       </div>
@@ -1788,7 +1788,7 @@ export function MeasurementsSection({ athleteId }) {
     setSaving(true)
     try {
       await BodyMeasurements.add(athleteId, date, vals)
-      toast('Medidas guardadas ✓')
+      toast('Medidas guardadas')
       setForm({})
       setShowForm(false)
       load()
@@ -1830,13 +1830,13 @@ export function MeasurementsSection({ athleteId }) {
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 12 }}>
             {MEASURES.map(m => (
               <div key={m.key}>
-                <label style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)', letterSpacing: '0.5px', display: 'block', marginBottom: 4 }}>{m.label}</label>
+                <label style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)', letterSpacing: '0.5px', display: 'block', marginBottom: 4 }}>{m.label}</label>
                 <div style={{ position: 'relative' }}>
                   <input className="input" type="number" step="0.1" placeholder={m.placeholder}
                     value={form[m.key] || ''}
                     onChange={e => setForm(f => ({ ...f, [m.key]: e.target.value }))}
                     style={{ paddingRight: 32 }} />
-                  <span style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', fontSize: 11, color: 'var(--text-muted)', fontWeight: 700 }}>{m.unit}</span>
+                  <span style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', fontSize: 12, color: 'var(--text-muted)', fontWeight: 700 }}>{m.unit}</span>
                 </div>
               </div>
             ))}
@@ -1872,8 +1872,8 @@ export function MeasurementsSection({ athleteId }) {
                   {monthData.map(d => d[m.key] != null && (
                     <div key={d.month} style={{ flex: '0 0 auto', background: 'var(--bg)', borderRadius: 10, padding: '8px 12px', textAlign: 'center', minWidth: 60 }}>
                       <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 900, fontSize: 18, color: 'var(--accent)', lineHeight: 1 }}>{d[m.key]}</div>
-                      <div style={{ fontSize: 9, color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase' }}>{m.unit}</div>
-                      <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 10, fontWeight: 700, color: 'var(--text-muted)', marginTop: 3 }}>Mes {d.month}</div>
+                      <div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase' }}>{m.unit}</div>
+                      <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', marginTop: 3 }}>Mes {d.month}</div>
                     </div>
                   ))}
                 </div>
@@ -1937,8 +1937,8 @@ export function MeasurementsMonthly({ athleteId }) {
               {monthData.map(d => d[m.key] != null && (
                 <div key={d.month} style={{ flex: '0 0 auto', background: 'var(--bg)', borderRadius: 10, padding: '8px 12px', textAlign: 'center', minWidth: 60 }}>
                   <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 900, fontSize: 18, color: 'var(--accent)', lineHeight: 1 }}>{d[m.key]}</div>
-                  <div style={{ fontSize: 9, color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase' }}>{m.unit}</div>
-                  <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 10, fontWeight: 700, color: 'var(--text-muted)', marginTop: 3 }}>Mes {d.month}</div>
+                  <div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase' }}>{m.unit}</div>
+                  <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', marginTop: 3 }}>Mes {d.month}</div>
                 </div>
               ))}
             </div>

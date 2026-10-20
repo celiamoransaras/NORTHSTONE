@@ -102,7 +102,7 @@ export default function Payments() {
     setEditingFee(null)
     setFeeInput('')
     haptic('success')
-    toast('Cuota guardada ✓')
+    toast('Cuota guardada')
     // Reload to create payment record if it didn't exist
     const ath = await Athletes.getActive()
     const pays = await DB.ensureMonth(ath, month, year)
@@ -116,7 +116,7 @@ export default function Payments() {
       const pays = await DB.getByMonth(month, year)
       setPayments(pays)
       haptic('success')
-      toast(currentStatus === 'pending' ? '✓ Pago registrado' : 'Pago marcado como pendiente')
+      toast(currentStatus === 'pending' ? 'Pago registrado' : 'Pago marcado como pendiente')
     } catch {
       toast('Error al actualizar el pago', 'error')
       haptic('error')
@@ -170,7 +170,7 @@ export default function Payments() {
                 <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 800, fontSize: 14, textTransform: 'uppercase', color: '#b45309', letterSpacing: '0.3px' }}>
                   {noFeeAthletes.length === 1 ? '1 deportista sin cuota asignada' : `${noFeeAthletes.length} deportistas sin cuota asignada`}
                 </div>
-                <div style={{ fontSize: 11, color: '#92400e', marginTop: 1 }}>Añade una cuota mensual para poder registrar pagos</div>
+                <div style={{ fontSize: 12, color: '#92400e', marginTop: 1 }}>Añade una cuota mensual para poder registrar pagos</div>
               </div>
             </div>
             <div style={{ padding: '4px 16px 8px' }}>
@@ -213,7 +213,7 @@ export default function Payments() {
         {/* Cuotas asignadas */}
         {Object.keys(fees).length > 0 && (
           <>
-            <div style={{ fontSize: 11, fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: 8 }}>
+            <div style={{ fontSize: 12, fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: 8 }}>
               💳 Cuotas mensuales
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -226,7 +226,7 @@ export default function Payments() {
                   }
                   <div style={{ flex: 1 }}>
                     <div style={{ fontWeight: 700, fontSize: 14 }}>{a.name}</div>
-                    <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>cuota mensual</div>
+                    <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 1 }}>cuota mensual</div>
                   </div>
                   {editingFee === a.id ? (
                     <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
@@ -247,7 +247,7 @@ export default function Payments() {
                       onClick={() => { setEditingFee(a.id); setFeeInput(String(fees[a.id])) }}
                       style={{ background: 'var(--accent-dim)', border: 'none', borderRadius: 12, padding: '6px 14px', cursor: 'pointer', textAlign: 'right' }}>
                       <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 900, fontSize: 22, color: 'var(--accent)', lineHeight: 1 }}>{fees[a.id]}€</div>
-                      <div style={{ fontSize: 10, color: 'var(--accent)', opacity: 0.7, marginTop: 1 }}>toca para editar</div>
+                      <div style={{ fontSize: 11, color: 'var(--accent)', opacity: 0.7, marginTop: 1 }}>toca para editar</div>
                     </button>
                   )}
                 </div>

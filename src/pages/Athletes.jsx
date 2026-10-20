@@ -166,7 +166,7 @@ export default function Athletes() {
       await DB.update(id, { status: 'active' })
       await load()
       setSheet(null)
-      toast('Deportista reactivado/a ✓')
+      toast('Deportista reactivado/a')
     } catch {
       toast('Error al reactivar', 'error')
     }
@@ -197,7 +197,7 @@ export default function Athletes() {
               borderRadius: 'var(--radius-sm)', padding: '10px 12px', textAlign: 'center'
             }}>
               <div style={{ fontSize: 20, fontWeight: 700 }}>{val}</div>
-              <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{label}</div>
+              <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{label}</div>
             </div>
           ))}
         </div>
@@ -256,7 +256,7 @@ export default function Athletes() {
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
                       <span className={`badge ${statusBadge(a.status)}`}>{statusLabel(a.status)}</span>
                       {weeklyStats[a.id]?.assigned > 0 && (
-                        <span style={{ fontSize: 11, fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700,
+                        <span style={{ fontSize: 12, fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700,
                           color: weeklyStats[a.id].done === weeklyStats[a.id].assigned ? 'var(--success)' : weeklyStats[a.id].done > 0 ? 'var(--warning)' : 'var(--text-muted)' }}>
                           📅 {weeklyStats[a.id].done}/{weeklyStats[a.id].assigned} esta semana
                         </span>
@@ -528,20 +528,20 @@ function CyclePhaseCoach({ athleteId }) {
 
   return (
     <div style={{ marginBottom: 16 }}>
-      <div style={{ fontSize: 11, fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: 8 }}>🩸 Ciclo menstrual</div>
+      <div style={{ fontSize: 12, fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: 8 }}>🩸 Ciclo menstrual</div>
 
       <div style={{ padding: 16, background: phase ? phase.color + '12' : 'var(--bg)', border: `1.5px solid ${phase ? phase.color + '40' : 'var(--border)'}`, borderRadius: 16, marginBottom: 8 }}>
         {/* Fase actual */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
           <span style={{ fontSize: 28 }}>{phase ? phase.emoji : '🩸'}</span>
           <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.4px', marginBottom: 2 }}>
+            <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.4px', marginBottom: 2 }}>
               {phase ? `Ciclo menstrual · Día ${phase.day}` : 'Ciclo menstrual'}
             </div>
             {phase ? (
               <>
                 <div style={{ fontWeight: 800, fontSize: 15, color: phase.color }}>{phase.label}
-                  {phase.periodEnded === true && phase.phase === 'menstrual' && <span style={{ fontSize: 11, fontWeight: 500, color: 'var(--text-muted)', marginLeft: 6 }}>· {phase.periodDays}d</span>}
+                  {phase.periodEnded === true && phase.phase === 'menstrual' && <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-muted)', marginLeft: 6 }}>· {phase.periodDays}d</span>}
                 </div>
                 <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>{phase.desc}</div>
               </>
@@ -554,10 +554,10 @@ function CyclePhaseCoach({ athleteId }) {
         {/* Síntomas del ciclo actual */}
         {symptoms.length > 0 && (
           <div style={{ borderTop: `1px solid ${phase?.color || 'var(--border)'}30`, paddingTop: 8, marginTop: 4 }}>
-            <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.4px', marginBottom: 6 }}>💬 Síntomas reportados</div>
+            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.4px', marginBottom: 6 }}>💬 Síntomas reportados</div>
             {symptoms.map((s, i) => (
               <div key={i} style={{ padding: '8px 10px', background: 'var(--bg)', borderRadius: 8, marginBottom: 4, borderLeft: `3px solid ${phase?.color || 'var(--accent)'}` }}>
-                <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 2 }}>
+                <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 2 }}>
                   {new Date(s.date + 'T12:00:00').toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })} · {s.phase}
                 </div>
                 <div style={{ fontSize: 13 }}>{s.text}</div>
@@ -584,7 +584,7 @@ function InfoRow({ icon, label, val }) {
     <div style={{ display: 'flex', gap: 12, marginBottom: 14 }}>
       <span style={{ fontSize: 18, width: 24, textAlign: 'center' }}>{icon}</span>
       <div>
-        <div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.4px' }}>{label}</div>
+        <div style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.4px' }}>{label}</div>
         <div style={{ fontSize: 15, marginTop: 2 }}>{val}</div>
       </div>
     </div>
@@ -597,7 +597,7 @@ function MedicalDocsCoach({ athleteId }) {
   if (docs.length === 0) return null
   return (
     <div style={{ marginTop: 4 }}>
-      <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 8 }}>📄 Documentos médicos</div>
+      <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 8 }}>📄 Documentos médicos</div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
         {docs.map(doc => (
           <a key={doc.id} href={doc.file_url} target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'none' }}>
@@ -605,7 +605,7 @@ function MedicalDocsCoach({ athleteId }) {
               <span style={{ fontSize: 20 }}>📄</span>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontWeight: 600, fontSize: 13, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{doc.title}</div>
-                <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{new Date(doc.created_at).toLocaleDateString('es-ES')}</div>
+                <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{new Date(doc.created_at).toLocaleDateString('es-ES')}</div>
               </div>
               <span style={{ fontSize: 12, color: 'var(--accent)', fontWeight: 700 }}>Ver →</span>
             </div>
@@ -679,7 +679,7 @@ function NutritionCoach({ athleteId }) {
   return (
     <div style={{ marginBottom: 16 }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-        <div style={{ fontSize: 11, fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.8px' }}>🥗 Nutrición · {MONTHS[month]} {year}</div>
+        <div style={{ fontSize: 12, fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.8px' }}>🥗 Nutrición · {MONTHS[month]} {year}</div>
         {!editing
           ? <button onClick={startEdit} style={{ background: 'var(--accent-dim)', color: 'var(--accent)', border: 'none', borderRadius: 8, padding: '4px 12px', fontWeight: 700, fontSize: 12, cursor: 'pointer' }}>
               {plan ? '✏️ Editar' : '+ Crear plan'}
@@ -715,7 +715,7 @@ function NutritionCoach({ athleteId }) {
             <div style={{ display: 'flex', gap: 6 }}>
               {/* Copiar de otro día */}
               <select onChange={e => e.target.value && copyDay(e.target.value)} value=""
-                style={{ fontSize: 11, padding: '3px 6px', borderRadius: 6, background: 'var(--bg)', color: 'var(--text-muted)', cursor: 'pointer' }}>
+                style={{ fontSize: 12, padding: '3px 6px', borderRadius: 6, background: 'var(--bg)', color: 'var(--text-muted)', cursor: 'pointer' }}>
                 <option value="">Copiar de...</option>
                 {Nutrition.DAYS.filter(d => d !== activeDay && (days[d]||[]).length > 0).map(d => (
                   <option key={d} value={d}>{Nutrition.DAY_LABELS[d]}</option>
@@ -749,7 +749,7 @@ function NutritionCoach({ athleteId }) {
                   { key: 'fat', label: 'G', color: '#8B5CF6' },
                 ].map(({ key, label, color }) => (
                   <div key={key} style={{ flex: key === 'kcal' ? 2 : 1 }}>
-                    <div style={{ fontSize: 9, color, fontWeight: 700, marginBottom: 2, textTransform: 'uppercase' }}>{label}{key !== 'kcal' ? ' (g)' : ''}</div>
+                    <div style={{ fontSize: 11, color, fontWeight: 700, marginBottom: 2, textTransform: 'uppercase' }}>{label}{key !== 'kcal' ? ' (g)' : ''}</div>
                     <input type="number" min="0" className="input"
                       placeholder="—"
                       value={meal[key] || ''}
@@ -762,7 +762,7 @@ function NutritionCoach({ athleteId }) {
           ))}
 
           <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid var(--border)' }}>
-            <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 4 }}>📝 Notas generales del plan</div>
+            <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 4 }}>📝 Notas generales del plan</div>
             <textarea className="input" rows={2} placeholder="Hidratación, observaciones..." value={notes}
               onChange={e => setNotes(e.target.value)} style={{ resize: 'vertical', fontSize: 13 }} />
           </div>
@@ -788,25 +788,25 @@ function NutritionCoach({ athleteId }) {
                 return <>
                   {meals.map((meal,i) => (
                     <div key={i} style={{ marginBottom: 8, padding: '8px 12px', background: 'var(--bg)', borderRadius: 10 }}>
-                      {meal.name && <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', marginBottom: 2 }}>{meal.name}</div>}
+                      {meal.name && <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', marginBottom: 2 }}>{meal.name}</div>}
                       <div style={{ fontSize: 13, marginBottom: (meal.kcal||meal.protein||meal.carbs||meal.fat) ? 6 : 0, whiteSpace: 'pre-wrap' }}>{meal.content}</div>
                       {(meal.kcal||meal.protein||meal.carbs||meal.fat) && (
                         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                          {meal.kcal ? <span style={{ fontSize: 10, fontWeight: 700, color: '#F97316', background: '#FFF7ED', borderRadius: 4, padding: '1px 5px' }}>{meal.kcal} kcal</span> : null}
-                          {meal.protein ? <span style={{ fontSize: 10, fontWeight: 700, color: '#3B82F6', background: '#EFF6FF', borderRadius: 4, padding: '1px 5px' }}>{meal.protein}g prot</span> : null}
-                          {meal.carbs ? <span style={{ fontSize: 10, fontWeight: 700, color: '#EAB308', background: '#FEFCE8', borderRadius: 4, padding: '1px 5px' }}>{meal.carbs}g HC</span> : null}
-                          {meal.fat ? <span style={{ fontSize: 10, fontWeight: 700, color: '#8B5CF6', background: '#F5F3FF', borderRadius: 4, padding: '1px 5px' }}>{meal.fat}g grasa</span> : null}
+                          {meal.kcal ? <span style={{ fontSize: 11, fontWeight: 700, color: '#F97316', background: '#FFF7ED', borderRadius: 4, padding: '1px 5px' }}>{meal.kcal} kcal</span> : null}
+                          {meal.protein ? <span style={{ fontSize: 11, fontWeight: 700, color: '#3B82F6', background: '#EFF6FF', borderRadius: 4, padding: '1px 5px' }}>{meal.protein}g prot</span> : null}
+                          {meal.carbs ? <span style={{ fontSize: 11, fontWeight: 700, color: '#EAB308', background: '#FEFCE8', borderRadius: 4, padding: '1px 5px' }}>{meal.carbs}g HC</span> : null}
+                          {meal.fat ? <span style={{ fontSize: 11, fontWeight: 700, color: '#8B5CF6', background: '#F5F3FF', borderRadius: 4, padding: '1px 5px' }}>{meal.fat}g grasa</span> : null}
                         </div>
                       )}
                     </div>
                   ))}
                   {hasMacros && (
                     <div style={{ marginTop: 6, padding: '8px 12px', background: 'var(--accent-dim)', borderRadius: 10, display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
-                      <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--accent)' }}>Total día:</span>
-                      {totals.kcal ? <span style={{ fontSize: 11, fontWeight: 700, color: '#F97316' }}>{totals.kcal} kcal</span> : null}
-                      {totals.protein ? <span style={{ fontSize: 11, fontWeight: 700, color: '#3B82F6' }}>{totals.protein}g prot</span> : null}
-                      {totals.carbs ? <span style={{ fontSize: 11, fontWeight: 700, color: '#EAB308' }}>{totals.carbs}g HC</span> : null}
-                      {totals.fat ? <span style={{ fontSize: 11, fontWeight: 700, color: '#8B5CF6' }}>{totals.fat}g grasa</span> : null}
+                      <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--accent)' }}>Total día:</span>
+                      {totals.kcal ? <span style={{ fontSize: 12, fontWeight: 700, color: '#F97316' }}>{totals.kcal} kcal</span> : null}
+                      {totals.protein ? <span style={{ fontSize: 12, fontWeight: 700, color: '#3B82F6' }}>{totals.protein}g prot</span> : null}
+                      {totals.carbs ? <span style={{ fontSize: 12, fontWeight: 700, color: '#EAB308' }}>{totals.carbs}g HC</span> : null}
+                      {totals.fat ? <span style={{ fontSize: 12, fontWeight: 700, color: '#8B5CF6' }}>{totals.fat}g grasa</span> : null}
                     </div>
                   )}
                 </>
@@ -814,7 +814,7 @@ function NutritionCoach({ athleteId }) {
           }
           {plan.notes && (
             <div style={{ marginTop: 8, padding: '8px 12px', background: 'var(--accent-dim)', borderRadius: 10, borderLeft: '3px solid var(--accent)' }}>
-              <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--accent)', marginBottom: 2 }}>📝 Notas</div>
+              <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--accent)', marginBottom: 2 }}>📝 Notas</div>
               <div style={{ fontSize: 13 }}>{plan.notes}</div>
             </div>
           )}
@@ -829,7 +829,7 @@ function NutritionCoach({ athleteId }) {
       {/* Historial adherencia */}
       {logs.length > 0 && (
         <div style={{ marginTop: 12 }}>
-          <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.4px', marginBottom: 8 }}>Adherencia últimos 30 días</div>
+          <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.4px', marginBottom: 8 }}>Adherencia últimos 30 días</div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
             {logs.map(l => (
               <div key={l.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '7px 10px', background: 'var(--card)', borderRadius: 8 }}>
@@ -882,10 +882,10 @@ function WeeklyAdherence({ athleteId, color }) {
           return (
             <div key={s.id} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <div style={{ width: 20, height: 20, borderRadius: '50%', background: done ? 'var(--success)' : 'var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                {done && <span style={{ color: '#fff', fontSize: 11 }}>✓</span>}
+                {done && <span style={{ color: '#fff', fontSize: 12 }}>✓</span>}
               </div>
               <div style={{ fontSize: 13, flex: 1 }}>{s.title}</div>
-              <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{new Date(s.date+'T12:00:00').toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric' })}</div>
+              <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{new Date(s.date+'T12:00:00').toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric' })}</div>
             </div>
           )
         })}
@@ -946,7 +946,7 @@ function AthleteDocsCoach({ athleteId }) {
     try {
       const { url, name } = await Storage.uploadDocument(file)
       await Documents.create({ title: title.trim(), file_url: url, file_name: name, category, athlete_id: athleteId })
-      toast('Documento subido ✓')
+      toast('Documento subido')
       setTitle('')
       setShowForm(false)
       load()
@@ -966,7 +966,7 @@ function AthleteDocsCoach({ athleteId }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <div style={{ fontSize: 11, fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.8px' }}>Documentos</div>
+        <div style={{ fontSize: 12, fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.8px' }}>Documentos</div>
         <button className="btn btn-primary btn-sm" onClick={() => setShowForm(f => !f)}>
           {showForm ? 'Cancelar' : '+ Subir'}
         </button>
@@ -994,7 +994,7 @@ function AthleteDocsCoach({ athleteId }) {
               <span style={{ fontSize: 20 }}>{catIcon(doc.category)}</span>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <a href={doc.file_url} target="_blank" rel="noopener noreferrer" style={{ fontWeight: 600, fontSize: 13, color: 'var(--text)', textDecoration: 'none', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{doc.title}</a>
-                <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{catLabel(doc.category)} · {new Date(doc.created_at).toLocaleDateString('es-ES')}</div>
+                <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{catLabel(doc.category)} · {new Date(doc.created_at).toLocaleDateString('es-ES')}</div>
               </div>
               <div style={{ display: 'flex', gap: 6 }}>
                 <a href={doc.file_url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12, color: 'var(--accent)', fontWeight: 700, textDecoration: 'none' }}>Ver</a>
@@ -1044,7 +1044,7 @@ function NutritionistAssign({ athleteId }) {
         await supabase.from('nutritionist_athletes')
           .insert({ nutritionist_id: nutritionistId, athlete_id: athleteId })
         setAssigned(true)
-        toast('Nutricionista asignada ✓')
+        toast('Nutricionista asignada')
       }
     } catch {
       toast('Error al actualizar', 'error')

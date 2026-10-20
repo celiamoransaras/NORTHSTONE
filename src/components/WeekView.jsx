@@ -41,7 +41,7 @@ export default function WeekView({ sessions, athletes, athleteFilter, onOpen, on
         <button className="btn btn-ghost btn-sm" onClick={() => setMonday(m => addDays(m, -7))} aria-label="Semana anterior">‹</button>
         <div style={{ flex: 1, textAlign: 'center' }}>
           <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 800, fontSize: 17, textTransform: 'uppercase' }}>{short(monday)} – {short(sunday)}</div>
-          <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{weekSessions.length} sesion{weekSessions.length === 1 ? '' : 'es'}{monday === mondayOf(today) ? ' · esta semana' : ''}</div>
+          <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{weekSessions.length} sesion{weekSessions.length === 1 ? '' : 'es'}{monday === mondayOf(today) ? ' · esta semana' : ''}</div>
         </div>
         {monday !== mondayOf(today) && <button className="btn btn-ghost btn-sm" onClick={() => setMonday(mondayOf(today))}>Hoy</button>}
         <button className="btn btn-ghost btn-sm" onClick={() => setMonday(m => addDays(m, 7))} aria-label="Semana siguiente">›</button>
@@ -67,7 +67,7 @@ export default function WeekView({ sessions, athletes, athleteFilter, onOpen, on
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: list.length ? 8 : 0 }}>
               <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 800, fontSize: 14, textTransform: 'uppercase', color: isToday ? 'var(--accent)' : 'var(--text)' }}>
                 {DAY_NAMES[i]} <span style={{ color: 'var(--text-muted)', fontWeight: 600 }}>{new Date(d + 'T12:00:00').getDate()}</span>
-                {isToday && <span style={{ marginLeft: 6, fontSize: 10, color: '#fff', background: 'var(--accent)', padding: '1px 6px', borderRadius: 5 }}>HOY</span>}
+                {isToday && <span style={{ marginLeft: 6, fontSize: 11, color: '#fff', background: 'var(--accent)', padding: '1px 6px', borderRadius: 5 }}>HOY</span>}
               </div>
               <button className="btn btn-ghost btn-sm" onClick={() => onCreate(d)} aria-label={`Nueva sesión el ${DAY_NAMES[i]}`} style={{ fontWeight: 800 }}>+ Sesión</button>
             </div>
@@ -77,21 +77,21 @@ export default function WeekView({ sessions, athletes, athleteFilter, onOpen, on
               const ids = s.athlete_ids || []
               return (
                 <div key={s.id} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 8px', borderRadius: 10, background: 'var(--bg)', borderLeft: `4px solid ${color}`, marginTop: 6, opacity: moving === s.id ? 0.5 : 1 }}>
-                  <button onClick={() => onMove(s, addDays(s.date, -1))} disabled={!!moving} className="btn btn-ghost btn-sm" aria-label="Mover al día anterior" title="Mover al día anterior" style={{ padding: '4px 6px' }}>‹</button>
+                  <button onClick={() => onMove(s, addDays(s.date, -1))} disabled={!!moving} className="btn btn-ghost btn-sm" aria-label="Mover al día anterior" title="Mover al día anterior" style={{ padding: 0, minWidth: 40, minHeight: 40, fontSize: 18 }}>‹</button>
                   <div onClick={() => onOpen(s)} role="button" style={{ flex: 1, minWidth: 0, cursor: 'pointer' }}>
                     <div style={{ fontWeight: 700, fontSize: 14, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{TYPE_ICONS[s.type] || '📅'} {s.title}</div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 3, flexWrap: 'wrap' }}>
-                      <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>⏱ {s.duration}′</span>
+                      <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>⏱ {s.duration}′</span>
                       {ids.slice(0, 6).map(id => {
                         const a = athleteById[id]
                         if (!a) return null
                         const done = s.attendance?.[id] === true
-                        return <span key={id} title={a.name} style={{ fontSize: 10, fontWeight: 800, padding: '1px 5px', borderRadius: 6, background: done ? 'var(--success-dim)' : `${a.color || '#888'}22`, color: done ? 'var(--success)' : (a.color || 'var(--text-muted)') }}>{done ? '✓' : ''}{initials(a.name)}</span>
+                        return <span key={id} title={a.name} style={{ fontSize: 11, fontWeight: 800, padding: '1px 5px', borderRadius: 6, background: done ? 'var(--success-dim)' : `${a.color || '#888'}22`, color: done ? 'var(--success)' : (a.color || 'var(--text-muted)') }}>{done ? '✓' : ''}{initials(a.name)}</span>
                       })}
-                      {ids.length > 6 && <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>+{ids.length - 6}</span>}
+                      {ids.length > 6 && <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>+{ids.length - 6}</span>}
                     </div>
                   </div>
-                  <button onClick={() => onMove(s, addDays(s.date, 1))} disabled={!!moving} className="btn btn-ghost btn-sm" aria-label="Mover al día siguiente" title="Mover al día siguiente" style={{ padding: '4px 6px' }}>›</button>
+                  <button onClick={() => onMove(s, addDays(s.date, 1))} disabled={!!moving} className="btn btn-ghost btn-sm" aria-label="Mover al día siguiente" title="Mover al día siguiente" style={{ padding: 0, minWidth: 40, minHeight: 40, fontSize: 18 }}>›</button>
                 </div>
               )
             })}

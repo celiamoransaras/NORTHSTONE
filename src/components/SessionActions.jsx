@@ -37,7 +37,7 @@ export default function SessionActions({ session, athleteId, athleteName, attend
     <button type="button" onClick={onClick} disabled={disabled}
       style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, padding: '10px 4px', borderRadius: 12, border: '1px solid var(--border)', background: 'var(--bg)', cursor: disabled ? 'default' : 'pointer', opacity: disabled ? 0.45 : 1, color: 'var(--text)' }}>
       <span style={{ fontSize: 20 }}>{icon}</span>
-      <span style={{ fontSize: 11, fontWeight: 700 }}>{label}</span>
+      <span style={{ fontSize: 12, fontWeight: 700 }}>{label}</span>
     </button>
   )
 
@@ -130,7 +130,7 @@ function ChangeDaySheet({ session, athleteId, athleteName, toast, onClose, onDon
             <textarea className="input" rows={2} placeholder="Algo que quieras contarle a Celia..." value={note} onChange={e => setNote(e.target.value)} />
           </div>
           <button className="btn btn-primary btn-full" onClick={send} disabled={saving || !toDate}>{saving ? 'Enviando...' : toDate ? `Pedir moverla al ${fmtDay(toDate)}` : 'Elige un día'}</button>
-          <div style={{ fontSize: 11, color: 'var(--text-muted)', textAlign: 'center', marginTop: 8 }}>La sesión no cambia hasta que Celia lo confirme.</div>
+          <div style={{ fontSize: 12, color: 'var(--text-muted)', textAlign: 'center', marginTop: 8 }}>La sesión no cambia hasta que Celia lo confirme.</div>
         </div>
       </div>
     </>,

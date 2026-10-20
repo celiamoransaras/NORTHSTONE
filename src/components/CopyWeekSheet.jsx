@@ -77,7 +77,7 @@ export default function CopyWeekSheet({ sessions, athletes, onClose, onDone, toa
           url: '/?tab=training',
         })
       } catch { /* notificación opcional */ }
-      toast(`${chosen.length} sesion${chosen.length > 1 ? 'es copiadas' : ' copiada'} ✓`)
+      toast(`${chosen.length} sesion${chosen.length > 1 ? 'es copiadas' : ' copiada'}`)
       onDone()
     } catch (err) {
       toast('Error al copiar: ' + (err?.message || err), 'error')
@@ -123,7 +123,7 @@ export default function CopyWeekSheet({ sessions, athletes, onClose, onDone, toa
                   <span style={{ fontSize: 16 }}>{TYPE_ICONS[s.type] || '📅'}</span>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontWeight: 700, fontSize: 14, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{s.title}</div>
-                    <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+                    <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
                       {DAY[new Date(s.date + 'T12:00:00').getDay()]} {new Date(s.date + 'T12:00:00').getDate()} → {DAY[new Date(addDays(s.date, shiftDays) + 'T12:00:00').getDay()]} {new Date(addDays(s.date, shiftDays) + 'T12:00:00').getDate()}
                     </div>
                   </div>
@@ -147,7 +147,7 @@ export default function CopyWeekSheet({ sessions, athletes, onClose, onDone, toa
           <button className="btn btn-primary btn-full" onClick={copy} disabled={!canCopy} style={{ marginTop: 16, opacity: canCopy ? 1 : 0.5 }}>
             {saving ? 'Copiando...' : `Copiar ${chosen.length} sesion${chosen.length === 1 ? '' : 'es'}${targets.length ? ` a ${targets.length} deportista${targets.length > 1 ? 's' : ''}` : ''}`}
           </button>
-          <div style={{ fontSize: 11, color: 'var(--text-muted)', textAlign: 'center', marginTop: 8 }}>
+          <div style={{ fontSize: 12, color: 'var(--text-muted)', textAlign: 'center', marginTop: 8 }}>
             Se crean sesiones nuevas: las originales no cambian y podrás editar cada copia.
           </div>
         </div>

@@ -117,7 +117,7 @@ export default function Health() {
       }
       await load()
       setConfirmDischarge(null)
-      toast('Deportista dada de alta ✓')
+      toast('Deportista dada de alta')
       haptic('success')
     } catch {
       toast('Error al dar de alta', 'error')
@@ -224,7 +224,7 @@ export default function Health() {
                     <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{inj.body_part}</div>
                   </div>
                   {isActive && (
-                    <span className="badge badge-red" style={{ marginLeft: 'auto', fontSize: 10 }}>ACTIVA</span>
+                    <span className="badge badge-red" style={{ marginLeft: 'auto', fontSize: 11 }}>ACTIVA</span>
                   )}
                 </div>
 
@@ -342,7 +342,7 @@ export default function Health() {
                       <div style={{ marginBottom: 10, display: 'flex', flexDirection: 'column', gap: 6 }}>
                         {followUps.map((entry, idx) => (
                           <div key={idx} style={{ background: 'var(--bg)', borderRadius: 10, padding: '8px 12px', fontSize: 13 }}>
-                            <div style={{ fontWeight: 600, fontSize: 11, color: 'var(--text-muted)', marginBottom: 2 }}>
+                            <div style={{ fontWeight: 600, fontSize: 12, color: 'var(--text-muted)', marginBottom: 2 }}>
                               {new Date(entry.date + 'T12:00:00').toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' })}
                             </div>
                             <div>{entry.text}</div>

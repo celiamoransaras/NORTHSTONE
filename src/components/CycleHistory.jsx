@@ -25,11 +25,11 @@ export default function CycleHistory({ cycles = [], color = 'var(--accent)' }) {
   return (
     <div style={{ marginTop: 12, borderTop: '1px solid var(--border)', paddingTop: 10 }}>
       <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 6, gap: 8 }}>
-        <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.4px' }}>
+        <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.4px' }}>
           Historial · {cycles.length} registro{cycles.length !== 1 ? 's' : ''}
         </div>
         {avg && (
-          <div style={{ fontSize: 11, color: 'var(--text-muted)', textAlign: 'right' }}>
+          <div style={{ fontSize: 12, color: 'var(--text-muted)', textAlign: 'right' }}>
             Media <strong style={{ color: 'var(--text)' }}>{avg} días</strong>
             {spread !== null && <> · {spread <= 7 ? 'regular' : `varía ${spread} días`}</>}
           </div>
@@ -44,8 +44,8 @@ export default function CycleHistory({ cycles = [], color = 'var(--accent)' }) {
               {c.date_end && <span style={{ marginLeft: 4, color: '#059669' }}>→ {fmt(c.date_end, false)}</span>}
             </span>
             {i === 0
-              ? <span style={{ fontSize: 11, fontWeight: 700, color, background: `${color}20`, padding: '2px 8px', borderRadius: 8 }}>Actual</span>
-              : <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>ciclo de {lengths[i]} d</span>}
+              ? <span style={{ fontSize: 12, fontWeight: 700, color, background: `${color}20`, padding: '2px 8px', borderRadius: 8 }}>Actual</span>
+              : <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>ciclo de {lengths[i]} d</span>}
           </div>
         ))}
       </div>

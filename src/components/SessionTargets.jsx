@@ -33,11 +33,11 @@ export default function SessionTargets({ session, athletes = [], mine = false })
     <div key={r.label} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '7px 0', borderBottom: i === rows.length - 1 ? 'none' : '1px solid var(--border)' }}>
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontSize: 13, fontWeight: 700 }}>{r.label}</div>
-        {r.hint && <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{r.hint}</div>}
+        {r.hint && <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{r.hint}</div>}
       </div>
       {r.value
         ? <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 800, fontSize: 17, color: 'var(--accent)', whiteSpace: 'nowrap' }}>{r.value}</div>
-        : <div style={{ fontSize: 11, color: 'var(--text-muted)', textAlign: 'right' }}>{r.missing}</div>}
+        : <div style={{ fontSize: 12, color: 'var(--text-muted)', textAlign: 'right' }}>{r.missing}</div>}
     </div>
   ))
 
@@ -47,9 +47,9 @@ export default function SessionTargets({ session, athletes = [], mine = false })
     const anyMissing = rows.some(r => !r.value)
     return (
       <div style={{ background: 'var(--accent-dim)', borderRadius: 'var(--radius-sm)', padding: '12px 14px', marginBottom: 16 }}>
-        <div style={{ fontSize: 11, fontWeight: 800, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: 4 }}>🎯 Tus números para esta sesión</div>
+        <div style={{ fontSize: 12, fontWeight: 800, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: 4 }}>🎯 Tus números para esta sesión</div>
         <Rows rows={rows} />
-        {anyMissing && <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 6 }}>Añade tus tests y RM en Más → Mis zonas para ver todos los números.</div>}
+        {anyMissing && <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 6 }}>Añade tus tests y RM en Más → Mis zonas para ver todos los números.</div>}
       </div>
     )
   }

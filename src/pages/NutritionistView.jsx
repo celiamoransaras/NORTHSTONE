@@ -57,7 +57,7 @@ function NutritionPlanEditor({ athlete, onDirtyChange }) {
     setSaving(true)
     try {
       await Nutrition.savePlan(athlete.id, month, year, days, notes)
-      toast('Plan guardado ✓')
+      toast('Plan guardado')
       setIsDirty(false)
       onDirtyChange?.(false)
       sendPushToAthletes([athlete.id], {
@@ -110,7 +110,7 @@ function NutritionPlanEditor({ athlete, onDirtyChange }) {
           {[2025, 2026, 2027].map(y => <option key={y} value={y}>{y}</option>)}
         </select>
         <button onClick={copyPrevMonth}
-          style={{ fontSize: 11, padding: '6px 10px', borderRadius: 8, border: '1px solid var(--border)', background: 'transparent', color: 'var(--text-muted)', cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0 }}>
+          style={{ fontSize: 12, padding: '6px 10px', borderRadius: 8, border: '1px solid var(--border)', background: 'transparent', color: 'var(--text-muted)', cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0 }}>
           Copiar mes anterior
         </button>
       </div>
@@ -141,7 +141,7 @@ function NutritionPlanEditor({ athlete, onDirtyChange }) {
               <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--accent)' }}>{Nutrition.DAY_LABELS[activeDay]}</div>
               {Nutrition.DAYS.filter(d => d !== activeDay && (days[d] || []).length > 0).length > 0 && (
                 <select onChange={e => e.target.value && copyDay(e.target.value)} value=""
-                  style={{ fontSize: 11, padding: '3px 6px', borderRadius: 6, background: 'var(--bg)', color: 'var(--text-muted)', border: '1px solid var(--border)', cursor: 'pointer' }}>
+                  style={{ fontSize: 12, padding: '3px 6px', borderRadius: 6, background: 'var(--bg)', color: 'var(--text-muted)', border: '1px solid var(--border)', cursor: 'pointer' }}>
                   <option value="">Copiar de...</option>
                   {Nutrition.DAYS.filter(d => d !== activeDay && (days[d] || []).length > 0).map(d => (
                     <option key={d} value={d}>{Nutrition.DAY_LABELS[d]}</option>
@@ -185,15 +185,15 @@ function NutritionPlanEditor({ athlete, onDirtyChange }) {
                   {[['kcal','Kcal'],['protein','Prot(g)'],['carbs','HC(g)'],['fat','Grasa(g)']].map(([field, label]) => (
                     <input key={field} className="input" type="number" placeholder={label}
                       value={meal[field] || ''} onChange={e => updateMeal(idx, field, e.target.value)}
-                      style={{ flex: 1, fontSize: 11, padding: '4px 6px', textAlign: 'center' }} />
+                      style={{ flex: 1, fontSize: 12, padding: '4px 6px', textAlign: 'center' }} />
                   ))}
                 </div>
                 {/* Mejora 5: nota por comida */}
                 <input className="input" placeholder="Sustituciones o indicaciones..."
                   value={meal.note || ''} onChange={e => updateMeal(idx, 'note', e.target.value)}
-                  style={{ marginTop: 6, fontSize: 11, fontStyle: 'italic', padding: '4px 8px' }} />
+                  style={{ marginTop: 6, fontSize: 12, fontStyle: 'italic', padding: '4px 8px' }} />
                 {meal.note && (
-                  <div style={{ fontSize: 11, fontStyle: 'italic', color: 'var(--text-muted)', marginTop: 3, paddingLeft: 2 }}>{meal.note}</div>
+                  <div style={{ fontSize: 12, fontStyle: 'italic', color: 'var(--text-muted)', marginTop: 3, paddingLeft: 2 }}>{meal.note}</div>
                 )}
               </div>
             ))}
@@ -202,7 +202,7 @@ function NutritionPlanEditor({ athlete, onDirtyChange }) {
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 6 }}>
                 {unusedPresets.map(p => (
                   <button key={p} onClick={() => addMeal(p)}
-                    style={{ fontSize: 11, padding: '4px 10px', borderRadius: 20, border: '1px dashed var(--border)', background: 'transparent', color: 'var(--text-muted)', cursor: 'pointer' }}>
+                    style={{ fontSize: 12, padding: '4px 10px', borderRadius: 20, border: '1px dashed var(--border)', background: 'transparent', color: 'var(--text-muted)', cursor: 'pointer' }}>
                     + {p}
                   </button>
                 ))}
@@ -261,7 +261,7 @@ function AthleteDocs({ athleteId }) {
     try {
       const { url, name } = await Storage.uploadDocument(file)
       await Documents.create({ title: title.trim(), file_url: url, file_name: name, category, athlete_id: athleteId })
-      toast('Documento subido ✓')
+      toast('Documento subido')
       setTitle('')
       setShowForm(false)
       load()
@@ -275,7 +275,7 @@ function AthleteDocs({ athleteId }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <div style={{ fontSize: 11, fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.8px' }}>Documentos</div>
+        <div style={{ fontSize: 12, fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.8px' }}>Documentos</div>
         <button className="btn btn-primary btn-sm" onClick={() => setShowForm(f => !f)}>
           {showForm ? 'Cancelar' : '+ Subir'}
         </button>
@@ -304,7 +304,7 @@ function AthleteDocs({ athleteId }) {
                 style={{ fontWeight: 600, fontSize: 13, color: 'var(--text)', textDecoration: 'none', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 {doc.title}
               </a>
-              <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{catLabel(doc.category)} · {new Date(doc.created_at).toLocaleDateString('es-ES')}</div>
+              <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{catLabel(doc.category)} · {new Date(doc.created_at).toLocaleDateString('es-ES')}</div>
             </div>
             <a href={doc.file_url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12, color: 'var(--accent)', fontWeight: 700, textDecoration: 'none', flexShrink: 0 }}>Ver →</a>
           </div>
@@ -355,7 +355,7 @@ function AdherenceSection({ athlete }) {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-      <div style={{ fontSize: 11, fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: 4 }}>
+      <div style={{ fontSize: 12, fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: 4 }}>
         Últimos {logs.length} días
       </div>
       {logs.map((log, idx) => (
@@ -396,7 +396,7 @@ function WellnessSection({ athleteId }) {
 
   return (
     <div className="card" style={{ padding: 14, marginBottom: 4 }}>
-      <div style={{ fontSize: 11, fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: 10 }}>
+      <div style={{ fontSize: 12, fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: 10 }}>
         Bienestar últimos 7 días
       </div>
       {data.length === 0 ? (
@@ -405,7 +405,7 @@ function WellnessSection({ athleteId }) {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
           {data.map((row, i) => (
             <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 13 }}>
-              <span style={{ fontSize: 11, color: 'var(--text-muted)', minWidth: 72, flexShrink: 0 }}>
+              <span style={{ fontSize: 12, color: 'var(--text-muted)', minWidth: 72, flexShrink: 0 }}>
                 {new Date(row.date).toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric', month: 'short' })}
               </span>
               <span title="Fatiga">😴 {row.fatigue ?? '–'}</span>
@@ -536,7 +536,7 @@ export default function NutritionistView() {
           <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 900, fontSize: 20, letterSpacing: '1px', textTransform: 'uppercase', lineHeight: 1.1 }}>
             <span style={{ color: 'var(--accent)' }}>N</span>ORTHSTONE
           </div>
-          <div style={{ fontFamily: "'Barlow', sans-serif", fontSize: 10, color: 'var(--text-muted)', fontWeight: 500, letterSpacing: '0.3px', marginTop: 1 }}>
+          <div style={{ fontFamily: "'Barlow', sans-serif", fontSize: 11, color: 'var(--text-muted)', fontWeight: 500, letterSpacing: '0.3px', marginTop: 1 }}>
             Nutricionista{profile?.athletes?.name ? ` · ${profile.athletes.name}` : user?.email ? ` · ${user.email}` : ''}
           </div>
         </div>

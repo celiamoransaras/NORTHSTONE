@@ -1,4 +1,6 @@
 import GoalCountdown from '../components/GoalCountdown'
+import Icon from '../components/Icon'
+import ThemeToggle from '../components/ThemeToggle'
 import { InstallGuide, InstallBanner } from '../components/InstallGuide'
 import { isStandalone } from '../lib/install'
 import ZonesPanel from '../components/ZonesPanel'
@@ -28,12 +30,12 @@ import { initials } from '../lib/utils'
 
 // 7 tabs
 const NAV = [
-  { id: 'home',      icon: '⊞',  label: 'Inicio' },
-  { id: 'training',  icon: '📅', label: 'Entrenos' },
-  { id: 'nutrition', icon: '🥗', label: 'Nutrición' },
-  { id: 'progress',  icon: '📈', label: 'Progreso' },
-  { id: 'messages',  icon: '💬', label: 'Chat' },
-  { id: 'more',      icon: '⋯',  label: 'Más' },
+  { id: 'home',      icon: 'home',     label: 'Inicio' },
+  { id: 'training',  icon: 'calendar', label: 'Entrenos' },
+  { id: 'nutrition', icon: 'target',   label: 'Nutrición' },
+  { id: 'progress',  icon: 'progress', label: 'Progreso' },
+  { id: 'messages',  icon: 'chat',     label: 'Chat' },
+  { id: 'more',      icon: 'more',     label: 'Más' },
 ].filter(t => t.id !== 'nutrition' || FEATURES.nutrition)
 
 export default function AthleteView() {
@@ -137,7 +139,7 @@ export default function AthleteView() {
       const url = await Storage.uploadAvatar(athleteId, file)
       await AthletesDB.update(athleteId, { avatar_url: url })
       updateAthleteAvatar(url) // Actualiza el estado sin recargar la página
-      toast('Foto actualizada ✓')
+      toast('Foto actualizada')
       haptic('success')
     } catch {
       toast('Error al subir la foto', 'error')
@@ -214,12 +216,12 @@ export default function AthleteView() {
         </div>
       )}
       {/* Header — sin botón Salir, avatar abre perfil */}
-      <header style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 20px', height: 'var(--header-height)', background: 'var(--bg)', flexShrink: 0 }}>
+      <header className="app-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 20px', height: 'var(--header-height)', background: 'var(--bg)', flexShrink: 0 }}>
         <div>
           <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 900, fontSize: 20, letterSpacing: '1px', textTransform: 'uppercase', lineHeight: 1.1 }}>
             <span style={{ color: 'var(--accent)' }}>N</span>ORTHSTONE
           </div>
-          <div style={{ fontFamily: "'Barlow', sans-serif", fontSize: 10, color: 'var(--text-muted)', fontWeight: 500, marginTop: 1 }}>
+          <div style={{ fontFamily: "'Barlow', sans-serif", fontSize: 11, color: 'var(--text-muted)', fontWeight: 500, marginTop: 1 }}>
             by Celia Morán Saras
           </div>
         </div>
@@ -257,18 +259,18 @@ export default function AthleteView() {
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 8 }}>
               {[
-                { id: 'payments', icon: '💳', label: 'Pagos', desc: 'Tus cuotas y pagos' },
-                { id: 'docs',     icon: '📂', label: 'Documentos', desc: 'Docs de tu entrenadora' },
-                { id: 'health',   icon: '🩺', label: 'Salud', desc: 'Lesiones y ciclo' },
-                { id: 'zones',    icon: '🎯', label: 'Mis zonas', desc: 'Ritmos, vatios y RM' },
-                { id: 'hyrox',    icon: '🏁', label: 'Mi Hyrox', desc: 'Parciales para tu objetivo' },
-                ...(isStandalone() ? [] : [{ id: 'install', icon: '📲', label: 'Instalar app', desc: 'Tenla en tu móvil' }]),
+                { id: 'payments', icon: 'card',   label: 'Pagos', desc: 'Tus cuotas y pagos' },
+                { id: 'docs',     icon: 'folder', label: 'Documentos', desc: 'Docs de tu entrenadora' },
+                { id: 'health',   icon: 'health', label: 'Salud', desc: 'Lesiones y ciclo' },
+                { id: 'zones',    icon: 'target', label: 'Mis zonas', desc: 'Ritmos, vatios y RM' },
+                { id: 'hyrox',    icon: 'flag',   label: 'Mi Hyrox', desc: 'Parciales para tu objetivo' },
+                ...(isStandalone() ? [] : [{ id: 'install', icon: 'phone', label: 'Instalar app', desc: 'Tenla en tu móvil' }]),
               ].map(({ id, icon, label, desc }) => (
                 <button key={id} onClick={() => { if (id === 'install') { setMoreOpen(false); setInstallOpen(true); return } const d = TAB_ORDER.indexOf(id) >= TAB_ORDER.indexOf(tab) ? 1 : -1; setTabDir(d); setTabKey(k=>k+1); setTab(id); setMoreOpen(false) }}
                   style={{ background: tab === id ? 'var(--accent-dim)' : 'var(--bg)', border: `1.5px solid ${tab === id ? 'var(--accent)' : 'var(--border)'}`, borderRadius: 14, padding: '14px 12px', cursor: 'pointer', textAlign: 'left' }}>
-                  <div style={{ fontSize: 24, marginBottom: 6 }}>{icon}</div>
+                  <div style={{ color: 'var(--accent)', marginBottom: 6 }}><Icon name={icon} size={24} /></div>
                   <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 800, fontSize: 14, color: tab === id ? 'var(--accent)' : 'var(--text)', textTransform: 'uppercase' }}>{label}</div>
-                  <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>{desc}</div>
+                  <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>{desc}</div>
                 </button>
               ))}
             </div>
@@ -282,9 +284,9 @@ export default function AthleteView() {
       <nav className="glass-nav" style={{ display: 'flex', height: 'var(--nav-height)', flexShrink: 0, paddingBottom: 'env(safe-area-inset-bottom)' }}>
         {NAV.map(({ id, icon, label }) => (
           <button key={id} onClick={() => id === 'more' ? setMoreOpen(o => !o) : (setTabDir(TAB_ORDER.indexOf(id) >= TAB_ORDER.indexOf(tab) ? 1 : -1), setTabKey(k=>k+1), setTab(id), setMoreOpen(false))}
-            style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 3, color: (id === 'more' ? moreOpen : tab===id) ? 'var(--accent)' : 'var(--text-muted)', fontFamily: "'Barlow Condensed', sans-serif", fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.3px', background: 'none', border: 'none', borderTop: (id === 'more' ? moreOpen : tab===id) ? '2px solid var(--accent)' : '2px solid transparent', cursor: 'pointer', transition: 'color 0.15s' }}>
-            <span style={{ fontSize: 22, position: 'relative', display: 'inline-block' }}>
-              {icon}
+            style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 3, color: (id === 'more' ? moreOpen : tab===id) ? 'var(--accent)' : 'var(--text-muted)', fontFamily: "'Barlow Condensed', sans-serif", fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.3px', background: 'none', border: 'none', borderTop: (id === 'more' ? moreOpen : tab===id) ? '2px solid var(--accent)' : '2px solid transparent', cursor: 'pointer', transition: 'color 0.15s' }}>
+            <span style={{ position: 'relative', display: 'inline-block' }}>
+              <Icon name={icon} size={24} />
               {id === 'messages' && unreadMessages > 0 && <Badge count={unreadMessages} />}
               {id === 'training' && unratedCount > 0 && <Badge count={unratedCount} color="var(--error)" />}
               {id === 'training' && unreadReplies > 0 && (
@@ -312,7 +314,7 @@ export default function AthleteView() {
                     ? <img src={athlete.avatar_url} alt={athlete.name} style={{ width: 64, height: 64, borderRadius: '50%', objectFit: 'cover', display: 'block', opacity: uploadingAvatar ? 0.5 : 1 }} />
                     : <div className="avatar" style={{ width: 64, height: 64, background: athlete.color+'30', color: athlete.color, fontSize: 22, opacity: uploadingAvatar ? 0.5 : 1 }}>{initials(athlete.name)}</div>
                   }
-                  <div style={{ position: 'absolute', bottom: 0, right: 0, width: 22, height: 22, borderRadius: '50%', background: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, boxShadow: '0 1px 4px rgba(0,0,0,0.3)' }}>
+                  <div style={{ position: 'absolute', bottom: 0, right: 0, width: 22, height: 22, borderRadius: '50%', background: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, boxShadow: '0 1px 4px rgba(0,0,0,0.3)' }}>
                     {uploadingAvatar ? '⏳' : '📷'}
                   </div>
                   <input type="file" accept="image/*" style={{ display: 'none' }} onChange={handleAvatarChange} disabled={uploadingAvatar} />
@@ -341,6 +343,7 @@ export default function AthleteView() {
               >
                 {pushLoading ? 'Un momento...' : pushSubscribed ? '🔕 Desactivar notificaciones' : '🔔 Activar notificaciones'}
               </button>
+              <div style={{ marginBottom: 12 }}><ThemeToggle /></div>
               <button className="btn btn-secondary btn-full" onClick={signOut} style={{ color: 'var(--error)', borderColor: 'rgba(220,38,38,0.3)' }}>
                 Cerrar sesión
               </button>
@@ -354,7 +357,7 @@ export default function AthleteView() {
 
 function Badge({ count, color = 'var(--error)' }) {
   return (
-    <span style={{ position: 'absolute', top: -4, right: -8, background: color, color: '#fff', borderRadius: '50%', fontSize: 10, fontWeight: 800, minWidth: 18, height: 18, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 3px', fontFamily: "'Barlow Condensed', sans-serif" }}>
+    <span style={{ position: 'absolute', top: -4, right: -8, background: color, color: '#fff', borderRadius: '50%', fontSize: 11, fontWeight: 800, minWidth: 18, height: 18, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 3px', fontFamily: "'Barlow Condensed', sans-serif" }}>
       {count > 99 ? '99+' : count}
     </span>
   )
@@ -495,7 +498,7 @@ function AthleteHome({ athlete, athleteId, onOpenSession, onGoTo, onInstall }) {
   if (loading) {
     return (
       <div className="page">
-        <div style={{ padding: '28px 20px 20px' }}>
+        <div className="page-hero" style={{ padding: '28px 20px 20px' }}>
           <div className="skeleton" style={{ height: 12, width: 160, marginBottom: 12 }} />
           <div className="skeleton" style={{ height: 42, width: 220, marginBottom: 6 }} />
           <div className="skeleton" style={{ height: 3, width: 48, marginBottom: 28 }} />
@@ -553,7 +556,7 @@ function AthleteHome({ athlete, athleteId, onOpenSession, onGoTo, onInstall }) {
         {refreshing && <span style={{ marginLeft: 6 }}>Actualizando...</span>}
       </div>
       {/* Hero con fecha — igual que el coach */}
-      <div style={{ padding: '28px 20px 20px', background: `linear-gradient(160deg, ${athlete.color}12 0%, transparent 60%)` }}>
+      <div className="page-hero" style={{ padding: '28px 20px 20px', background: `linear-gradient(160deg, ${athlete.color}12 0%, transparent 60%)` }}>
         <div style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 6 }}>
           {dayNames[now.getDay()]}, {now.getDate()} {monthNames[now.getMonth()]}
         </div>
@@ -634,7 +637,7 @@ function AthleteHome({ athlete, athleteId, onOpenSession, onGoTo, onInstall }) {
               const next = steps.findIndex(st => !st.done)
               return (
                 <div className="card" style={{ padding: '12px 14px' }}>
-                  <div style={{ fontSize: 11, fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: 10 }}>
+                  <div style={{ fontSize: 12, fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: 10 }}>
                     {next === -1 ? '🎉 Día completado' : `Tu día · paso ${next + 1} de 3`}
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -645,7 +648,7 @@ function AthleteHome({ athlete, athleteId, onOpenSession, onGoTo, onInstall }) {
                             border: `1.5px solid ${st.done ? 'var(--success)' : i === next ? athlete.color : 'var(--border)'}`,
                             background: st.done ? 'var(--success-dim)' : i === next ? `${athlete.color}12` : 'var(--bg)' }}>
                           <span style={{ fontSize: 20 }}>{st.done ? '✅' : st.icon}</span>
-                          <span style={{ fontSize: 11, fontWeight: 700, color: st.done ? 'var(--success)' : i === next ? athlete.color : 'var(--text-muted)' }}>{st.label}</span>
+                          <span style={{ fontSize: 12, fontWeight: 700, color: st.done ? 'var(--success)' : i === next ? athlete.color : 'var(--text-muted)' }}>{st.label}</span>
                         </button>
                         {i < steps.length - 1 && <span style={{ color: 'var(--text-dim)', fontSize: 12 }}>›</span>}
                       </div>
@@ -720,7 +723,7 @@ function AthleteHome({ athlete, athleteId, onOpenSession, onGoTo, onInstall }) {
                   <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 900, fontSize: 28, color: weekTotal > 0 && (weekDone/weekTotal) >= 0.8 ? 'var(--success)' : 'var(--text)', lineHeight: 1 }}>
                     {weekTotal > 0 ? Math.round((weekDone/weekTotal)*100) : 0}<span style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-muted)' }}>%</span>
                   </div>
-                  <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>adherencia</div>
+                  <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>adherencia</div>
                 </div>
               </div>
               <div style={{ height: 5, background: 'var(--border)', borderRadius: 99 }}>
@@ -824,7 +827,7 @@ function AthleteHealth({ athleteId }) {
       const updated = await Cycle.getByAthlete(athleteId)
       setCycles(updated)
       haptic('success')
-      toast('Ciclo registrado ✓')
+      toast('Ciclo registrado')
     } catch { toast('Error al registrar', 'error') }
     setLoggingCycle(false)
   }
@@ -838,7 +841,7 @@ function AthleteHealth({ athleteId }) {
       const updated = await Cycle.getByAthlete(athleteId)
       setCycles(updated)
       haptic('success')
-      toast('Periodo finalizado ✓')
+      toast('Periodo finalizado')
     } catch { toast('Error al guardar', 'error') }
     setEndingCycle(false)
   }
@@ -853,7 +856,7 @@ function AthleteHealth({ athleteId }) {
       setCycles(updated)
       setSymptomText('')
       haptic('success')
-      toast('Síntoma guardado ✓')
+      toast('Síntoma guardado')
     } catch { toast('Error al guardar', 'error') }
     setSavingSymptom(false)
   }
@@ -864,7 +867,7 @@ function AthleteHealth({ athleteId }) {
       await Cycle.setCycleLength(athleteId, val)
       setCycleLengthState(val)
       setEditingCycleLength(false)
-      toast('Duración guardada ✓')
+      toast('Duración guardada')
     } else {
       toast('Introduce un valor entre 21 y 45 días', 'error')
     }
@@ -891,7 +894,7 @@ function AthleteHealth({ athleteId }) {
       setReportingInjury(false)
       setInjuryForm({ type: '', body_part: '', date_start: ymd(new Date()), notes: '' })
       haptic('success')
-      toast('Lesión reportada ✓ Tu entrenadora la verá pronto')
+      toast('Lesión reportada: tu entrenadora la verá pronto')
     } catch { toast('Error al guardar la lesión', 'error') }
     setSavingInjury(false)
   }
@@ -928,7 +931,7 @@ function AthleteHealth({ athleteId }) {
           <button onClick={() => setDocsTab(false)} className={`pill-tab${!docsTab ? ' active' : ''}`} style={{ fontSize: 12 }}>Lesiones</button>
           <button onClick={() => setDocsTab(true)} className={`pill-tab${docsTab ? ' active' : ''}`} style={{ fontSize: 12, position: 'relative' }}>
             Docs
-            {medDocs.length > 0 && <span style={{ marginLeft: 4, background: 'rgba(255,255,255,0.3)', borderRadius: 8, padding: '1px 6px', fontSize: 11 }}>{medDocs.length}</span>}
+            {medDocs.length > 0 && <span style={{ marginLeft: 4, background: 'rgba(255,255,255,0.3)', borderRadius: 8, padding: '1px 6px', fontSize: 12 }}>{medDocs.length}</span>}
           </button>
         </div>
       </div>
@@ -936,7 +939,7 @@ function AthleteHealth({ athleteId }) {
 
         {/* Sección ciclo menstrual (solo mujeres) */}
         {isFemale && !docsTab && (
-          <div style={{ fontSize: 11, fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: 8 }}>
+          <div style={{ fontSize: 12, fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: 8 }}>
             🩸 Ciclo menstrual
           </div>
         )}
@@ -953,13 +956,13 @@ function AthleteHealth({ athleteId }) {
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 }}>
                   <span style={{ fontSize: 28 }}>{phase ? phase.emoji : '🩸'}</span>
                   <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.4px' }}>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.4px' }}>
                       {phase ? `Ciclo menstrual · Día ${phase.day}` : 'Ciclo menstrual'}
                     </div>
                     {phase ? (
                       <>
                         <div style={{ fontWeight: 800, fontSize: 16, color: phase.color }}>{phase.label}
-                          {phase.periodEnded === true && phase.phase === 'menstrual' && <span style={{ fontSize: 11, fontWeight: 500, color: 'var(--text-muted)', marginLeft: 6 }}>· {phase.periodDays}d</span>}
+                          {phase.periodEnded === true && phase.phase === 'menstrual' && <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-muted)', marginLeft: 6 }}>· {phase.periodDays}d</span>}
                         </div>
                         <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>{phase.desc}</div>
                       </>
@@ -983,7 +986,7 @@ function AthleteHealth({ athleteId }) {
                 {/* Síntomas — visible cuando hay ciclo activo */}
                 {currentCycle && (
                   <div style={{ marginTop: 4 }}>
-                    <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.4px', marginBottom: 6 }}>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.4px', marginBottom: 6 }}>
                       ¿Cómo te sientes? {phase && <span style={{ color: phase.color }}>({phase.label})</span>}
                     </div>
                     <textarea
@@ -1004,10 +1007,10 @@ function AthleteHealth({ athleteId }) {
                     {/* Historial síntomas del ciclo actual */}
                     {symptoms.length > 0 && (
                       <div style={{ marginTop: 10 }}>
-                        <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.4px', marginBottom: 6 }}>Síntomas registrados</div>
+                        <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.4px', marginBottom: 6 }}>Síntomas registrados</div>
                         {symptoms.slice(0, 5).map((s, i) => (
                           <div key={i} style={{ padding: '8px 10px', background: 'var(--bg)', borderRadius: 8, marginBottom: 4, borderLeft: `3px solid ${phase?.color || 'var(--accent)'}` }}>
-                            <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 2 }}>
+                            <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 2 }}>
                               {new Date(s.date + 'T12:00:00').toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })} · {s.phase}
                             </div>
                             <div style={{ fontSize: 13 }}>{s.text}</div>
@@ -1049,7 +1052,7 @@ function AthleteHealth({ athleteId }) {
 
         {!docsTab && (
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: isFemale ? 20 : 0, marginBottom: 8, paddingTop: isFemale ? 16 : 0, borderTop: isFemale ? '1px solid var(--border)' : 'none' }}>
-            <div style={{ fontSize: 11, fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.8px' }}>
+            <div style={{ fontSize: 12, fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.8px' }}>
               🩹 Lesiones
             </div>
             <button className="btn btn-sm btn-primary" onClick={() => setReportingInjury(true)} style={{ fontSize: 12 }}>
@@ -1078,7 +1081,7 @@ function AthleteHealth({ athleteId }) {
                     <div style={{ flex: 1 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3, flexWrap: 'wrap' }}>
                         <span style={{ fontWeight: 700, fontSize: 14 }}>{inj.type} · {inj.body_part}</span>
-                        {isActive && <span className="badge badge-red" style={{ fontSize: 10 }}>Activa</span>}
+                        {isActive && <span className="badge badge-red" style={{ fontSize: 11 }}>Activa</span>}
                       </div>
                       <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 6 }}>
                         {new Date(inj.date_start+'T12:00:00').toLocaleDateString('es-ES')}
@@ -1458,7 +1461,7 @@ function AthleteTrainingWithRPE({ athleteId, athleteName, initialSessionId, onSe
       setRpeSheet(null)
       setRpe(0); setFatiguePost(0); setMoodPost(0)
       haptic('success')
-      toast('Valoración guardada ✓')
+      toast('Valoración guardada')
       try {
         const name = profile?.athletes?.name || 'Una deportista'
         const rpeLabel = rpe ? ` · RPE ${rpe}/10` : ''
@@ -1482,7 +1485,7 @@ function AthleteTrainingWithRPE({ athleteId, athleteName, initialSessionId, onSe
       setSessionComment('')
       setEditingComment(false)
       haptic('success')
-      toast('Comentario enviado a Celia ✓')
+      toast('Comentario enviado a Celia')
       try {
         const athleteName = profile?.athletes?.name || 'Una deportista'
         sendPushToCoach({ title: `💬 ${athleteName}`, body: sessionComment.trim(), url: '/training' })
@@ -1503,7 +1506,7 @@ function AthleteTrainingWithRPE({ athleteId, athleteName, initialSessionId, onSe
       setPreSheet(null)
       setFatiguePre(0)
       haptic('success')
-      toast('Estado guardado ✓')
+      toast('Estado guardado')
     } catch {
       toast('Error al guardar', 'error')
       haptic('error')
@@ -1557,7 +1560,7 @@ function AthleteTrainingWithRPE({ athleteId, athleteName, initialSessionId, onSe
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
                         <div style={{ fontSize: 12, color: isToday ? 'var(--accent)' : color, fontWeight: 800, fontFamily: "'Barlow Condensed', sans-serif", textTransform: 'uppercase' }}>{formatDate(s.date)}</div>
-                        {isToday && <span className="badge badge-green" style={{ fontSize: 10 }}>HOY</span>}
+                        {isToday && <span className="badge badge-green" style={{ fontSize: 11 }}>HOY</span>}
                       </div>
                       <div style={{ fontWeight: 700, fontSize: 15 }}>{s.title}</div>
                       <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>{s.duration} min{s.exercises?.length > 0 ? ` · 📋 ${s.exercises.length} ejercicios` : ''}</div>
@@ -1712,7 +1715,7 @@ function AthleteTrainingWithRPE({ athleteId, athleteName, initialSessionId, onSe
                 </div>
                 {savedComment && !editingComment ? (
                   <div style={{ background: 'var(--surface)', borderRadius: 'var(--radius-sm)', padding: '10px 12px', fontSize: 14, color: 'var(--text)', lineHeight: 1.5 }}>
-                    <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.4px', marginBottom: 4 }}>Tu comentario</div>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.4px', marginBottom: 4 }}>Tu comentario</div>
                     <div>"{savedComment}"</div>
                     <button
                       className="btn btn-secondary btn-full"
@@ -1749,7 +1752,7 @@ function AthleteTrainingWithRPE({ athleteId, athleteName, initialSessionId, onSe
                 )}
                 {coachReply && (
                   <div style={{ marginTop: 10, padding: '10px 12px', background: 'var(--accent-dim)', borderRadius: 10, borderLeft: '3px solid var(--accent)' }}>
-                    <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: '0.4px', marginBottom: 4 }}>💬 Respuesta de Celia</div>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: '0.4px', marginBottom: 4 }}>💬 Respuesta de Celia</div>
                     <div style={{ fontSize: 14, color: 'var(--text)' }}>{coachReply}</div>
                   </div>
                 )}
@@ -1859,16 +1862,16 @@ function AthleteSessionRow({ session, last }) {
   return (
     <div className="list-item" style={{ borderBottom: last ? 'none' : undefined, cursor: 'default' }}>
       <div style={{ width: 52, height: 52, borderRadius: 14, background: isToday ? 'var(--accent)' : `${color}15`, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flexShrink: 0, border: isToday ? 'none' : `1.5px solid ${color}30` }}>
-        <div style={{ fontSize: 10, fontWeight: 800, color: isToday ? '#fff' : color, fontFamily: "'Barlow Condensed', sans-serif", textTransform: 'uppercase' }}>{days[date.getDay()]}</div>
+        <div style={{ fontSize: 11, fontWeight: 800, color: isToday ? '#fff' : color, fontFamily: "'Barlow Condensed', sans-serif", textTransform: 'uppercase' }}>{days[date.getDay()]}</div>
         <div style={{ fontSize: 18, fontWeight: 900, color: isToday ? '#fff' : 'var(--text)', lineHeight: 1, fontFamily: "'Barlow Condensed', sans-serif" }}>{date.getDate()}</div>
-        <div style={{ fontSize: 9, color: isToday ? 'rgba(255,255,255,0.8)' : 'var(--text-muted)', fontFamily: "'Barlow Condensed', sans-serif" }}>{months[date.getMonth()]}</div>
+        <div style={{ fontSize: 11, color: isToday ? 'rgba(255,255,255,0.8)' : 'var(--text-muted)', fontFamily: "'Barlow Condensed', sans-serif" }}>{months[date.getMonth()]}</div>
       </div>
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontWeight: 700, fontSize: 14, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{session.title}</div>
         <div style={{ color: 'var(--text-muted)', fontSize: 12, marginTop: 2 }}>{session.duration} min</div>
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4, flexShrink: 0 }}>
-        {isToday && <span className="badge badge-green" style={{ fontSize: 10 }}>HOY</span>}
+        {isToday && <span className="badge badge-green" style={{ fontSize: 11 }}>HOY</span>}
         <span style={{ fontSize: 18 }}>{icon}</span>
       </div>
     </div>
@@ -1997,7 +2000,7 @@ function AthleteNutrition({ athleteId }) {
         {/* Plan */}
         {plan ? (
           <div style={{ background: 'var(--card)', borderRadius: 16, padding: 14 }}>
-            <div style={{ fontSize: 11, fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: 10 }}>
+            <div style={{ fontSize: 12, fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: 10 }}>
               Tu plan · {MONTHS[plan.month]} {plan.year}
             </div>
 
@@ -2039,25 +2042,25 @@ function AthleteNutrition({ athleteId }) {
                   return <>
                     {activeMeals.map((meal, i) => (
                       <div key={i} style={{ marginBottom: 8, padding: '10px 12px', background: 'var(--bg)', borderRadius: 10 }}>
-                        {meal.name && <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', marginBottom: 3, textTransform: 'uppercase', letterSpacing: '0.3px' }}>{meal.name}</div>}
+                        {meal.name && <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', marginBottom: 3, textTransform: 'uppercase', letterSpacing: '0.3px' }}>{meal.name}</div>}
                         <div style={{ fontSize: 14, marginBottom: (meal.kcal||meal.protein||meal.carbs||meal.fat) ? 6 : 0, whiteSpace: 'pre-wrap' }}>{meal.content}</div>
                         {(meal.kcal||meal.protein||meal.carbs||meal.fat) && (
                           <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                            {meal.kcal ? <span style={{ fontSize: 10, fontWeight: 700, color: '#F97316', background: '#FFF7ED', borderRadius: 4, padding: '1px 5px' }}>{meal.kcal} kcal</span> : null}
-                            {meal.protein ? <span style={{ fontSize: 10, fontWeight: 700, color: '#3B82F6', background: '#EFF6FF', borderRadius: 4, padding: '1px 5px' }}>{meal.protein}g prot</span> : null}
-                            {meal.carbs ? <span style={{ fontSize: 10, fontWeight: 700, color: '#EAB308', background: '#FEFCE8', borderRadius: 4, padding: '1px 5px' }}>{meal.carbs}g HC</span> : null}
-                            {meal.fat ? <span style={{ fontSize: 10, fontWeight: 700, color: '#8B5CF6', background: '#F5F3FF', borderRadius: 4, padding: '1px 5px' }}>{meal.fat}g grasa</span> : null}
+                            {meal.kcal ? <span style={{ fontSize: 11, fontWeight: 700, color: '#F97316', background: '#FFF7ED', borderRadius: 4, padding: '1px 5px' }}>{meal.kcal} kcal</span> : null}
+                            {meal.protein ? <span style={{ fontSize: 11, fontWeight: 700, color: '#3B82F6', background: '#EFF6FF', borderRadius: 4, padding: '1px 5px' }}>{meal.protein}g prot</span> : null}
+                            {meal.carbs ? <span style={{ fontSize: 11, fontWeight: 700, color: '#EAB308', background: '#FEFCE8', borderRadius: 4, padding: '1px 5px' }}>{meal.carbs}g HC</span> : null}
+                            {meal.fat ? <span style={{ fontSize: 11, fontWeight: 700, color: '#8B5CF6', background: '#F5F3FF', borderRadius: 4, padding: '1px 5px' }}>{meal.fat}g grasa</span> : null}
                           </div>
                         )}
                       </div>
                     ))}
                     {hasMacros && (
                       <div style={{ marginTop: 6, padding: '8px 12px', background: 'var(--accent-dim)', borderRadius: 10, display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
-                        <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--accent)' }}>Total día:</span>
-                        {totals.kcal ? <span style={{ fontSize: 11, fontWeight: 700, color: '#F97316' }}>{totals.kcal} kcal</span> : null}
-                        {totals.protein ? <span style={{ fontSize: 11, fontWeight: 700, color: '#3B82F6' }}>{totals.protein}g prot</span> : null}
-                        {totals.carbs ? <span style={{ fontSize: 11, fontWeight: 700, color: '#EAB308' }}>{totals.carbs}g HC</span> : null}
-                        {totals.fat ? <span style={{ fontSize: 11, fontWeight: 700, color: '#8B5CF6' }}>{totals.fat}g grasa</span> : null}
+                        <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--accent)' }}>Total día:</span>
+                        {totals.kcal ? <span style={{ fontSize: 12, fontWeight: 700, color: '#F97316' }}>{totals.kcal} kcal</span> : null}
+                        {totals.protein ? <span style={{ fontSize: 12, fontWeight: 700, color: '#3B82F6' }}>{totals.protein}g prot</span> : null}
+                        {totals.carbs ? <span style={{ fontSize: 12, fontWeight: 700, color: '#EAB308' }}>{totals.carbs}g HC</span> : null}
+                        {totals.fat ? <span style={{ fontSize: 12, fontWeight: 700, color: '#8B5CF6' }}>{totals.fat}g grasa</span> : null}
                       </div>
                     )}
                   </>
@@ -2066,7 +2069,7 @@ function AthleteNutrition({ athleteId }) {
 
             {plan.notes && (
               <div style={{ marginTop: 8, padding: '10px 14px', background: 'var(--accent-dim)', borderRadius: 10, borderLeft: '3px solid var(--accent)' }}>
-                <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--accent)', marginBottom: 2 }}>📝 Notas de tu entrenadora</div>
+                <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--accent)', marginBottom: 2 }}>📝 Notas de tu entrenadora</div>
                 <div style={{ fontSize: 14 }}>{plan.notes}</div>
               </div>
             )}
@@ -2082,7 +2085,7 @@ function AthleteNutrition({ athleteId }) {
         {/* Historial últimos 30 días */}
         {logs.length > 0 && (
           <div style={{ marginTop: 8 }}>
-            <div style={{ fontSize: 11, fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: 8 }}>Mis últimos 30 días</div>
+            <div style={{ fontSize: 12, fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: 8 }}>Mis últimos 30 días</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
               {logs.map(l => (
                 <div key={l.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', background: 'var(--card)', borderRadius: 10 }}>

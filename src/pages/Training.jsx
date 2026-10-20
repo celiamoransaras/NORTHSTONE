@@ -105,6 +105,13 @@ export default function Training({ athleteId = null, coachView = false, embedded
     if (s) { openDetail(s); if (s.date < ymd(new Date())) setTab('past') }
     setOpenedFromState(true)
   }, [sessions, location.state, openedFromState]) // eslint-disable-line
+  // "Nueva sesión" desde el botón flotante
+  const [handledNew, setHandledNew] = useState(null)
+  useEffect(() => {
+    const t = location.state?.openNew
+    if (!t || t === handledNew || loading) return
+    setHandledNew(t); openNew()
+  }, [location.state, loading]) // eslint-disable-line
   useEffect(() => { loadTemplates() }, [user?.id])
 
   // Realtime: asistencia en tiempo real (vista entrenadora)
@@ -307,7 +314,7 @@ export default function Training({ athleteId = null, coachView = false, embedded
       })
     }
     await loadTemplates()
-    toast('Plantilla guardada ✓')
+    toast('Plantilla guardada')
     haptic('success')
   }
   const deleteTemplate = async (id) => {
@@ -576,11 +583,11 @@ export default function Training({ athleteId = null, coachView = false, embedded
                           {r && (r.rpe || r.fatigue_pre || r.fatigue_post || r.mood_post || r.rpe_notes) && (
                             <div style={{ marginTop: 6, marginLeft: 12 }}>
                               <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                                {r.fatigue_pre != null && <span style={{ fontSize: 11, background: 'var(--bg)', padding: '2px 8px', borderRadius: 6, color: 'var(--text-muted)' }}>😴 Pre: <strong>{r.fatigue_pre}</strong></span>}
-                                {r.rpe != null && <span style={{ fontSize: 11, background: 'var(--bg)', padding: '2px 8px', borderRadius: 6, color: 'var(--text-muted)' }}>💪 RPE: <strong>{r.rpe}</strong></span>}
-                                {r.fatigue_post != null && <span style={{ fontSize: 11, background: 'var(--bg)', padding: '2px 8px', borderRadius: 6, color: 'var(--text-muted)' }}>🥵 Post: <strong>{r.fatigue_post}</strong></span>}
-                                {r.mood_post != null && <span style={{ fontSize: 11, background: 'var(--bg)', padding: '2px 8px', borderRadius: 6, color: 'var(--text-muted)' }}>😊 Ánimo: <strong>{r.mood_post}</strong></span>}
-                                {r.fatigue_pre >= 8 && <span style={{ fontSize: 11, background: 'var(--error-dim)', color: 'var(--error)', padding: '2px 8px', borderRadius: 6 }}>⚠️ Cansancio alto</span>}
+                                {r.fatigue_pre != null && <span style={{ fontSize: 12, background: 'var(--bg)', padding: '2px 8px', borderRadius: 6, color: 'var(--text-muted)' }}>😴 Pre: <strong>{r.fatigue_pre}</strong></span>}
+                                {r.rpe != null && <span style={{ fontSize: 12, background: 'var(--bg)', padding: '2px 8px', borderRadius: 6, color: 'var(--text-muted)' }}>💪 RPE: <strong>{r.rpe}</strong></span>}
+                                {r.fatigue_post != null && <span style={{ fontSize: 12, background: 'var(--bg)', padding: '2px 8px', borderRadius: 6, color: 'var(--text-muted)' }}>🥵 Post: <strong>{r.fatigue_post}</strong></span>}
+                                {r.mood_post != null && <span style={{ fontSize: 12, background: 'var(--bg)', padding: '2px 8px', borderRadius: 6, color: 'var(--text-muted)' }}>😊 Ánimo: <strong>{r.mood_post}</strong></span>}
+                                {r.fatigue_pre >= 8 && <span style={{ fontSize: 12, background: 'var(--error-dim)', color: 'var(--error)', padding: '2px 8px', borderRadius: 6 }}>⚠️ Cansancio alto</span>}
                               </div>
                               {r.rpe_notes && (
                                 <div style={{ marginTop: 6, padding: '8px 10px', background: 'var(--bg)', borderRadius: 8, borderLeft: '3px solid var(--accent)', fontSize: 13, color: 'var(--text)', fontStyle: 'italic' }}>
@@ -862,14 +869,14 @@ function SessionCard({ session, athletes, onPress, formatDate }) {
       <div style={{ padding: '14px 16px', display: 'flex', gap: 14, alignItems: 'center' }}>
         {/* Date box */}
         <div style={{ width: 48, height: 56, borderRadius: 12, background: isToday ? typeColor : `${typeColor}15`, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flexShrink: 0, border: isToday ? 'none' : `1.5px solid ${typeColor}30` }}>
-          <div style={{ fontSize: 9, fontWeight: 800, color: isToday ? '#fff' : typeColor, fontFamily: "'Barlow Condensed', sans-serif", textTransform: 'uppercase', letterSpacing: '0.5px' }}>{days[date.getDay()]}</div>
+          <div style={{ fontSize: 11, fontWeight: 800, color: isToday ? '#fff' : typeColor, fontFamily: "'Barlow Condensed', sans-serif", textTransform: 'uppercase', letterSpacing: '0.5px' }}>{days[date.getDay()]}</div>
           <div style={{ fontSize: 20, fontWeight: 900, color: isToday ? '#fff' : 'var(--text)', lineHeight: 1.1, fontFamily: "'Barlow Condensed', sans-serif" }}>{date.getDate()}</div>
-          <div style={{ fontSize: 9, color: isToday ? 'rgba(255,255,255,0.8)' : 'var(--text-muted)', fontFamily: "'Barlow Condensed', sans-serif" }}>{months[date.getMonth()]}</div>
+          <div style={{ fontSize: 11, color: isToday ? 'rgba(255,255,255,0.8)' : 'var(--text-muted)', fontFamily: "'Barlow Condensed', sans-serif" }}>{months[date.getMonth()]}</div>
         </div>
         {/* Info */}
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
-            {isToday && <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 10, fontWeight: 800, color: '#fff', background: 'var(--success)', padding: '2px 6px', borderRadius: 5, textTransform: 'uppercase' }}>HOY</span>}
+            {isToday && <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 11, fontWeight: 800, color: '#fff', background: 'var(--success)', padding: '2px 6px', borderRadius: 5, textTransform: 'uppercase' }}>HOY</span>}
           </div>
           <div style={{ fontWeight: 700, fontSize: 15, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{session.title}</div>
           <div style={{ display: 'flex', gap: 10, marginTop: 5, alignItems: 'center' }}>
@@ -922,7 +929,7 @@ function CalendarView({ sessions, onSelectDay, onEmptyDay }) {
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 2, marginBottom: 6 }}>
         {DAYS.map(d => (
-          <div key={d} style={{ textAlign: 'center', fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', fontFamily: "'Barlow Condensed', sans-serif", padding: '4px 0' }}>{d}</div>
+          <div key={d} style={{ textAlign: 'center', fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', fontFamily: "'Barlow Condensed', sans-serif", padding: '4px 0' }}>{d}</div>
         ))}
       </div>
 

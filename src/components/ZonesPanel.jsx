@@ -36,10 +36,10 @@ const Card = ({ title, subtitle, children, right }) => (
 )
 const Row = ({ code, name, value, desc, last }) => (
   <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 0', borderBottom: last ? 'none' : '1px solid var(--border)' }}>
-    {code && <span style={{ minWidth: 40, textAlign: 'center', fontSize: 11, fontWeight: 800, padding: '3px 6px', borderRadius: 8, background: 'var(--accent-dim)', color: 'var(--accent)' }}>{code}</span>}
+    {code && <span style={{ minWidth: 40, textAlign: 'center', fontSize: 12, fontWeight: 800, padding: '3px 6px', borderRadius: 8, background: 'var(--accent-dim)', color: 'var(--accent)' }}>{code}</span>}
     <div style={{ flex: 1, minWidth: 0 }}>
       <div style={{ fontSize: 13, fontWeight: 700 }}>{name}</div>
-      {desc && <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>{desc}</div>}
+      {desc && <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 1 }}>{desc}</div>}
     </div>
     <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 800, fontSize: 16, whiteSpace: 'nowrap' }}>{value}</div>
   </div>
@@ -148,7 +148,7 @@ export default function ZonesPanel({ athleteId, athleteName = '', isCoach = fals
                   style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '10px 0', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left', color: 'var(--text)' }}>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontSize: 14, fontWeight: 700 }}>{r.lift}</div>
-                    <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>{fmtDate(r.date)}{r.record?.notes ? ` · ${r.record.notes}` : ''}</div>
+                    <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 1 }}>{fmtDate(r.date)}{r.record?.notes ? ` · ${r.record.notes}` : ''}</div>
                   </div>
                   <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 900, fontSize: 22, color: 'var(--accent)' }}>{fmtKg(r.value)}</div>
                   <span style={{ color: 'var(--text-dim)', fontSize: 14, transform: openLift === r.lift ? 'rotate(90deg)' : 'none', transition: 'transform 0.15s' }}>›</span>
@@ -157,7 +157,7 @@ export default function ZonesPanel({ athleteId, athleteName = '', isCoach = fals
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6, paddingBottom: 12 }}>
                     {[50, 55, 60, 65, 70, 75, 80, 85, 90, 95].map(p => (
                       <div key={p} style={{ textAlign: 'center', padding: '7px 2px', borderRadius: 10, background: 'var(--bg)', border: '1px solid var(--border)' }}>
-                        <div style={{ fontSize: 10, fontWeight: 800, color: 'var(--text-muted)' }}>{p} %</div>
+                        <div style={{ fontSize: 11, fontWeight: 800, color: 'var(--text-muted)' }}>{p} %</div>
                         <div style={{ fontSize: 13, fontWeight: 800 }}>{fmtKg(roundLoad(r.value * p / 100))}</div>
                       </div>
                     ))}
@@ -328,9 +328,9 @@ function RmSheet({ onClose, onSave, toast }) {
             <input className="input" type="date" max={ymd(new Date())} value={date} onChange={e => setDate(e.target.value)} />
           </div>
           <div style={{ textAlign: 'center', padding: '12px', borderRadius: 12, background: 'var(--accent-dim)', marginBottom: 14 }}>
-            <div style={{ fontSize: 11, fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.6px' }}>{Number(reps) > 1 ? '1RM estimado' : '1RM'}</div>
+            <div style={{ fontSize: 12, fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.6px' }}>{Number(reps) > 1 ? '1RM estimado' : '1RM'}</div>
             <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 900, fontSize: 30, color: 'var(--accent)' }}>{est ? fmtKg(est) : '–'}</div>
-            {Number(reps) > 1 && <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>Estimación orientativa (fórmula de Epley); es más fiable con 2-6 repeticiones</div>}
+            {Number(reps) > 1 && <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>Estimación orientativa (fórmula de Epley); es más fiable con 2-6 repeticiones</div>}
           </div>
           <button className="btn btn-primary btn-full" onClick={save} disabled={saving}>{saving ? 'Guardando...' : 'Guardar RM'}</button>
         </div>

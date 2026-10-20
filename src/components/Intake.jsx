@@ -337,7 +337,7 @@ export function IntakeFlow({ athlete, athleteId, existing, onDone, onClose }) {
             <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
               {[{ k: 'mark_5k', l: '5 km', ph: '25:00' }, { k: 'mark_10k', l: '10 km', ph: '52:00' }, { k: 'mark_hyrox', l: 'Hyrox', ph: '1:25:00' }].map(m => (
                 <div key={m.k} style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 700, marginBottom: 4 }}>{m.l}</div>
+                  <div style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 700, marginBottom: 4 }}>{m.l}</div>
                   <input className="input" inputMode="text" placeholder={m.ph} value={v[m.k] || ''} onChange={e => sv(m.k, e.target.value)} />
                 </div>
               ))}
@@ -547,7 +547,7 @@ export function IntakeSummary({ athleteId, athlete }) {
     <div className="card" style={{ padding: '14px 16px' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 8 }}>
         <div style={{ fontWeight: 800, fontSize: 14 }}>📝 Cuestionario de alta</div>
-        <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>Consentimiento {new Date(i.consent_at).toLocaleDateString('es-ES')}</div>
+        <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>Consentimiento {new Date(i.consent_at).toLocaleDateString('es-ES')}</div>
       </div>
       {i.deletion_requested_at && <div style={{ marginTop: 8, padding: 10, borderRadius: 10, background: 'var(--error-dim)', color: 'var(--error)', fontSize: 13, fontWeight: 700 }}>🗑 Pidió la baja y el borrado de sus datos el {new Date(i.deletion_requested_at).toLocaleDateString('es-ES')}</div>}
       {intakeNeedsUpdate(i) && <div style={{ marginTop: 8, fontSize: 12, color: 'var(--text-muted)' }}>⏳ Aún no ha contestado las preguntas nuevas: se le pedirán al entrar.</div>}
@@ -607,7 +607,7 @@ export function IntakeSummary({ athleteId, athlete }) {
           <Line label="Contacto">{[v.emergency_name, v.emergency_phone].filter(Boolean).join(' · ')}</Line>
         </Section>
       )}
-      <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 8 }}>Actualizado el {new Date(i.updated_at || i.consent_at).toLocaleDateString('es-ES')}</div>
+      <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 8 }}>Actualizado el {new Date(i.updated_at || i.consent_at).toLocaleDateString('es-ES')}</div>
     </div>
   )
 }

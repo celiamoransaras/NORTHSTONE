@@ -326,7 +326,7 @@ export default function Messages() {
           {Object.entries(grouped).map(([date, msgs]) => (
             <div key={date}>
               <div style={{ textAlign: 'center', margin: '16px 0 12px' }}>
-                <span style={{ fontSize: 11, color: 'var(--text-muted)', background: 'var(--surface)', padding: '3px 10px', borderRadius: 10 }}>{formatDate(msgs[0].ts)}</span>
+                <span style={{ fontSize: 12, color: 'var(--text-muted)', background: 'var(--surface)', padding: '3px 10px', borderRadius: 10 }}>{formatDate(msgs[0].ts)}</span>
               </div>
               {msgs.map(msg => {
                 const isMe = msg.sender === myId
@@ -336,7 +336,7 @@ export default function Messages() {
                 return (
                   <div key={msg.id} style={{ display: 'flex', flexDirection: isMe ? 'row-reverse' : 'row', gap: 8, marginBottom: 10, alignItems: 'flex-end' }}>
                     {!isMe && (
-                      <div style={{ width: 28, height: 28, borderRadius: '50%', flexShrink: 0, overflow: 'hidden', background: sender?.color+'30' || 'var(--accent-dim)', color: sender?.color || 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 700 }}>
+                      <div style={{ width: 28, height: 28, borderRadius: '50%', flexShrink: 0, overflow: 'hidden', background: sender?.color+'30' || 'var(--accent-dim)', color: sender?.color || 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700 }}>
                         {avatarUrl
                           ? <img src={avatarUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                           : (msg.senderName ? initials(msg.senderName) : '?')}
@@ -344,7 +344,7 @@ export default function Messages() {
                     )}
                     <div style={{ maxWidth: '75%', position: 'relative' }}>
                       {!isMe && msg.senderName && (
-                        <div style={{ fontSize: 11, color: sender?.color || 'var(--text-muted)', marginBottom: 3, marginLeft: 4, fontWeight: 600 }}>{msg.senderName}</div>
+                        <div style={{ fontSize: 12, color: sender?.color || 'var(--text-muted)', marginBottom: 3, marginLeft: 4, fontWeight: 600 }}>{msg.senderName}</div>
                       )}
                       <div style={{ display: 'flex', alignItems: 'flex-end', gap: 4, flexDirection: isMe ? 'row-reverse' : 'row' }}>
                       <div style={{ background: isMe ? 'var(--accent-gradient)' : 'var(--card)', color: isMe ? '#fff' : 'var(--text)', borderRadius: isMe ? '18px 18px 4px 18px' : '18px 18px 18px 4px', padding: msg.file_url && msg.file_type?.startsWith('image/') ? 4 : '10px 14px', fontSize: 14, border: isMe ? 'none' : '1px solid var(--border-light)', wordBreak: 'break-word', overflow: 'hidden', boxShadow: 'var(--shadow-sm)' }}>
@@ -380,12 +380,12 @@ export default function Messages() {
                           {Object.entries(reactions[msg.id]).map(([emoji, senders]) => (
                             <button key={emoji} onClick={() => toggleReaction(msg.id, emoji)}
                               style={{ display: 'flex', alignItems: 'center', gap: 3, background: senders.includes(myId) ? 'var(--accent-dim)' : 'var(--card)', border: `1px solid ${senders.includes(myId) ? 'var(--accent)' : 'var(--border)'}`, borderRadius: 12, padding: '2px 8px', fontSize: 13, cursor: 'pointer' }}>
-                              {emoji} <span style={{ fontSize: 11, fontWeight: 600 }}>{senders.length}</span>
+                              {emoji} <span style={{ fontSize: 12, fontWeight: 600 }}>{senders.length}</span>
                             </button>
                           ))}
                         </div>
                       )}
-                      <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 3, textAlign: isMe ? 'right' : 'left', padding: '0 4px' }}>{formatTime(msg.ts)}</div>
+                      <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 3, textAlign: isMe ? 'right' : 'left', padding: '0 4px' }}>{formatTime(msg.ts)}</div>
                     </div>
                   </div>
                 )

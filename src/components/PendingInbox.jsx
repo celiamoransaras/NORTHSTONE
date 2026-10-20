@@ -199,7 +199,7 @@ export default function PendingInbox({ athleteMap = {} }) {
       </div>
       {items.length === 0 && <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 4 }}>✅ Todo al día</div>}
       {items.length > 0 && closable.length < items.length && closable.length === 0 && (
-        <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 4 }}>Las peticiones de cambio de día y de baja se cierran al decidir.</div>
+        <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 4 }}>Las peticiones de cambio de día y de baja se cierran al decidir.</div>
       )}
       {visible.map((it, i) => (
         <div key={it.key} onClick={it.go} role={it.go ? 'button' : undefined}
@@ -217,7 +217,7 @@ export default function PendingInbox({ athleteMap = {} }) {
           </div>
           {it.closable && (
             <button aria-label="Marcar como visto" title="Marcar como visto" onClick={(e) => { e.stopPropagation(); dismiss([it]) }}
-              style={{ background: 'none', border: 'none', color: 'var(--text-dim)', fontSize: 15, cursor: 'pointer', padding: '0 4px', lineHeight: 1.4 }}>✕</button>
+              style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: 15, cursor: 'pointer', padding: 0, minWidth: 40, minHeight: 40, marginTop: -8 }}>✕</button>
           )}
           {it.go && <span style={{ color: 'var(--text-dim)', fontSize: 18 }}>›</span>}
         </div>

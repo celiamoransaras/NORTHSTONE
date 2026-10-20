@@ -77,7 +77,7 @@ const Kpis = ({ items }) => (
     {items.map(k => (
       <div key={k.label} className="card" style={{ padding: '12px 8px', margin: 0, textAlign: 'center' }}>
         <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 900, fontSize: 20, color: k.color, lineHeight: 1.1 }}>{k.value}</div>
-        <div style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700, letterSpacing: '0.5px', marginTop: 4 }}>{k.label}</div>
+        <div style={{ fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700, letterSpacing: '0.5px', marginTop: 4 }}>{k.label}</div>
       </div>
     ))}
   </div>
@@ -90,11 +90,11 @@ const Splits = ({ rows }) => (
         <span style={{ width: 8, height: 8, borderRadius: '50%', background: r.kind === 'run' ? '#10B981' : '#F59E0B', flexShrink: 0 }} />
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontWeight: 700, fontSize: 14 }}>{r.label}</div>
-          <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{r.detail}</div>
+          <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{r.detail}</div>
         </div>
         <div style={{ textAlign: 'right' }}>
           <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 800, fontSize: 16 }}>{fmt(r.split)}</div>
-          <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>⏱ {fmt(r.clock)}</div>
+          <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>⏱ {fmt(r.clock)}</div>
         </div>
       </div>
     ))}
@@ -187,14 +187,14 @@ export default function HyroxPlanner({ athleteId }) {
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
                 <div>
                   <div style={{ fontWeight: 700, fontSize: 14 }}>Ritmo de carrera en Hyrox</div>
-                  <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>El de competición, cansada entre estaciones (min/km)</div>
+                  <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>El de competición, cansada entre estaciones (min/km)</div>
                 </div>
                 <input style={timeInput} inputMode="numeric" value={paceTxt} onChange={e => setPaceTxt(e.target.value)} aria-label="Ritmo por kilómetro" placeholder="5:40" />
               </div>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginTop: 14 }}>
                 <div>
                   <div style={{ fontWeight: 700, fontSize: 14 }}>Transiciones (Roxzone)</div>
-                  <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2 }}>Tiempo total entrando y saliendo de estaciones</div>
+                  <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>Tiempo total entrando y saliendo de estaciones</div>
                 </div>
                 <input style={timeInput} inputMode="numeric" value={roxTxt} onChange={e => setRoxTxt(e.target.value)} aria-label="Tiempo total de transiciones" placeholder="7:00" />
               </div>
@@ -206,7 +206,7 @@ export default function HyroxPlanner({ athleteId }) {
                 <div key={st.key} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 16px', borderBottom: i < STATIONS.length - 1 ? '1px solid var(--border)' : 'none' }}>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontWeight: 700, fontSize: 14 }}>{st.name} <span style={{ fontWeight: 500, color: 'var(--text-muted)', fontSize: 12 }}>· {st.detail}</span></div>
-                    <div style={{ fontSize: 11, color: fromRecords[st.key] && stTxt[st.key] === fmt(fromRecords[st.key]) ? 'var(--success)' : 'var(--text-muted)' }}>
+                    <div style={{ fontSize: 12, color: fromRecords[st.key] && stTxt[st.key] === fmt(fromRecords[st.key]) ? 'var(--success)' : 'var(--text-muted)' }}>
                       {fromRecords[st.key] && stTxt[st.key] === fmt(fromRecords[st.key]) ? '✓ De tus marcas' : `Referencia ${fmt(st.ref)}`}
                     </div>
                   </div>

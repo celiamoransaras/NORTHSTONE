@@ -107,7 +107,7 @@ export default function Dashboard() {
   return (
     <div className="page fade-in">
       {/* Hero */}
-      <div style={{ padding: '28px 20px 20px', background: 'linear-gradient(160deg, rgba(37,99,235,0.05) 0%, transparent 60%)' }}>
+      <div className="page-hero" style={{ padding: '28px 20px 20px', background: 'linear-gradient(160deg, rgba(37,99,235,0.05) 0%, transparent 60%)' }}>
         <div style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 6 }}>
           {dayNames[today.getDay()]}, {today.getDate()} {monthNames[today.getMonth()]}
         </div>
@@ -148,7 +148,7 @@ export default function Dashboard() {
                   </div>
                   <div style={{ textAlign: 'right', flexShrink: 0 }}>
                     <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 900, fontSize: 22, color: 'var(--error)', lineHeight: 1 }}>{a.fatigue_pre}<span style={{ fontSize: 12 }}>/10</span></div>
-                    <div style={{ fontSize: 11, color: 'var(--accent)', fontWeight: 600 }}>Hablar →</div>
+                    <div style={{ fontSize: 12, color: 'var(--accent)', fontWeight: 600 }}>Hablar →</div>
                   </div>
                 </div>
               )
@@ -178,17 +178,6 @@ export default function Dashboard() {
           <StatCard value={stats.sessionsThisMonth} label="Sesiones" color="var(--accent)" icon="📅" onClick={() => navigate('/training')} />
           <StatCard value={`${stats.paidCount}/${stats.totalPayments}`} label="Pagos al día" color="#059669" icon="💳" onClick={() => navigate('/payments')} />
         </div>
-
-        {/* Nueva sesión */}
-        <button onClick={() => navigate('/training')}
-          style={{ width: '100%', padding: '14px 18px', borderRadius: 'var(--radius)', background: 'var(--accent-gradient)', border: 'none', boxShadow: 'var(--accent-glow)', display: 'flex', alignItems: 'center', gap: 14, cursor: 'pointer', textAlign: 'left' }}>
-          <span style={{ fontSize: 26 }}>➕</span>
-          <div style={{ flex: 1 }}>
-            <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 800, fontSize: 16, textTransform: 'uppercase', color: '#fff' }}>Nueva sesión</div>
-            <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.8)', marginTop: 2 }}>Crear o planificar entrenamiento</div>
-          </div>
-          <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: 22 }}>→</span>
-        </button>
 
         {/* Próximas sesiones */}
         {upcomingSessions.length > 0 && (
@@ -241,41 +230,36 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* Estadísticas del equipo */}
-        <button onClick={() => setStatsOpen(true)}
-          style={{ width: '100%', padding: '14px 18px', borderRadius: 'var(--radius)', background: 'var(--card)', border: '1px solid var(--border)', boxShadow: 'var(--shadow)', display: 'flex', alignItems: 'center', gap: 14, cursor: 'pointer', textAlign: 'left' }}>
-          <span style={{ fontSize: 28 }}>📊</span>
-          <div style={{ flex: 1 }}>
-            <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 800, fontSize: 16, textTransform: 'uppercase' }}>Estadísticas del equipo</div>
-            <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>Volumen, distribución y ranking</div>
-          </div>
-          <span style={{ color: 'var(--text-dim)', fontSize: 20 }}>›</span>
-        </button>
+        {/* Seguimiento: lo que se mira cada semana */}
+        <Fold id="team" title="Seguimiento del equipo" defaultOpen>
+          <WeeklyAdherenceSection athleteMap={athleteMap} />
+          <TeamWellnessSection />
+          <TeamCycleSection athleteMap={athleteMap} />
+          <UpcomingGoalsSection athleteMap={athleteMap} />
+        </Fold>
 
+        {/* Consulta ocasional */}
+        <Fold id="tools" title="Estadísticas y herramientas">
+          <button onClick={() => setStatsOpen(true)}
+            style={{ width: '100%', padding: '14px 18px', borderRadius: 'var(--radius)', background: 'var(--card)', border: '1px solid var(--border)', boxShadow: 'var(--shadow)', display: 'flex', alignItems: 'center', gap: 14, cursor: 'pointer', textAlign: 'left', color: 'var(--text)' }}>
+            <span style={{ fontSize: 28 }}>📊</span>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 800, fontSize: 16, textTransform: 'uppercase' }}>Estadísticas del equipo</div>
+              <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>Volumen, distribución y ranking</div>
+            </div>
+            <span style={{ color: 'var(--text-dim)', fontSize: 20 }}>›</span>
+          </button>
+          <button onClick={() => setInstallOpen(true)}
+            style={{ width: '100%', padding: '12px 18px', borderRadius: 'var(--radius)', background: 'var(--card)', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 14, cursor: 'pointer', textAlign: 'left', color: 'var(--text)' }}>
+            <span style={{ fontSize: 24 }}>📲</span>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontWeight: 800, fontSize: 14 }}>Cómo instalar la app</div>
+              <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>Pasos para iPhone y Android · enlace para tus deportistas</div>
+            </div>
+            <span style={{ color: 'var(--text-dim)', fontSize: 20 }}>›</span>
+          </button>
+        </Fold>
         {statsOpen && <TeamStatsSheet onClose={() => setStatsOpen(false)} />}
-
-        {/* Enlace de instalación para las deportistas */}
-        <button onClick={() => setInstallOpen(true)}
-          style={{ width: '100%', padding: '12px 18px', borderRadius: 'var(--radius)', background: 'var(--card)', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 14, cursor: 'pointer', textAlign: 'left' }}>
-          <span style={{ fontSize: 24 }}>📲</span>
-          <div style={{ flex: 1 }}>
-            <div style={{ fontWeight: 800, fontSize: 14 }}>Cómo instalar la app</div>
-            <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>Pasos para iPhone y Android · enlace para tus deportistas</div>
-          </div>
-          <span style={{ color: 'var(--text-dim)', fontSize: 20 }}>›</span>
-        </button>
-
-        {/* Próximas competiciones y objetivos con fecha */}
-        <UpcomingGoalsSection athleteMap={athleteMap} />
-
-        {/* Adherencia semanal */}
-        <WeeklyAdherenceSection athleteMap={athleteMap} />
-
-        {/* Bienestar del equipo hoy */}
-        <TeamWellnessSection />
-
-        {/* Ciclo menstrual del equipo */}
-        <TeamCycleSection athleteMap={athleteMap} />
 
       </div>
     </div>
@@ -371,7 +355,7 @@ function TeamStatsSheet({ onClose }) {
                     </div>
                     <div style={{ textAlign: 'right', flexShrink: 0 }}>
                       <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 900, fontSize: 22, color: a.color, lineHeight: 1 }}>{a.count}</div>
-                      <div style={{ fontSize: 10, color: 'var(--text-muted)' }}>sesiones</div>
+                      <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>sesiones</div>
                     </div>
                   </div>
                 ))}
@@ -430,7 +414,7 @@ function TeamWellnessSection() {
           </div>
         </div>
         {alerts.length > 0 && (
-          <span style={{ background: 'var(--error-dim)', color: 'var(--error)', fontSize: 11, fontWeight: 700, padding: '4px 10px', borderRadius: 20, fontFamily: "'Barlow Condensed', sans-serif" }}>
+          <span style={{ background: 'var(--error-dim)', color: 'var(--error)', fontSize: 12, fontWeight: 700, padding: '4px 10px', borderRadius: 20, fontFamily: "'Barlow Condensed', sans-serif" }}>
             ⚠️ {alerts.length} alerta{alerts.length !== 1 ? 's' : ''}
           </span>
         )}
@@ -453,7 +437,7 @@ function TeamWellnessSection() {
               <div style={{ width: 8, height: 8, borderRadius: '50%', background: color, flexShrink: 0 }} />
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontWeight: 600, fontSize: 14 }}>{name}</div>
-                <div style={{ fontSize: 11, color: isToday ? 'var(--success)' : 'var(--text-muted)', marginTop: 1 }}>
+                <div style={{ fontSize: 12, color: isToday ? 'var(--success)' : 'var(--text-muted)', marginTop: 1 }}>
                   {dateLabel(e.date)}
                 </div>
               </div>
@@ -466,7 +450,7 @@ function TeamWellnessSection() {
                 ].map(({ emoji, label }) => (
                   <div key={label} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
                     <span style={{ fontSize: 20 }}>{emoji}</span>
-                    <span style={{ fontSize: 9, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.3px' }}>{label}</span>
+                    <span style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.3px' }}>{label}</span>
                   </div>
                 ))}
               </div>
@@ -534,7 +518,7 @@ function WeeklyAdherenceSection({ athleteMap }) {
     <>
       <div className="section-title" style={{ marginTop: 4 }}>
         Carga semanal del equipo
-        <span style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 400, marginLeft: 6, textTransform: 'none', fontFamily: 'inherit' }}>
+        <span style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 400, marginLeft: 6, textTransform: 'none', fontFamily: 'inherit' }}>
           {fmt(mon)} – {fmt(sun)}
         </span>
       </div>
@@ -547,7 +531,7 @@ function WeeklyAdherenceSection({ athleteMap }) {
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
                 {a.avatar_url
                   ? <img src={a.avatar_url} style={{ width: 28, height: 28, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
-                  : <div style={{ width: 28, height: 28, borderRadius: '50%', background: a.color+'20', color: a.color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 11, flexShrink: 0, fontFamily: "'Barlow Condensed', sans-serif" }}>
+                  : <div style={{ width: 28, height: 28, borderRadius: '50%', background: a.color+'20', color: a.color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 12, flexShrink: 0, fontFamily: "'Barlow Condensed', sans-serif" }}>
                       {a.name?.split(' ').map(w=>w[0]).join('').slice(0,2)}
                     </div>
                 }
@@ -582,16 +566,16 @@ function SessionRow({ session, last, onClick }) {
   return (
     <div className="list-item" onClick={onClick} style={{ borderBottom: last ? 'none' : undefined }}>
       <div style={{ width: 52, height: 52, borderRadius: 14, background: isToday ? 'var(--accent)' : `${color}15`, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flexShrink: 0, border: isToday ? 'none' : `1.5px solid ${color}30` }}>
-        <div style={{ fontSize: 10, fontWeight: 800, color: isToday ? '#fff' : color, fontFamily: "'Barlow Condensed', sans-serif", textTransform: 'uppercase' }}>{days[date.getDay()]}</div>
+        <div style={{ fontSize: 11, fontWeight: 800, color: isToday ? '#fff' : color, fontFamily: "'Barlow Condensed', sans-serif", textTransform: 'uppercase' }}>{days[date.getDay()]}</div>
         <div style={{ fontSize: 18, fontWeight: 900, color: isToday ? '#fff' : 'var(--text)', lineHeight: 1, fontFamily: "'Barlow Condensed', sans-serif" }}>{date.getDate()}</div>
-        <div style={{ fontSize: 9, color: isToday ? 'rgba(255,255,255,0.8)' : 'var(--text-muted)', fontFamily: "'Barlow Condensed', sans-serif" }}>{months[date.getMonth()]}</div>
+        <div style={{ fontSize: 11, color: isToday ? 'rgba(255,255,255,0.8)' : 'var(--text-muted)', fontFamily: "'Barlow Condensed', sans-serif" }}>{months[date.getMonth()]}</div>
       </div>
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontWeight: 700, fontSize: 14, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{session.title}</div>
         <div style={{ color: 'var(--text-muted)', fontSize: 12, marginTop: 2 }}>{session.duration} min · {session.athlete_ids?.length || 0} deportistas</div>
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4, flexShrink: 0 }}>
-        {isToday && <span className="badge badge-green" style={{ fontSize: 10 }}>HOY</span>}
+        {isToday && <span className="badge badge-green" style={{ fontSize: 11 }}>HOY</span>}
         <span style={{ fontSize: 18 }}>{icon}</span>
       </div>
     </div>
@@ -642,7 +626,7 @@ function TeamCycleSection({ athleteMap }) {
           <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>Fase actual según lo que registra cada deportista</div>
         </div>
         {late > 0 && (
-          <span style={{ background: 'var(--error-dim)', color: 'var(--error)', fontSize: 11, fontWeight: 700, padding: '4px 10px', borderRadius: 20, fontFamily: "'Barlow Condensed', sans-serif" }}>
+          <span style={{ background: 'var(--error-dim)', color: 'var(--error)', fontSize: 12, fontWeight: 700, padding: '4px 10px', borderRadius: 20, fontFamily: "'Barlow Condensed', sans-serif" }}>
             ⚠️ {late} a revisar
           </span>
         )}
@@ -657,7 +641,7 @@ function TeamCycleSection({ athleteMap }) {
             <div style={{ width: 8, height: 8, borderRadius: '50%', background: a.color || 'var(--accent)', flexShrink: 0 }} />
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontWeight: 600, fontSize: 14 }}>{a.name}</div>
-              <div style={{ fontSize: 11, color: state === 'late' ? 'var(--error)' : 'var(--text-muted)', marginTop: 1 }}>
+              <div style={{ fontSize: 12, color: state === 'late' ? 'var(--error)' : 'var(--text-muted)', marginTop: 1 }}>
                 {state === 'late' && `Sin registrar la regla desde hace ${daysSince} días · pregúntale cómo está`}
                 {state === 'ok' && phase && `Día ${phase.day} del ciclo`}
                 {state === 'none' && 'Aún no ha registrado su ciclo'}
@@ -705,7 +689,7 @@ function UpcomingGoalsSection({ athleteMap }) {
               <span style={{ fontSize: 18 }}>{goalIcon(g.title)}</span>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontWeight: 700, fontSize: 14, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{g.title}</div>
-                <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>
+                <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 1 }}>
                   <span style={{ color: a?.color || 'var(--text-muted)', fontWeight: 700 }}>{a?.name || 'Deportista'}</span> · {formatGoalDate(g.deadline)}
                 </div>
               </div>
@@ -714,6 +698,22 @@ function UpcomingGoalsSection({ athleteMap }) {
           )
         })}
       </div>
+    </div>
+  )
+}
+
+// Sección plegable que recuerda si la dejaste abierta o cerrada
+function Fold({ id, title, defaultOpen = false, children }) {
+  const key = 'ns_fold_' + id
+  const [open, setOpen] = useState(() => { try { const v = localStorage.getItem(key); return v === null ? defaultOpen : v === '1' } catch { return defaultOpen } })
+  const toggle = () => setOpen(o => { try { localStorage.setItem(key, o ? '0' : '1') } catch { /* sin almacenamiento */ } return !o })
+  return (
+    <div>
+      <button className="fold-head" onClick={toggle} aria-expanded={open}>
+        <span>{title}</span>
+        <span style={{ fontSize: 16, transform: open ? 'rotate(90deg)' : 'none', transition: 'transform 0.15s' }}>›</span>
+      </button>
+      {open && <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>{children}</div>}
     </div>
   )
 }
