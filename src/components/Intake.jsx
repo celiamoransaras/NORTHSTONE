@@ -69,11 +69,15 @@ export function IntakeFlow({ athlete, athleteId, existing, onDone, onClose }) {
   const questions = PARQ.filter(p => !p.femaleOnly || female)
   const parqDone = questions.every(p => typeof f.parq[p.key] === 'boolean')
   const flag = parqFlag(f.parq)
-  const toggleList = (k, v) => set(k, f[k].includes(v) ? f[k].filter(x => x !== v) : [...f[k], v])
-  const goalsList = f.goals ? f.goals.split(' · ').filter(Boolean) : []
-  const toggleGoal = (g) => set('goals', (goalsList.includes(g) ? goalsList.filter(x => x !== g) : [...goalsList, g]).join(' · '))
-  const equipList = f.equipment ? f.equipment.split(' · ').filter(Boolean) : []
-  const toggleEquip = (g) => set('equipment', (equipList.includes(g) ? equipList.filter(x => x !== g) : [...equipList, g]).join(' · '))
+  // Siempre sobre el estado más reciente (si se toca muy rápido no se pierde ninguna respuesta)
+  const toggleList = (k, v) => setF(x => ({ ...x, [k]: x[k].includes(v) ? x[k].filter(y => y !== v) : [...x[k], v] }))
+  const split = (str) => str ? str.split(' · ').filter(Boolean) : []
+  const toggleText = (k, g) => setF(x => { const l = split(x[k]); return { ...x, [k]: (l.includes(g) ? l.filter(y => y !== g) : [...l, g]).join(' · ') } })
+  const goalsList = split(f.goals)
+  const toggleGoal = (g) => toggleText('goals', g)
+  const equipList = split(f.equipment)
+  const toggleEquip = (g) => toggleText('equipment', g)
+  const answer = (key, v) => setF(x => ({ ...x, parq: { ...x.parq, [key]: v } }))
 
   const save = async () => {
     setSaving(true)
@@ -146,7 +150,7 @@ export function IntakeFlow({ athlete, athleteId, existing, onDone, onClose }) {
                 <div style={{ fontSize: 14, lineHeight: 1.45, marginBottom: 10 }}>{p.q}</div>
                 <div style={{ display: 'flex', gap: 8 }}>
                   {[{ v: false, l: 'No' }, { v: true, l: 'Sí' }].map(o => (
-                    <button key={o.l} type="button" onClick={() => set('parq', { ...f.parq, [p.key]: o.v })}
+                    <button key={o.l} type="button" onClick={() => answer(p.key, o.v)}
                       style={{ flex: 1, padding: '9px', borderRadius: 10, fontWeight: 800, cursor: 'pointer', border: `1.5px solid ${f.parq[p.key] === o.v ? (o.v ? 'var(--warning)' : 'var(--success)') : 'var(--border)'}`, background: f.parq[p.key] === o.v ? (o.v ? 'var(--warning-dim, #FEF3C7)' : 'var(--success-dim)') : 'var(--bg)', color: 'var(--text)' }}>
                       {o.l}
                     </button>
