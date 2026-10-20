@@ -5,7 +5,7 @@ import { ymd } from '../lib/dates'
 import { Sessions, isPendingPayment } from '../lib/db'
 import { sendPushToAthletes } from '../lib/pushNotifications'
 import { isTestOrRm } from '../lib/zones'
-import { intakeComplete } from './Intake'
+import { intakeComplete, intakeFlags } from './Intake'
 import { useToast } from '../contexts/ToastContext'
 
 const fmtDay = (d) => new Date(d + 'T12:00:00').toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric', month: 'short' })
@@ -81,7 +81,7 @@ export default function PendingInbox({ athleteMap = {} }) {
     const [dismissed, reqs, intakes, comments, recs, recent, wellness, pays] = await Promise.all([
       loadDismissed(),
       supabase.from('session_change_requests').select('*, sessions(title)').eq('status', 'pending').order('created_at'),
-      supabase.from('athlete_intake').select('athlete_id, consent_privacy, consent_health, consent_version, parq_flag, coach_seen_at, deletion_requested_at, updated_at'),
+      supabase.from('athlete_intake').select('*'),
       supabase.from('session_athletes').select('athlete_id, session_id, rpe_notes, coach_reply, sessions!inner(title, date)').not('rpe_notes', 'is', null).is('coach_reply', null).gte('sessions.date', daysAgo(14)),
       supabase.from('personal_records').select('athlete_id, name, date').gte('date', daysAgo(3)),
       supabase.from('session_athletes').select('athlete_id, attended, sessions!inner(date)').gte('sessions.date', daysAgo(7)).lte('sessions.date', ymd(now)),
@@ -103,8 +103,8 @@ export default function PendingInbox({ athleteMap = {} }) {
         title: `${name(i.athlete_id)} pide la baja y el borrado de sus datos`, sub: `Desde el ${new Date(i.deletion_requested_at).toLocaleDateString('es-ES')}`,
       }))
       ;(intakes.data || []).filter(i => intakeComplete(i) && !i.coach_seen_at && athleteMap[i.athlete_id]).forEach(i => out.push({
-        key: 'int:' + i.athlete_id + ':' + (i.updated_at || ''), seen: i.athlete_id, icon: i.parq_flag ? '⚠️' : '📝', prio: i.parq_flag ? 0 : 2, go: () => navigate('/athletes', { state: { openAthlete: i.athlete_id } }),
-        title: `${name(i.athlete_id)} ha rellenado su cuestionario de alta`, sub: i.parq_flag ? 'Tiene respuestas de salud a revisar' : 'Toca para verlo',
+        key: 'int:' + i.athlete_id + ':' + (i.updated_at || ''), seen: i.athlete_id, flags: intakeFlags(i), icon: intakeFlags(i).length ? '⚠️' : '📝', prio: intakeFlags(i).length ? 0 : 2, go: () => navigate('/athletes', { state: { openAthlete: i.athlete_id } }),
+        title: `${name(i.athlete_id)} ha rellenado su cuestionario de alta`, sub: intakeFlags(i).length ? '⚠️ ' + intakeFlags(i).join(' · ') : 'Toca para verlo',
       }))
       const missing = active.filter(a => !intakeComplete(byId[a.id]))
       if (missing.length) out.push({

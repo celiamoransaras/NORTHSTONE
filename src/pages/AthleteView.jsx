@@ -3,7 +3,7 @@ import { InstallGuide, InstallBanner } from '../components/InstallGuide'
 import { isStandalone } from '../lib/install'
 import ZonesPanel from '../components/ZonesPanel'
 import SessionActions from '../components/SessionActions'
-import { IntakeFlow, PrivacyActions, loadIntake, intakeComplete } from '../components/Intake'
+import { IntakeFlow, PrivacyActions, loadIntake, intakeComplete, intakeNeedsUpdate } from '../components/Intake'
 import { downloadICS } from '../lib/ics'
 import SessionTargets from '../components/SessionTargets'
 import { ymd } from '../lib/dates'
@@ -62,7 +62,7 @@ export default function AthleteView() {
   const [intakeState, setIntakeState] = useState(null) // null = cargando · { unavailable } · { intake }
   const [intakeEdit, setIntakeEdit] = useState(false)
   useEffect(() => { if (athleteId) loadIntake(athleteId).then(setIntakeState) }, [athleteId])
-  const needsIntake = intakeState && !intakeState.unavailable && !intakeComplete(intakeState.intake)
+  const needsIntake = intakeState && !intakeState.unavailable && (!intakeComplete(intakeState.intake) || intakeNeedsUpdate(intakeState.intake))
   const [tabDir, setTabDir] = useState(1)
   const [tabKey, setTabKey] = useState(0)
   const TAB_ORDER = ['home', 'training', 'nutrition', 'progress', 'messages'].filter(t => t !== 'nutrition' || FEATURES.nutrition)
