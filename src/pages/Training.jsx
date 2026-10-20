@@ -5,6 +5,8 @@ import { useState, useEffect } from 'react'
 import { Sessions, Athletes, RPE } from '../lib/db'
 import ConfirmSheet from '../components/ConfirmSheet'
 import CopyWeekSheet from '../components/CopyWeekSheet'
+import WeekView, { addDays } from '../components/WeekView'
+import { loadGroups, loadBlocks, saveBlock, BlockPicker, GroupsSheet } from '../components/PlanningLibrary'
 import { useToast } from '../contexts/ToastContext'
 import { haptic } from '../lib/haptic'
 import { sendPushToAthletes, sendPushToCoach } from '../lib/pushNotifications'
@@ -42,7 +44,7 @@ export default function Training({ athleteId = null, coachView = false, embedded
   const [saving, setSaving] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(null)
   const [replyDraft, setReplyDraft] = useState({}) // { [athleteId]: texto }
-  const [tab, setTab] = useState('upcoming')
+  const [tab, setTab] = useState(embedded ? 'upcoming' : 'week')
   const [filterType, setFilterType] = useState(() => sessionStorage.getItem('training_filter') || null)
 
   const setFilterTypePersisted = (value) => {
@@ -58,6 +60,23 @@ export default function Training({ athleteId = null, coachView = false, embedded
   const [daySessionsToSelect, setDaySessionsToSelect] = useState([])
   const [libraryFor, setLibraryFor] = useState(null) // índice del entrenamiento con la biblioteca abierta
   const [libraryQuery, setLibraryQuery] = useState('')
+  const [groups, setGroups] = useState(null)   // null = no disponible
+  const [blocks, setBlocks] = useState(null)
+  const [blockPickerOpen, setBlockPickerOpen] = useState(false)
+  const [groupsOpen, setGroupsOpen] = useState(false)
+  const [search, setSearch] = useState('')
+  const [athleteFilter, setAthleteFilter] = useState('')
+  const [extraDates, setExtraDates] = useState([])
+  const [snapshot, setSnapshot] = useState('')
+  const [confirmDiscard, setConfirmDiscard] = useState(false)
+  const [movingId, setMovingId] = useState(null)
+  const [templateQuery, setTemplateQuery] = useState('')
+  const canPlan = !athleteId || coachView
+  useEffect(() => {
+    if (!canPlan) return
+    loadGroups().then(setGroups)
+    loadBlocks().then(setBlocks)
+  }, [canPlan])
 
   const loadTemplates = async () => {
     if (!user?.id) return
@@ -120,20 +139,45 @@ export default function Training({ athleteId = null, coachView = false, embedded
   const upcoming = sessions.filter(s => s.date >= today)
   const past = sessions.filter(s => s.date < today).reverse()
   const baseList = tab === 'upcoming' ? upcoming : past
-  const displayed = filterType ? baseList.filter(s => s.type === filterType) : baseList
+  const q = search.trim().toLowerCase()
+  const displayed = baseList
+    .filter(s => !filterType || s.type === filterType)
+    .filter(s => !athleteFilter || (s.athlete_ids || []).includes(athleteFilter))
+    .filter(s => !q || `${s.title} ${s.notes || ''} ${(s.exercises || []).map(e => e.name).join(' ')}`.toLowerCase().includes(q))
 
-  const openNew = () => {
+  // ¿Hay cambios sin guardar en el formulario?
+  const isDirty = () => sheet === 'form' && (JSON.stringify(form) !== snapshot || extraDates.length > 0)
+  const closeForm = () => { if (isDirty()) setConfirmDiscard(true); else setSheet(null) }
+  const openForm = (f, editId = null) => { setForm(f); setSnapshot(JSON.stringify(f)); setExtraDates([]); setEditing(editId); setShowTemplates(false); setTemplateQuery(''); setSheet('form') }
+
+  const openNew = (date) => {
     const base = newEmptyForm()
+    if (typeof date === 'string') base.date = date
     if (athleteId) base.athlete_ids = [athleteId]
-    setForm(base); setEditing(null); setSheet('form')
+    openForm(base)
   }
-  const openEdit = (s) => { setForm({ ...s, exercises: [...(s.exercises||[])], athlete_ids: [...(s.athlete_ids||[])] }); setEditing(s.id); setSheet('form') }
+  const openEdit = (s) => openForm({ ...s, exercises: [...(s.exercises||[])], athlete_ids: [...(s.athlete_ids||[])] }, s.id)
+  // Duplicar: mismo día de la semana siguiente (o el próximo que aún no haya pasado)
   const duplicateSession = (s) => {
-    const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate() + 1)
-    const { id: _id, ...rest } = s
-    setForm({ ...rest, date: ymd(tomorrow), exercises: [...(s.exercises||[])], athlete_ids: [...(s.athlete_ids||[])] })
-    setEditing(null)
-    setSheet('form')
+    const { id: _id, attendance: _a, ratings: _r, session_athletes: _sa, ...rest } = s
+    let date = addDays(s.date, 7)
+    while (date < today) date = addDays(date, 7)
+    openForm({ ...rest, date, exercises: (s.exercises||[]).map(e => ({ ...e, id: crypto.randomUUID() })), athlete_ids: [...(s.athlete_ids||[])] })
+    toast('Copia preparada para el ' + new Date(date + 'T12:00:00').toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'short' }) + ': revisa y guarda', 'info')
+  }
+  // Mover una sesión de día desde la vista semana
+  const moveSession = async (s, newDate) => {
+    setMovingId(s.id)
+    const { error } = await supabase.from('sessions').update({ date: newDate }).eq('id', s.id)
+    setMovingId(null)
+    if (error) { toast('No se pudo mover', 'error'); return }
+    setSessions(prev => prev.map(x => x.id === s.id ? { ...x, date: newDate } : x).sort((a, b) => a.date.localeCompare(b.date)))
+    haptic('light')
+    if ((s.athlete_ids || []).length && newDate >= today) {
+      try {
+        sendPushToAthletes(s.athlete_ids, { title: '📅 Sesión movida', body: `${s.title} · ${new Date(newDate + 'T12:00:00').toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })}`, url: '/?tab=training' })
+      } catch { /* aviso opcional */ }
+    }
   }
   const openDetail = (s) => {
     setDetailSession(s)
@@ -205,23 +249,26 @@ export default function Training({ athleteId = null, coachView = false, embedded
           }
         }
       } else {
-        await Sessions.create(safeForm)
+        const dates = [...new Set([safeForm.date, ...extraDates.filter(Boolean)])].sort()
+        for (const date of dates) await Sessions.create({ ...safeForm, date })
         // Notificar a los deportistas convocados
         if (safeForm.athlete_ids?.length) {
-          const dateLabel = new Date(safeForm.date + 'T12:00:00').toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })
+          const label = (d) => new Date(d + 'T12:00:00').toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })
+          const shortLabel = (d) => new Date(d + 'T12:00:00').toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric' })
           try {
             sendPushToAthletes(safeForm.athlete_ids, {
-              title: '📅 Nueva sesión asignada',
-              body: `${safeForm.title} · ${dateLabel}`,
+              title: dates.length > 1 ? `📅 ${dates.length} sesiones nuevas` : '📅 Nueva sesión asignada',
+              body: dates.length > 1 ? `${safeForm.title} · ${dates.map(shortLabel).join(', ')}` : `${safeForm.title} · ${label(dates[0])}`,
               url: '/?tab=training',
             })
           } catch { /* notificación opcional */ }
         }
       }
       await load()
-      setSheet(null)
+      const n = editing ? 1 : new Set([safeForm.date, ...extraDates.filter(Boolean)]).size
+      setSheet(null); setExtraDates([])
       haptic('success')
-      toast(editing ? 'Sesión actualizada' : 'Sesión creada')
+      toast(editing ? 'Sesión actualizada' : n > 1 ? `${n} sesiones creadas` : 'Sesión creada')
     } catch (err) {
       console.error('Error guardando sesión:', err)
       toast('Error: ' + (err?.message || JSON.stringify(err)), 'error')
@@ -247,7 +294,8 @@ export default function Training({ athleteId = null, coachView = false, embedded
   const saveAsTemplate = async () => {
     if (!form.title.trim() || !user?.id) return
     // Si ya existe una con ese título, la reemplazamos
-    const existing = templates.find(t => t.title === form.title)
+    const existing = templates.find(t => t.title.trim().toLowerCase() === form.title.trim().toLowerCase())
+    if (existing && !window.confirm(`Ya tienes una plantilla «${existing.title}». ¿Quieres sustituirla por esta sesión?`)) return
     if (existing) {
       await supabase.from('session_templates').update({
         type: form.type, duration: form.duration, notes: form.notes, exercises: form.exercises
@@ -274,6 +322,36 @@ export default function Training({ athleteId = null, coachView = false, embedded
   const addExercise = () => setForm(f => ({ ...f, exercises: [...f.exercises, { ...emptyExercise, id: crypto.randomUUID() }] }))
   const updateExercise = (idx, data) => setForm(f => ({ ...f, exercises: f.exercises.map((e,i) => i===idx ? {...e,...data} : e) }))
   const removeExercise = (idx) => setForm(f => ({ ...f, exercises: f.exercises.filter((_,i) => i!==idx) }))
+  const moveExercise = (idx, dir) => setForm(f => {
+    const ex = [...f.exercises]; const j = idx + dir
+    if (j < 0 || j >= ex.length) return f
+    ;[ex[idx], ex[j]] = [ex[j], ex[idx]]
+    return { ...f, exercises: ex }
+  })
+  const duplicateExercise = (idx) => setForm(f => {
+    const ex = [...f.exercises]
+    ex.splice(idx + 1, 0, { ...ex[idx], id: crypto.randomUUID(), videos: (ex[idx].videos || []).map(v => ({ ...v, id: crypto.randomUUID() })) })
+    return { ...f, exercises: ex }
+  })
+  const addBlock = (b) => {
+    setForm(f => ({ ...f, exercises: [...f.exercises, { name: b.name, notes: b.notes || '', videos: (b.videos || []).map(v => ({ ...v, id: crypto.randomUUID() })), id: crypto.randomUUID() }] }))
+    setBlockPickerOpen(false)
+    toast(`«${b.name}» añadido`)
+  }
+  const saveExerciseAsBlock = async (ex) => {
+    try {
+      const r = await saveBlock(ex)
+      if (r === 'cancel') return
+      toast(r === 'updated' ? 'Bloque actualizado' : 'Bloque guardado: ya puedes añadirlo a cualquier sesión')
+      setBlocks(await loadBlocks())
+    } catch (e) { toast(e?.message || 'No se pudo guardar', 'error') }
+  }
+  const selectAll = (ids) => setForm(f => ({ ...f, athlete_ids: ids }))
+  const addGroup = (g) => setForm(f => {
+    const ids = (g.athlete_ids || []).filter(id => athletes.some(a => a.id === id))
+    const allIn = ids.every(id => f.athlete_ids.includes(id))
+    return { ...f, athlete_ids: allIn ? f.athlete_ids.filter(id => !ids.includes(id)) : [...new Set([...f.athlete_ids, ...ids])] }
+  })
   // Biblioteca de vídeos: todos los vídeos ya usados en sesiones anteriores (sin repetir)
   const videoLibrary = (() => {
     const seen = new Map()
@@ -304,30 +382,46 @@ export default function Training({ athleteId = null, coachView = false, embedded
   const inner = (
     <>
       {!embedded && (
-        <div className="page-header">
-          <h2>Entrenamientos</h2>
+        <div className="page-header" style={{ gap: 8 }}>
+          <h2 style={{ minWidth: 0, fontSize: 'clamp(20px, 6.2vw, 32px)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Entrenos</h2>
           {showCreate && (
-            <div style={{ display: 'flex', gap: 8 }}>
-              <button className="btn btn-secondary btn-sm" onClick={() => setSheet('copyWeek')} title="Copiar una semana de entrenos">⧉ Copiar semana</button>
-              <button className="btn btn-primary btn-sm" onClick={openNew}>+ Nuevo</button>
+            <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
+              <button className="btn btn-secondary btn-sm" onClick={() => setSheet('copyWeek')} title="Copiar una semana de entrenos" aria-label="Copiar semana">⧉ Copiar</button>
+              <button className="btn btn-primary btn-sm" onClick={() => openNew()}>+ Nueva</button>
             </div>
           )}
         </div>
       )}
       {embedded && showCreate && (
         <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 12 }}>
-          <button className="btn btn-primary btn-sm" onClick={openNew}>+ Nueva sesión</button>
+          <button className="btn btn-primary btn-sm" onClick={() => openNew()}>+ Nueva sesión</button>
         </div>
       )}
 
       <div className="page-content">
         <div className="pill-tabs">
+          {!embedded && <button className={`pill-tab ${tab==='week'?'active':''}`} onClick={() => setTab('week')}>Semana</button>}
           <button className={`pill-tab ${tab==='upcoming'?'active':''}`} onClick={() => { setTab('upcoming'); setFilterTypePersisted(null) }}>Próximos ({upcoming.length})</button>
           <button className={`pill-tab ${tab==='past'?'active':''}`} onClick={() => { setTab('past'); setFilterTypePersisted(null) }}>Historial ({past.length})</button>
           {!embedded && <button className={`pill-tab ${tab==='calendar'?'active':''}`} onClick={() => setTab('calendar')}>Calendario</button>}
         </div>
 
-        {tab !== 'calendar' && (() => {
+        {/* Buscar y filtrar por deportista */}
+        {tab !== 'calendar' && (
+          <div style={{ display: 'flex', gap: 8 }}>
+            {tab !== 'week' && (
+              <input className="input" placeholder="🔍 Buscar sesión..." value={search} onChange={e => setSearch(e.target.value)} style={{ flex: 1, minWidth: 0 }} />
+            )}
+            {!athleteId && athletes.length > 1 && (
+              <select className="input" value={athleteFilter} onChange={e => setAthleteFilter(e.target.value)} style={{ flex: tab === 'week' ? 1 : '0 0 42%', minWidth: 0 }}>
+                <option value="">Todas las deportistas</option>
+                {athletes.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
+              </select>
+            )}
+          </div>
+        )}
+
+        {tab !== 'calendar' && tab !== 'week' && (() => {
           const typesInList = [...new Set(baseList.map(s => s.type).filter(Boolean))]
           if (typesInList.length < 2) return null
           return (
@@ -353,16 +447,19 @@ export default function Training({ athleteId = null, coachView = false, embedded
 
         {loading ? (
           <div style={{ color: 'var(--text-muted)', textAlign: 'center', padding: 24 }}>Cargando...</div>
+        ) : tab === 'week' ? (
+          <WeekView sessions={sessions} athletes={athletes} athleteFilter={athleteFilter} moving={movingId}
+            onOpen={openDetail} onCreate={(d) => openNew(d)} onMove={moveSession} />
         ) : tab === 'calendar' ? (
-          <CalendarView sessions={sessions} onSelectDay={daySessions => {
+          <CalendarView sessions={sessions} onEmptyDay={showCreate ? (d) => openNew(d) : null} onSelectDay={daySessions => {
             if (daySessions.length === 1) { setDetailSession(daySessions[0]); setSheet('detail') }
             else { setDaySessionsToSelect(daySessions); setSheet('dayPicker') }
           }} />
         ) : displayed.length === 0 ? (
           <div className="empty-state">
             <div className="icon">📅</div>
-            <h3>{tab==='upcoming' ? 'Sin sesiones' : 'Sin historial'}</h3>
-            <p>{tab==='upcoming' ? 'No hay sesiones próximas' : 'Las sesiones pasadas aparecerán aquí'}</p>
+            <h3>{q || athleteFilter || filterType ? 'Nada coincide' : tab==='upcoming' ? 'Sin sesiones' : 'Sin historial'}</h3>
+            <p>{q || athleteFilter || filterType ? 'Prueba con otra búsqueda o quita los filtros' : tab==='upcoming' ? 'No hay sesiones próximas' : 'Las sesiones pasadas aparecerán aquí'}</p>
           </div>
         ) : displayed.map(s => (
           <SessionCard key={s.id} session={s} athletes={athletes} onPress={() => openDetail(s)} formatDate={formatDate} />
@@ -381,6 +478,9 @@ export default function Training({ athleteId = null, coachView = false, embedded
             </div>
             <div className="sheet-body">
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {showCreate && (
+                  <button className="btn btn-secondary btn-full" onClick={() => openNew(daySessionsToSelect[0].date)}>+ Nueva sesión este día</button>
+                )}
                 {daySessionsToSelect.map(s => {
                   const typeOpt = TYPE_OPTS.find(t => t.value === s.type)
                   return (
@@ -537,12 +637,12 @@ export default function Training({ athleteId = null, coachView = false, embedded
       {/* Form */}
       {sheet==='form' && (
         <>
-          <div className="overlay" onClick={() => setSheet(null)} />
+          <div className="overlay" onClick={closeForm} />
           <div className="sheet">
             <div className="sheet-handle" />
             <div className="sheet-header">
               <h3>{editing ? 'Editar sesión' : 'Nueva sesión'}</h3>
-              <button className="btn-close" aria-label="Cerrar" onClick={() => setSheet(null)}>✕</button>
+              <button className="btn-close" aria-label="Cerrar" onClick={closeForm}>✕</button>
             </div>
             <div className="sheet-body">
               {/* Botón plantillas */}
@@ -554,13 +654,14 @@ export default function Training({ athleteId = null, coachView = false, embedded
               )}
               {showTemplates && (
                 <div style={{ marginBottom: 16, display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  {templates.map(tpl => (
+                  {templates.length > 5 && <input className="input" placeholder="Buscar plantilla..." value={templateQuery} onChange={e => setTemplateQuery(e.target.value)} />}
+                  {templates.filter(t => !templateQuery.trim() || t.title.toLowerCase().includes(templateQuery.trim().toLowerCase())).map(tpl => (
                     <div key={tpl.id} style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--bg)', borderRadius: 10, padding: '10px 12px', border: '1px solid var(--border)' }}>
                       <button onClick={() => loadTemplate(tpl)} style={{ flex: 1, textAlign: 'left', background: 'none', border: 'none', cursor: 'pointer' }}>
                         <div style={{ fontWeight: 700, fontSize: 14 }}>{tpl.title}</div>
-                        <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{tpl.type} · {tpl.duration} min · {tpl.exercises?.length || 0} ejercicios</div>
+                        <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{TYPE_OPTS.find(o => o.value === tpl.type)?.label || tpl.type} · {tpl.duration} min · {tpl.exercises?.length || 0} entrenamientos</div>
                       </button>
-                      <button onClick={() => deleteTemplate(tpl.id)} style={{ color: 'var(--text-dim)', background: 'none', border: 'none', cursor: 'pointer', fontSize: 16, padding: 4 }}>🗑</button>
+                      <button onClick={() => { if (window.confirm(`¿Borrar la plantilla «${tpl.title}»?`)) deleteTemplate(tpl.id) }} aria-label={`Borrar plantilla ${tpl.title}`} style={{ color: 'var(--text-dim)', background: 'none', border: 'none', cursor: 'pointer', fontSize: 16, padding: 4 }}>🗑</button>
                     </div>
                   ))}
                 </div>
@@ -579,6 +680,20 @@ export default function Training({ athleteId = null, coachView = false, embedded
                   <input className="input" type="number" min="1" value={form.duration} onChange={e => setForm(f=>({...f,duration:Math.max(1,parseInt(e.target.value)||60)}))} />
                 </div>
               </div>
+              {!editing && (
+                <div style={{ marginTop: -6, marginBottom: 14 }}>
+                  {extraDates.map((d, i) => (
+                    <div key={i} style={{ display: 'flex', gap: 8, marginBottom: 6, alignItems: 'center' }}>
+                      <span style={{ fontSize: 12, color: 'var(--text-muted)', width: 70 }}>También el</span>
+                      <input className="input" type="date" value={d} onChange={e => setExtraDates(x => x.map((y, j) => j === i ? e.target.value : y))} style={{ flex: 1 }} />
+                      <button className="btn btn-ghost btn-sm" aria-label="Quitar día" onClick={() => setExtraDates(x => x.filter((_, j) => j !== i))}>✕</button>
+                    </div>
+                  ))}
+                  <button type="button" className="btn btn-ghost btn-sm" onClick={() => setExtraDates(x => [...x, addDays(x[x.length - 1] || form.date, 7)])}>
+                    + Repetir otro día {extraDates.length === 0 && <span style={{ color: 'var(--text-muted)', fontWeight: 500 }}>(misma sesión en varias fechas)</span>}
+                  </button>
+                </div>
+              )}
               <div className="input-group">
                 <label className="input-label">Tipo</label>
                 <select className="input" value={form.type} onChange={e => setForm(f=>({...f,type:e.target.value}))}>
@@ -592,14 +707,23 @@ export default function Training({ athleteId = null, coachView = false, embedded
 
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
                 <div className="section-title" style={{ margin: 0 }}>Entrenamientos</div>
-                <button className="btn btn-ghost btn-sm" onClick={addExercise}>+ Añadir entrenamiento</button>
+                <div style={{ display: 'flex', gap: 4 }}>
+                  {blocks !== null && <button className="btn btn-ghost btn-sm" onClick={() => setBlockPickerOpen(true)}>📦 Bloques{blocks.length ? ` (${blocks.length})` : ''}</button>}
+                  <button className="btn btn-ghost btn-sm" onClick={addExercise}>+ Añadir</button>
+                </div>
               </div>
               {form.exercises.map((ex, idx) => (
                 <div key={ex.id || idx} className="card" style={{ marginBottom: 10 }}>
                   <div style={{ padding: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
                     <div style={{ display: 'flex', gap: 8 }}>
-                      <input className="input" placeholder="Nombre del entrenamiento" value={ex.name} onChange={e => updateExercise(idx,{name:e.target.value})} style={{ flex: 1 }} />
-                      <button className="btn btn-ghost btn-sm btn-icon" onClick={() => removeExercise(idx)} style={{ color: 'var(--error)' }}>✕</button>
+                      <input className="input" placeholder="Nombre del entrenamiento" value={ex.name} onChange={e => updateExercise(idx,{name:e.target.value})} style={{ flex: 1, minWidth: 0 }} />
+                      <button className="btn btn-ghost btn-sm btn-icon" onClick={() => removeExercise(idx)} aria-label="Quitar entrenamiento" style={{ color: 'var(--error)' }}>✕</button>
+                    </div>
+                    <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                      <button type="button" className="btn btn-ghost btn-sm" disabled={idx === 0} onClick={() => moveExercise(idx, -1)}>↑ Subir</button>
+                      <button type="button" className="btn btn-ghost btn-sm" disabled={idx === form.exercises.length - 1} onClick={() => moveExercise(idx, 1)}>↓ Bajar</button>
+                      <button type="button" className="btn btn-ghost btn-sm" onClick={() => duplicateExercise(idx)}>⧉ Duplicar</button>
+                      {blocks !== null && <button type="button" className="btn btn-ghost btn-sm" onClick={() => saveExerciseAsBlock(ex)}>💾 Guardar bloque</button>}
                     </div>
                     <textarea className="input" placeholder={"Escribe aquí el detalle, una línea por ejercicio:\nej. Sentadilla 4x10\nPeso muerto 3x8\nPlancha 3x30s"}
                       rows={5} value={ex.notes} onChange={e => updateExercise(idx,{notes:e.target.value})} style={{ resize: 'vertical' }} />
@@ -648,7 +772,29 @@ export default function Training({ athleteId = null, coachView = false, embedded
                 </div>
               ))}
 
-              <div className="section-title" style={{ marginTop: 8 }}>Deportistas convocados</div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 8, marginBottom: 8 }}>
+                <div className="section-title" style={{ margin: 0 }}>Deportistas convocados <span style={{ color: 'var(--text-muted)' }}>({form.athlete_ids.length})</span></div>
+                <div style={{ display: 'flex', gap: 4 }}>
+                  {form.athlete_ids.length < athletes.length
+                    ? <button type="button" className="btn btn-ghost btn-sm" onClick={() => selectAll(athletes.map(a => a.id))}>Todas</button>
+                    : <button type="button" className="btn btn-ghost btn-sm" onClick={() => selectAll(athleteId ? [athleteId] : [])}>Ninguna</button>}
+                  {groups !== null && <button type="button" className="btn btn-ghost btn-sm" onClick={() => setGroupsOpen(true)}>👥 Grupos</button>}
+                </div>
+              </div>
+              {groups?.length > 0 && (
+                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 8 }}>
+                  {groups.map(g => {
+                    const ids = (g.athlete_ids || []).filter(id => athletes.some(a => a.id === id))
+                    const on = ids.length > 0 && ids.every(id => form.athlete_ids.includes(id))
+                    return (
+                      <button key={g.id} type="button" onClick={() => addGroup(g)}
+                        style={{ padding: '6px 12px', borderRadius: 20, fontSize: 12, fontWeight: 700, cursor: 'pointer', border: `1.5px solid ${on ? 'var(--accent)' : 'var(--border)'}`, background: on ? 'var(--accent-dim)' : 'var(--card)', color: on ? 'var(--accent)' : 'var(--text)' }}>
+                        {on ? '✓ ' : '+ '}{g.name} <span style={{ color: 'var(--text-muted)' }}>{ids.length}</span>
+                      </button>
+                    )
+                  })}
+                </div>
+              )}
               {athletes.map(a => (
                 <label key={a.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 12px', background: 'var(--card)', borderRadius: 'var(--radius-sm)', border: form.athlete_ids.includes(a.id) ? '1px solid var(--accent)' : '1px solid var(--border)', cursor: 'pointer', marginBottom: 6 }}>
                   <input type="checkbox" checked={form.athlete_ids.includes(a.id)} onChange={() => toggleAthlete(a.id)} style={{ width: 'auto', accentColor: 'var(--accent)' }} />
@@ -667,6 +813,22 @@ export default function Training({ athleteId = null, coachView = false, embedded
             </div>
           </div>
         </>
+      )}
+      {confirmDiscard && (
+        <ConfirmSheet
+          icon="✋"
+          title="¿Salir sin guardar?"
+          message="Tienes cambios en esta sesión que todavía no has guardado. Si sales, se perderán."
+          confirmLabel="Salir y descartar"
+          onConfirm={() => { setConfirmDiscard(false); setExtraDates([]); setSheet(null) }}
+          onCancel={() => setConfirmDiscard(false)}
+        />
+      )}
+      {blockPickerOpen && blocks !== null && (
+        <BlockPicker blocks={blocks} onPick={addBlock} onClose={() => setBlockPickerOpen(false)} onDeleted={id => setBlocks(b => b.filter(x => x.id !== id))} />
+      )}
+      {groupsOpen && groups !== null && (
+        <GroupsSheet athletes={athletes} groups={groups} toast={toast} onClose={() => setGroupsOpen(false)} onChange={async () => setGroups(await loadGroups())} />
       )}
       {sheet === 'copyWeek' && (
         <CopyWeekSheet sessions={sessions} athletes={athletes} toast={toast}
@@ -725,7 +887,7 @@ function SessionCard({ session, athletes, onPress, formatDate }) {
   )
 }
 
-function CalendarView({ sessions, onSelectDay }) {
+function CalendarView({ sessions, onSelectDay, onEmptyDay }) {
   const [current, setCurrent] = useState(new Date())
   const year = current.getFullYear()
   const month = current.getMonth()
@@ -771,8 +933,9 @@ function CalendarView({ sessions, onSelectDay }) {
           const hasSessions = byDay[day]
           const allDone = hasSessions && hasSessions.every(s => s.athlete_ids?.length > 0 && Object.values(s.attendance||{}).some(Boolean))
           return (
-            <div key={day} onClick={() => hasSessions && onSelectDay(hasSessions)}
-              style={{ aspectRatio: '1', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', borderRadius: 10, cursor: hasSessions ? 'pointer' : 'default',
+            <div key={day} onClick={() => hasSessions ? onSelectDay(hasSessions) : onEmptyDay?.(`${year}-${String(month+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`)}
+              title={hasSessions ? undefined : onEmptyDay ? 'Crear sesión este día' : undefined}
+              style={{ aspectRatio: '1', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', borderRadius: 10, cursor: hasSessions || onEmptyDay ? 'pointer' : 'default',
                 background: isToday ? 'var(--accent)' : hasSessions ? 'var(--accent-dim)' : 'transparent' }}>
               <span style={{ fontSize: 14, fontWeight: isToday ? 800 : 400, color: isToday ? '#fff' : hasSessions ? 'var(--accent)' : 'var(--text)' }}>{day}</span>
               {hasSessions && <div style={{ width: 5, height: 5, borderRadius: '50%', background: isToday ? '#fff' : 'var(--accent)', marginTop: 1 }} />}
