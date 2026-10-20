@@ -5,6 +5,7 @@ import { Records, Goals, Wellness, WeightLog, Storage, Documents, BodyMeasuremen
 import { supabase } from '../lib/supabase'
 import ConfirmSheet from '../components/ConfirmSheet'
 import { useToast } from '../contexts/ToastContext'
+import { RECORDS_CHANGED, notifyRecordsChanged } from '../components/ZonesPanel'
 import { haptic } from '../lib/haptic'
 import { sendPushToCoach } from '../lib/pushNotifications'
 import { FEATURES } from '../lib/constants'
@@ -994,6 +995,10 @@ function RecordChart({ recs, unit }) {
 }
 
 // ---- Marcas personales ----
+// En tiempos, menos es mejor; en kilos, vatios, metros o repeticiones, más es mejor
+const lowerIsBetter = (unit) => unit === 'min' || unit === 'seg'
+const bestValue = (vals, unit) => lowerIsBetter(unit) ? Math.min(...vals) : Math.max(...vals)
+
 function RecordsSection({ athleteId, canEdit }) {
   const [records, setRecords] = useState([])
   const [sheet, setSheet] = useState(false)
@@ -1006,9 +1011,14 @@ function RecordsSection({ athleteId, canEdit }) {
   const [form, setForm] = useState(emptyForm)
   const [saving, setSaving] = useState(false)
 
-  const UNITS = ['min', 'seg', 'kg', 'km', 'rep', 'cm', 'w', 'm']
+  const UNITS = ['min', 'seg', 'kg', 'km', 'rep', 'cm', 'w', 'm', 'bpm']
 
   useEffect(() => { Records.getByAthlete(athleteId).then(setRecords) }, [athleteId])
+  useEffect(() => {
+    const h = (e) => { if (!e.detail?.athleteId || e.detail.athleteId === athleteId) Records.getByAthlete(athleteId).then(setRecords) }
+    window.addEventListener(RECORDS_CHANGED, h)
+    return () => window.removeEventListener(RECORDS_CHANGED, h)
+  }, [athleteId])
 
   // Agrupar por nombre normalizado (case-insensitive) preservando el nombre original del primer registro
   const groupMap = {}
@@ -1033,6 +1043,7 @@ function RecordsSection({ athleteId, canEdit }) {
       if (editing) await Records.update(editing, { ...form, value: parseFloat(form.value) })
       else await Records.create({ ...form, value: parseFloat(form.value), athlete_id: athleteId })
       setRecords(await Records.getByAthlete(athleteId))
+      notifyRecordsChanged(athleteId)
       setSheet(false)
       setEditing(null)
       haptic('success')
@@ -1048,6 +1059,7 @@ function RecordsSection({ athleteId, canEdit }) {
     try {
       await Records.delete(id)
       setRecords(r => r.filter(x => x.id !== id))
+      notifyRecordsChanged(athleteId)
       setSheet(false)
       setConfirmDelete(null)
       haptic('medium'); toast('Marca eliminada')
@@ -1074,7 +1086,7 @@ function RecordsSection({ athleteId, canEdit }) {
             const best = recs[0]
             const prev = recs[1]
             const improved = prev && parseFloat(best.value) !== parseFloat(prev.value)
-            const better = prev && parseFloat(best.value) < parseFloat(prev.value)
+            const better = !prev || best.unit === 'bpm' ? null : lowerIsBetter(best.unit) ? parseFloat(best.value) < parseFloat(prev.value) : parseFloat(best.value) > parseFloat(prev.value)
             return (
               <div key={name} className="card" style={{ padding: '16px 18px', cursor: 'pointer' }}
                 onClick={() => setChartGroup({ name, recs: chronological, unit: best.unit })}>
@@ -1086,8 +1098,8 @@ function RecordsSection({ athleteId, canEdit }) {
                       {recs.length > 1 && ` · ${recs.length} registros`}
                     </div>
                     {improved && (
-                      <div style={{ fontSize: 12, color: better ? 'var(--success)' : 'var(--error)', marginTop: 4, fontWeight: 600 }}>
-                        {better ? '↑ Mejora' : '↓'} vs anterior: {prev.value} {prev.unit}
+                      <div style={{ fontSize: 12, color: better === null ? 'var(--text-muted)' : better ? 'var(--success)' : 'var(--error)', marginTop: 4, fontWeight: 600 }}>
+                        {better === null ? '' : better ? '↑ Mejora' : '↓'} vs anterior: {prev.value} {prev.unit}
                       </div>
                     )}
                   </div>
@@ -1140,7 +1152,7 @@ function RecordsSection({ athleteId, canEdit }) {
               {/* Stats rápidas */}
               <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
                 {[
-                  { label: 'Mejor', value: Math.min(...chartGroup.recs.map(r => parseFloat(r.value))), color: 'var(--success)' },
+                  { label: 'Mejor', value: bestValue(chartGroup.recs.map(r => parseFloat(r.value)), chartGroup.unit), color: 'var(--success)' },
                   { label: 'Último', value: parseFloat(chartGroup.recs[chartGroup.recs.length-1].value), color: 'var(--accent)' },
                   { label: 'Registros', value: chartGroup.recs.length, color: 'var(--text-muted)' },
                 ].map(({ label, value, color }) => (
@@ -1158,7 +1170,7 @@ function RecordsSection({ athleteId, canEdit }) {
               <div className="section-title" style={{ marginTop: 20 }}>Historial</div>
               <div className="card">
                 {[...chartGroup.recs].reverse().map((r, i) => {
-                  const isBest = parseFloat(r.value) === Math.min(...chartGroup.recs.map(x => parseFloat(x.value)))
+                  const isBest = parseFloat(r.value) === bestValue(chartGroup.recs.map(x => parseFloat(x.value)), chartGroup.unit)
                   return (
                     <div key={r.id} className="list-item" style={{ borderBottom: i < chartGroup.recs.length-1 ? undefined : 'none', cursor: 'default' }}>
                       <div style={{ flex: 1 }}>

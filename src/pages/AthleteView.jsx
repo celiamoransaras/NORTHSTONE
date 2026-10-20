@@ -1,4 +1,6 @@
 import GoalCountdown from '../components/GoalCountdown'
+import ZonesPanel from '../components/ZonesPanel'
+import SessionTargets from '../components/SessionTargets'
 import { ymd } from '../lib/dates'
 import { useState, useEffect, useRef } from 'react'
 import { useAuth } from '../contexts/AuthContext'
@@ -227,6 +229,7 @@ export default function AthleteView() {
           {tab === 'payments'  && <AthletePayments athleteId={athleteId} />}
           {tab === 'docs'      && <AthleteDocs athleteId={athleteId} />}
           {tab === 'hyrox'     && <HyroxPlanner athleteId={athleteId} />}
+          {tab === 'zones'     && <ZonesPanel athleteId={athleteId} athleteName={athlete?.name} />}
           {tab === 'messages'  && <Messages />}
         </div>
       </main>
@@ -244,6 +247,7 @@ export default function AthleteView() {
                 { id: 'payments', icon: '💳', label: 'Pagos', desc: 'Tus cuotas y pagos' },
                 { id: 'docs',     icon: '📂', label: 'Documentos', desc: 'Docs de tu entrenadora' },
                 { id: 'health',   icon: '🩺', label: 'Salud', desc: 'Lesiones y ciclo' },
+                { id: 'zones',    icon: '🎯', label: 'Mis zonas', desc: 'Ritmos, vatios y RM' },
                 { id: 'hyrox',    icon: '🏁', label: 'Mi Hyrox', desc: 'Parciales para tu objetivo' },
               ].map(({ id, icon, label, desc }) => (
                 <button key={id} onClick={() => { const d = TAB_ORDER.indexOf(id) >= TAB_ORDER.indexOf(tab) ? 1 : -1; setTabDir(d); setTabKey(k=>k+1); setTab(id); setMoreOpen(false) }}
@@ -1645,6 +1649,7 @@ function AthleteTrainingWithRPE({ athleteId, initialSessionId, onSessionOpened, 
                 )}
               </div>
               {detailSession.notes && <div style={{ color: 'var(--text-muted)', fontSize: 14, marginBottom: 16 }}>{detailSession.notes}</div>}
+              <SessionTargets session={detailSession} athletes={[{ id: athleteId }]} mine />
               {detailSession.exercises?.length > 0 ? (
                 <>
                   <div className="section-title">Entrenamientos</div>

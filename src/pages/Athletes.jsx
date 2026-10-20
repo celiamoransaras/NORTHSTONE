@@ -6,6 +6,7 @@ import CycleHistory from '../components/CycleHistory'
 import { Athletes as DB, Sessions, Storage, Cycle, Nutrition, Documents } from '../lib/db'
 import { supabase } from '../lib/supabase'
 import Training from './Training'
+import ZonesPanel from '../components/ZonesPanel'
 import { GoalsSection, RecordsSection, LoadChart, WellnessTodayCoach, WellnessHistory, MonthlyReport, WeightCoach, WeightMonthly, MeasurementsMonthly, ProgressPhotos } from './Progress'
 import { useToast } from '../contexts/ToastContext'
 import { sendPushToAthletes } from '../lib/pushNotifications'
@@ -900,6 +901,8 @@ function AthleteProgress({ athleteId, isFemale }) {
       <MeasurementsMonthly athleteId={athleteId} />
       <ProgressPhotos athleteId={athleteId} canUpload={false} canDelete={true} />
       <GoalsSection athleteId={athleteId} canCreate={true} />
+      <div className="section-title" style={{ marginBottom: 0 }}>🎯 Zonas y RM</div>
+      <ZonesPanel athleteId={athleteId} isCoach embedded />
       <RecordsSection athleteId={athleteId} canEdit={true} />
     </div>
   )

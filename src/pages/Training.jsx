@@ -1,4 +1,5 @@
 import { ymd } from '../lib/dates'
+import SessionTargets from '../components/SessionTargets'
 import { useState, useEffect } from 'react'
 import { Sessions, Athletes, RPE } from '../lib/db'
 import ConfirmSheet from '../components/ConfirmSheet'
@@ -421,6 +422,11 @@ export default function Training({ athleteId = null, coachView = false, embedded
                 <span className="badge badge-blue">👥 {detailSession.athlete_ids?.length||0} deportistas</span>
               </div>
               {detailSession.notes && <div style={{ color: 'var(--text-muted)', fontSize: 14, marginBottom: 20 }}>{detailSession.notes}</div>}
+
+              {(!athleteId || coachView) && (
+                <SessionTargets session={detailSession}
+                  athletes={(athleteId ? [athleteId] : (detailSession.athlete_ids || [])).map(id => athletes.find(a => a.id === id)).filter(Boolean)} />
+              )}
 
               {detailSession.exercises?.length > 0 && (
                 <>

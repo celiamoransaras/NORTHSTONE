@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Records } from '../lib/db'
+import { isTestOrRm } from '../lib/zones'
 
 // ─────────────────────────────────────────────
 // MI HYROX
@@ -132,7 +133,7 @@ export default function HyroxPlanner({ athleteId }) {
     Records.getByAthlete(athleteId).then(recs => {
       const found = {}
       STATIONS.forEach(st => {
-        const r = recs.find(x => st.match.test(x.name || ''))
+        const r = recs.find(x => !isTestOrRm(x.name) && st.match.test(x.name || ''))
         const sec = recordToSeconds(r)
         if (sec) found[st.key] = sec
       })
