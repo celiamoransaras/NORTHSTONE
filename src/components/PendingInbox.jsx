@@ -16,7 +16,19 @@ const mondayKey = () => { const d = new Date(); d.setDate(d.getDate() - ((d.getD
 const LS_KEY = 'ns_dismissed'
 async function loadDismissed() {
   const { data, error } = await supabase.from('coach_dismissed').select('key')
-  if (!error) return { keys: new Set((data || []).map(d => d.key)), db: true }
+  if (!error) {
+    const keys = new Set((data || []).map(d => d.key))
+    // Si alguna vez no se pudo guardar en la base de datos (sin conexión, lentitud...), se sube ahora
+    try {
+      const local = JSON.parse(localStorage.getItem(LS_KEY) || '[]').filter(k => !keys.has(k))
+      if (local.length) {
+        const { error: e2 } = await supabase.from('coach_dismissed').upsert(local.map(key => ({ key })), { onConflict: 'key' })
+        if (!e2) localStorage.removeItem(LS_KEY)
+      }
+      local.forEach(k => keys.add(k))
+    } catch { /* sin almacenamiento */ }
+    return { keys, db: true }
+  }
   try { return { keys: new Set(JSON.parse(localStorage.getItem(LS_KEY) || '[]')), db: false } } catch { return { keys: new Set(), db: false } }
 }
 async function saveDismissed(keys, db) {
