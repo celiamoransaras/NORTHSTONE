@@ -1,4 +1,6 @@
 import { useState } from 'react'
+import { InstallGuide } from '../components/InstallGuide'
+import { isStandalone } from '../lib/install'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
 
@@ -11,6 +13,7 @@ export default function Login() {
   const [mode, setMode] = useState('login')
   const [success, setSuccess] = useState('')
   const [showPass, setShowPass] = useState(false)
+  const [installOpen, setInstallOpen] = useState(() => new URLSearchParams(window.location.search).has('instalar'))
 
   const handle = async (e) => {
     e.preventDefault()
@@ -126,6 +129,14 @@ export default function Login() {
           </button>
         </form>
       </div>
+
+      {!isStandalone() && (
+        <button type="button" onClick={() => setInstallOpen(true)}
+          style={{ marginTop: 18, background: 'none', border: 'none', color: 'var(--accent)', fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>
+          📲 Cómo instalar la app en tu móvil
+        </button>
+      )}
+      {installOpen && <InstallGuide onClose={() => setInstallOpen(false)} />}
 
       <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
     </div>

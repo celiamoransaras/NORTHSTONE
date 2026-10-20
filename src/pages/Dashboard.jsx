@@ -5,6 +5,7 @@ import { Athletes, Sessions, Injuries, Payments, Wellness, Cycle, isPendingPayme
 import { supabase } from '../lib/supabase'
 import { getDismissed, dismissFatigueAlert, isFatigueDismissed, subscribeAlerts } from '../lib/alertState'
 import { TYPE_ICONS, TYPE_COLORS, TYPE_LABELS } from '../lib/constants'
+import { InstallGuide, InstallBanner } from '../components/InstallGuide'
 import { daysUntil, goalIcon, countdownLabel, formatGoalDate } from '../components/GoalCountdown'
 
 export default function Dashboard() {
@@ -15,6 +16,7 @@ export default function Dashboard() {
   const [athleteMap, setAthleteMap] = useState({})
   const [dismissedAlerts, setDismissedAlerts] = useState(() => getDismissed())
   const [statsOpen, setStatsOpen] = useState(false)
+  const [installOpen, setInstallOpen] = useState(() => new URLSearchParams(window.location.search).has('instalar'))
 
   useEffect(() => {
     return subscribeAlerts(() => setDismissedAlerts(new Set(getDismissed())))
@@ -113,6 +115,8 @@ export default function Dashboard() {
       </div>
 
       <div className="page-content" style={{ paddingTop: 4 }}>
+        <InstallBanner onOpen={() => setInstallOpen(true)} />
+        {installOpen && <InstallGuide isCoach onClose={() => setInstallOpen(false)} />}
 
         {/* Alerta cansancio */}
         {visibleFatigueAlerts.length > 0 && (
@@ -247,6 +251,17 @@ export default function Dashboard() {
         </button>
 
         {statsOpen && <TeamStatsSheet onClose={() => setStatsOpen(false)} />}
+
+        {/* Enlace de instalación para las deportistas */}
+        <button onClick={() => setInstallOpen(true)}
+          style={{ width: '100%', padding: '12px 18px', borderRadius: 'var(--radius)', background: 'var(--card)', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 14, cursor: 'pointer', textAlign: 'left' }}>
+          <span style={{ fontSize: 24 }}>📲</span>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontWeight: 800, fontSize: 14 }}>Cómo instalar la app</div>
+            <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>Pasos para iPhone y Android · enlace para tus deportistas</div>
+          </div>
+          <span style={{ color: 'var(--text-dim)', fontSize: 20 }}>›</span>
+        </button>
 
         {/* Próximas competiciones y objetivos con fecha */}
         <UpcomingGoalsSection athleteMap={athleteMap} />

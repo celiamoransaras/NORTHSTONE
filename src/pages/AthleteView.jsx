@@ -1,4 +1,6 @@
 import GoalCountdown from '../components/GoalCountdown'
+import { InstallGuide, InstallBanner } from '../components/InstallGuide'
+import { isStandalone } from '../lib/install'
 import ZonesPanel from '../components/ZonesPanel'
 import SessionTargets from '../components/SessionTargets'
 import { ymd } from '../lib/dates'
@@ -53,6 +55,7 @@ export default function AthleteView() {
   const [onboardingStep, setOnboardingStep] = useState(0)
   const [pushPrompt, setPushPrompt] = useState(false)
   const [moreOpen, setMoreOpen] = useState(false)
+  const [installOpen, setInstallOpen] = useState(() => new URLSearchParams(window.location.search).has('instalar'))
   const [tabDir, setTabDir] = useState(1)
   const [tabKey, setTabKey] = useState(0)
   const TAB_ORDER = ['home', 'training', 'nutrition', 'progress', 'messages'].filter(t => t !== 'nutrition' || FEATURES.nutrition)
@@ -221,7 +224,7 @@ export default function AthleteView() {
       {/* Content */}
       <main style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
         <div key={tabKey} style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', animation: `tabSlide${tabDir > 0 ? 'Right' : 'Left'} 0.22s cubic-bezier(0.16,1,0.3,1) backwards` }}>
-          {tab === 'home'      && <AthleteHome athlete={athlete} athleteId={athleteId} onOpenSession={s => { setTabDir(1); setTabKey(k=>k+1); setTab('training'); setOpenSessionId(s.id) }} onGoTo={t => { setTabDir(1); setTabKey(k=>k+1); setTab(t) }} />}
+          {tab === 'home'      && <AthleteHome athlete={athlete} athleteId={athleteId} onOpenSession={s => { setTabDir(1); setTabKey(k=>k+1); setTab('training'); setOpenSessionId(s.id) }} onGoTo={t => { setTabDir(1); setTabKey(k=>k+1); setTab(t) }} onInstall={() => setInstallOpen(true)} />}
           {tab === 'training'  && <AthleteTrainingWithRPE athleteId={athleteId} initialSessionId={openSessionId} onSessionOpened={() => setOpenSessionId(null)} onReplySeen={() => setUnreadReplies(c => Math.max(0, c - 1))} />}
           {tab === 'health'    && <AthleteHealth athleteId={athleteId} />}
           {tab === 'nutrition' && FEATURES.nutrition && <AthleteNutrition athleteId={athleteId} />}
@@ -249,8 +252,9 @@ export default function AthleteView() {
                 { id: 'health',   icon: '🩺', label: 'Salud', desc: 'Lesiones y ciclo' },
                 { id: 'zones',    icon: '🎯', label: 'Mis zonas', desc: 'Ritmos, vatios y RM' },
                 { id: 'hyrox',    icon: '🏁', label: 'Mi Hyrox', desc: 'Parciales para tu objetivo' },
+                ...(isStandalone() ? [] : [{ id: 'install', icon: '📲', label: 'Instalar app', desc: 'Tenla en tu móvil' }]),
               ].map(({ id, icon, label, desc }) => (
-                <button key={id} onClick={() => { const d = TAB_ORDER.indexOf(id) >= TAB_ORDER.indexOf(tab) ? 1 : -1; setTabDir(d); setTabKey(k=>k+1); setTab(id); setMoreOpen(false) }}
+                <button key={id} onClick={() => { if (id === 'install') { setMoreOpen(false); setInstallOpen(true); return } const d = TAB_ORDER.indexOf(id) >= TAB_ORDER.indexOf(tab) ? 1 : -1; setTabDir(d); setTabKey(k=>k+1); setTab(id); setMoreOpen(false) }}
                   style={{ background: tab === id ? 'var(--accent-dim)' : 'var(--bg)', border: `1.5px solid ${tab === id ? 'var(--accent)' : 'var(--border)'}`, borderRadius: 14, padding: '14px 12px', cursor: 'pointer', textAlign: 'left' }}>
                   <div style={{ fontSize: 24, marginBottom: 6 }}>{icon}</div>
                   <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 800, fontSize: 14, color: tab === id ? 'var(--accent)' : 'var(--text)', textTransform: 'uppercase' }}>{label}</div>
@@ -261,6 +265,8 @@ export default function AthleteView() {
           </div>
         </div>
       )}
+
+      {installOpen && <InstallGuide onClose={() => setInstallOpen(false)} />}
 
       {/* Bottom nav */}
       <nav className="glass-nav" style={{ display: 'flex', height: 'var(--nav-height)', flexShrink: 0, paddingBottom: 'env(safe-area-inset-bottom)' }}>
@@ -340,7 +346,7 @@ function Badge({ count, color = 'var(--error)' }) {
 }
 
 // ---- Inicio del deportista ----
-function AthleteHome({ athlete, athleteId, onOpenSession, onGoTo }) {
+function AthleteHome({ athlete, athleteId, onOpenSession, onGoTo, onInstall }) {
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [pullY, setPullY] = useState(0)
@@ -541,6 +547,7 @@ function AthleteHome({ athlete, athleteId, onOpenSession, onGoTo }) {
       </div>
 
       <div className="page-content">
+        <InstallBanner onOpen={() => onInstall?.()} />
         {!hasAnything ? (
           <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--text-muted)' }}>
             <div style={{ fontSize: 52, marginBottom: 16, opacity: 0.4 }}>🏋️</div>
