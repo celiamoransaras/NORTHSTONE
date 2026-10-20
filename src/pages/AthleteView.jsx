@@ -2,6 +2,9 @@ import GoalCountdown from '../components/GoalCountdown'
 import { InstallGuide, InstallBanner } from '../components/InstallGuide'
 import { isStandalone } from '../lib/install'
 import ZonesPanel from '../components/ZonesPanel'
+import SessionActions from '../components/SessionActions'
+import { IntakeFlow, PrivacyActions, loadIntake, intakeComplete } from '../components/Intake'
+import { downloadICS } from '../lib/ics'
 import SessionTargets from '../components/SessionTargets'
 import { ymd } from '../lib/dates'
 import { useState, useEffect, useRef } from 'react'
@@ -56,6 +59,10 @@ export default function AthleteView() {
   const [pushPrompt, setPushPrompt] = useState(false)
   const [moreOpen, setMoreOpen] = useState(false)
   const [installOpen, setInstallOpen] = useState(() => new URLSearchParams(window.location.search).has('instalar'))
+  const [intakeState, setIntakeState] = useState(null) // null = cargando · { unavailable } · { intake }
+  const [intakeEdit, setIntakeEdit] = useState(false)
+  useEffect(() => { if (athleteId) loadIntake(athleteId).then(setIntakeState) }, [athleteId])
+  const needsIntake = intakeState && !intakeState.unavailable && !intakeComplete(intakeState.intake)
   const [tabDir, setTabDir] = useState(1)
   const [tabKey, setTabKey] = useState(0)
   const TAB_ORDER = ['home', 'training', 'nutrition', 'progress', 'messages'].filter(t => t !== 'nutrition' || FEATURES.nutrition)
@@ -157,6 +164,9 @@ export default function AthleteView() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100dvh', overflow: 'hidden' }}>
+      {/* Alta: consentimiento + cuestionario (obligatorio la primera vez) */}
+      {needsIntake && <IntakeFlow athlete={athlete} athleteId={athleteId} existing={intakeState.intake} onDone={i => setIntakeState({ intake: i })} />}
+      {intakeEdit && intakeState?.intake && <IntakeFlow athlete={athlete} athleteId={athleteId} existing={intakeState.intake} onClose={() => setIntakeEdit(false)} onDone={i => { setIntakeState({ intake: i }); setIntakeEdit(false) }} />}
       {/* Onboarding primera vez */}
       {onboarding && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 1000, display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
@@ -225,7 +235,7 @@ export default function AthleteView() {
       <main style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
         <div key={tabKey} style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', animation: `tabSlide${tabDir > 0 ? 'Right' : 'Left'} 0.22s cubic-bezier(0.16,1,0.3,1) backwards` }}>
           {tab === 'home'      && <AthleteHome athlete={athlete} athleteId={athleteId} onOpenSession={s => { setTabDir(1); setTabKey(k=>k+1); setTab('training'); setOpenSessionId(s.id) }} onGoTo={t => { setTabDir(1); setTabKey(k=>k+1); setTab(t) }} onInstall={() => setInstallOpen(true)} />}
-          {tab === 'training'  && <AthleteTrainingWithRPE athleteId={athleteId} initialSessionId={openSessionId} onSessionOpened={() => setOpenSessionId(null)} onReplySeen={() => setUnreadReplies(c => Math.max(0, c - 1))} />}
+          {tab === 'training'  && <AthleteTrainingWithRPE athleteId={athleteId} athleteName={athlete?.name} initialSessionId={openSessionId} onSessionOpened={() => setOpenSessionId(null)} onReplySeen={() => setUnreadReplies(c => Math.max(0, c - 1))} />}
           {tab === 'health'    && <AthleteHealth athleteId={athleteId} />}
           {tab === 'nutrition' && FEATURES.nutrition && <AthleteNutrition athleteId={athleteId} />}
           {tab === 'progress'  && <AthleteProgressTab athleteId={athleteId} isFemale={athlete?.gender === 'female'} />}
@@ -312,6 +322,11 @@ export default function AthleteView() {
                   <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 2 }}>Toca la foto para cambiarla</div>
                 </div>
               </div>
+              {intakeState && !intakeState.unavailable && (
+                <PrivacyActions athlete={athlete} athleteId={athleteId} intake={intakeState.intake}
+                  onEdit={() => { setProfileOpen(false); setIntakeEdit(true) }}
+                  onChange={() => loadIntake(athleteId).then(setIntakeState)} />
+              )}
               <button
                 className="btn btn-secondary btn-full"
                 onClick={() => {
@@ -1333,7 +1348,7 @@ function AthleteProgressTab({ athleteId, isFemale }) {
 }
 
 // ---- Entrenos con RPE ----
-function AthleteTrainingWithRPE({ athleteId, initialSessionId, onSessionOpened, onReplySeen }) {
+function AthleteTrainingWithRPE({ athleteId, athleteName, initialSessionId, onSessionOpened, onReplySeen }) {
   const { user, profile } = useAuth()
   const toast = useToast()
   const [sessions, setSessions] = useState([])
@@ -1518,7 +1533,12 @@ function AthleteTrainingWithRPE({ athleteId, initialSessionId, onSessionOpened, 
 
   return (
     <div className="page fade-in">
-      <div className="page-header"><h2>Mis entrenos</h2></div>
+      <div className="page-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+        <h2>Mis entrenos</h2>
+        {upcoming.length > 0 && (
+          <button className="btn btn-secondary btn-sm" onClick={() => { downloadICS(upcoming, 'northstone-proximos-entrenos.ics'); toast('Abre el archivo descargado para añadirlos a tu calendario', 'info') }}>📅 Al calendario</button>
+        )}
+      </div>
       <div className="page-content">
 
         {upcoming.length > 0 && (
@@ -1655,6 +1675,7 @@ function AthleteTrainingWithRPE({ athleteId, initialSessionId, onSessionOpened, 
                   </span>
                 )}
               </div>
+              <SessionActions session={detailSession} athleteId={athleteId} athleteName={athleteName} attended={!!attendanceMap[detailSession.id]} />
               {detailSession.notes && <div style={{ color: 'var(--text-muted)', fontSize: 14, whiteSpace: 'pre-line', lineHeight: 1.5, marginBottom: 16 }}>{detailSession.notes}</div>}
               <SessionTargets session={detailSession} athletes={[{ id: athleteId }]} mine />
               {detailSession.exercises?.length > 0 ? (

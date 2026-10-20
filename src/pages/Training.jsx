@@ -1,5 +1,6 @@
 import { ymd } from '../lib/dates'
 import SessionTargets from '../components/SessionTargets'
+import { useLocation } from 'react-router-dom'
 import { useState, useEffect } from 'react'
 import { Sessions, Athletes, RPE } from '../lib/db'
 import ConfirmSheet from '../components/ConfirmSheet'
@@ -75,6 +76,16 @@ export default function Training({ athleteId = null, coachView = false, embedded
     setLoading(false)
   }
   useEffect(() => { load() }, [athleteId])
+  // Abrir una sesión concreta al llegar desde Pendientes
+  const location = useLocation()
+  const [openedFromState, setOpenedFromState] = useState(false)
+  useEffect(() => {
+    const id = location.state?.openSessionId
+    if (!id || openedFromState || !sessions.length) return
+    const s = sessions.find(x => x.id === id)
+    if (s) { openDetail(s); if (s.date < ymd(new Date())) setTab('past') }
+    setOpenedFromState(true)
+  }, [sessions, location.state, openedFromState]) // eslint-disable-line
   useEffect(() => { loadTemplates() }, [user?.id])
 
   // Realtime: asistencia en tiempo real (vista entrenadora)

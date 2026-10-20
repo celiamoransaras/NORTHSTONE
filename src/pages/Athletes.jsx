@@ -7,6 +7,8 @@ import { Athletes as DB, Sessions, Storage, Cycle, Nutrition, Documents } from '
 import { supabase } from '../lib/supabase'
 import Training from './Training'
 import ZonesPanel from '../components/ZonesPanel'
+import { IntakeSummary } from '../components/Intake'
+import CoachNotes from '../components/CoachNotes'
 import { GoalsSection, RecordsSection, LoadChart, WellnessTodayCoach, WellnessHistory, MonthlyReport, WeightCoach, WeightMonthly, MeasurementsMonthly, ProgressPhotos } from './Progress'
 import { useToast } from '../contexts/ToastContext'
 import { sendPushToAthletes } from '../lib/pushNotifications'
@@ -332,6 +334,10 @@ export default function Athletes() {
                       <div style={{ fontWeight: 700, fontSize: 18 }}>{sheet.name}</div>
                       <span className={`badge ${statusBadge(sheet.status)}`}>{statusLabel(sheet.status)}</span>
                     </div>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 12 }}>
+                    <IntakeSummary athleteId={sheet.id} athlete={sheet} />
+                    <CoachNotes athleteId={sheet.id} />
                   </div>
                   {sheet.gender === 'female' && <CyclePhaseCoach athleteId={sheet.id} />}
                   <WeeklyAdherence athleteId={sheet.id} color={sheet.color} />

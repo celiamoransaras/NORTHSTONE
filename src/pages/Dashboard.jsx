@@ -6,6 +6,7 @@ import { supabase } from '../lib/supabase'
 import { getDismissed, dismissFatigueAlert, isFatigueDismissed, subscribeAlerts } from '../lib/alertState'
 import { TYPE_ICONS, TYPE_COLORS, TYPE_LABELS } from '../lib/constants'
 import { InstallGuide, InstallBanner } from '../components/InstallGuide'
+import PendingInbox from '../components/PendingInbox'
 import { daysUntil, goalIcon, countdownLabel, formatGoalDate } from '../components/GoalCountdown'
 
 export default function Dashboard() {
@@ -117,6 +118,7 @@ export default function Dashboard() {
       <div className="page-content" style={{ paddingTop: 4 }}>
         <InstallBanner onOpen={() => setInstallOpen(true)} />
         {installOpen && <InstallGuide isCoach onClose={() => setInstallOpen(false)} />}
+        <PendingInbox athleteMap={athleteMap} />
 
         {/* Alerta cansancio */}
         {visibleFatigueAlerts.length > 0 && (
