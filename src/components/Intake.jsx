@@ -564,11 +564,11 @@ export function IntakeSummary({ athleteId, athlete }) {
         ) : '✅ Sin señales de salud que revisar'}
       </div>
 
-      <Section title="Salud">
+      {[i.medical_notes, v.current_injuries, i.injuries_history].some(x => (x || '').trim()) && <Section title="Salud">
         <Line label="Notas de salud">{i.medical_notes}</Line>
         <Line label="Lesión actual">{v.current_injuries}</Line>
         <Line label="Lesiones previas">{i.injuries_history}</Line>
-      </Section>
+      </Section>}
       {female && (v.cycle_regular || v.last_period || v.contraception || v.amenorrhea !== undefined || v.urine_leaks) && (
         <Section title="Salud femenina">
           <Line label="Ciclo regular">{v.cycle_regular}</Line>
@@ -578,7 +578,7 @@ export function IntakeSummary({ athleteId, athlete }) {
           <Line label="Pérdidas de orina">{v.urine_leaks}</Line>
         </Section>
       )}
-      <Section title="Deporte">
+      {(v.years_training || v.sports || (v.competed || []).length || v.mark_5k || v.mark_10k || v.mark_hyrox || v.target_event) && <Section title="Deporte">
         <Line label="Experiencia">{v.years_training}</Line>
         <Line label="Deportes">{v.sports}</Line>
         <Line label="Ha competido en">{(v.competed || []).join(', ')}</Line>
@@ -587,13 +587,13 @@ export function IntakeSummary({ athleteId, athlete }) {
         {v.target_event && v.target_date && v.target_date >= ymd(new Date()) && !goalDone && (
           <button className="btn btn-secondary btn-sm" style={{ marginTop: 6 }} onClick={createGoal}>🏁 Crear objetivo con cuenta atrás</button>
         )}
-      </Section>
-      <Section title="Día a día">
+      </Section>}
+      {(v.sleep || v.stress || v.job || v.session_time) && <Section title="Día a día">
         <Line label="Sueño">{v.sleep}</Line>
         <Line label="Estrés">{v.stress}</Line>
         <Line label="Trabajo">{v.job}</Line>
         <Line label="Tiempo por sesión">{v.session_time}</Line>
-      </Section>
+      </Section>}
       <Section title="Entrenamiento">
         <Line label="Objetivo">{i.goals}</Line>
         <Line label="Disponibilidad">{[(i.availability || []).join(' · '), i.sessions_per_week && `${i.sessions_per_week} sesiones/semana`].filter(Boolean).join(' · ')}</Line>
