@@ -76,6 +76,86 @@ export function useSessionLog(session, athleteId) {
   return { logs, available: logs !== false, editing, setEditing, onSaved, onDeleted }
 }
 
+// ─────────────────────────────────────────────
+// REGISTRO RÁPIDO: "Hecho tal cual estaba planificado"
+// Apunta de una vez cada línea con series × reps (y kilos si dice "% RM" y hay RM)
+// o con distancia; luego la deportista edita solo lo que cambió.
+// ─────────────────────────────────────────────
+const distOf = (line) => {
+  const m = String(line).toLowerCase().match(/(\d+(?:[.,]\d+)?)\s?(km|m|metros)\b/)
+  if (!m) return null
+  const v = Number(m[1].replace(',', '.'))
+  return m[2] === 'km' ? Math.round(v * 1000) : Math.round(v)
+}
+const kgOf = (line) => { const m = String(line).toLowerCase().match(/(\d+(?:[.,]\d+)?)\s?kg\b/); return m ? Number(m[1].replace(',', '.')) : null }
+
+export function plannedSets(line, ex, rms = {}) {
+  const scheme = parseScheme(line)
+  // "3x500 m", "4 x 1 km": series de distancia, se apuntan como tiempo + metros
+  const distScheme = /[x×]\s?\d+(?:[.,]\d+)?\s?(km|m|metros)\b/i.test(line)
+  const guessed = guessKind(line, ex)
+  const kind = distScheme && guessed !== 'carry' ? 'time' : guessed
+  const lift = LIFTS.find(l => l.re.test(line))
+  const pct = String(line).match(/(\d{2,3})\s?%/)
+  const rm = lift ? rms[lift.name.toLowerCase()] : null
+  const kg = kgOf(line) ?? (pct && rm ? roundLoad(rm.value * Number(pct[1]) / 100) : null)
+  const dist = distOf(line)
+  if ((kind === 'strength' || kind === 'reps') && scheme) {
+    return { kind, sets: Array.from({ length: scheme.sets }, () => ({ kg: kind === 'strength' ? kg : null, reps: scheme.reps, time: null, dist: null })) }
+  }
+  if ((kind === 'time' || kind === 'carry') && dist) {
+    const n = scheme?.sets || 1
+    return { kind, sets: Array.from({ length: Math.min(n, 12) }, () => ({ kg: kind === 'carry' ? kg : null, reps: null, time: null, dist })) }
+  }
+  return null
+}
+
+export function QuickLogButton({ session, athleteId, library, logs, onSaved, onMarkDone }) {
+  const toast = useToast()
+  const [busy, setBusy] = useState(false)
+  const pending = useMemo(() => {
+    const out = []
+    ;(session?.exercises || []).forEach((block, b) => blockLines(block.notes).forEach((line, l) => {
+      if (logs?.[logKey(b, l)]) return
+      out.push({ b, l, line, ex: matchExercise(line, library) })
+    }))
+    return out
+  }, [session, logs, library])
+  const plannable = pending.filter(p => plannedSets(p.line, p.ex))
+  if (!session || !plannable.length) return null
+
+  const run = async () => {
+    setBusy(true)
+    const { data: recs } = await supabase.from('personal_records').select('*').eq('athlete_id', athleteId)
+    const rms = latestRMs(recs || [])
+    const rows = []
+    pending.forEach(({ b, l, line, ex }) => {
+      const plan = plannedSets(line, ex, rms)
+      if (!plan) return
+      rows.push({
+        session_id: session.id, athlete_id: athleteId, block_idx: b, line_idx: l, line_text: line,
+        exercise_key: keyForLine(line, ex), exercise_name: ex?.name || line.slice(0, 80), kind: plan.kind, sets: plan.sets,
+        notes: 'Como estaba planificado', date: session.date || ymd(new Date()), updated_at: new Date().toISOString(),
+      })
+    })
+    const { data, error } = await supabase.from('workout_logs').upsert(rows, { onConflict: 'session_id,athlete_id,block_idx,line_idx' }).select()
+    setBusy(false)
+    if (error) { toast('No se pudo apuntar: ' + error.message, 'error'); return }
+    ;(data || rows).forEach(r => onSaved(r))
+    haptic('success')
+    const left = pending.length - rows.length
+    toast(`✓ ${rows.length} ejercicio${rows.length === 1 ? '' : 's'} apuntado${rows.length === 1 ? '' : 's'}${left ? ` · ${left} sin datos para apuntar a mano` : ''}. Cambia solo lo que hiciste distinto.`)
+    onMarkDone?.()
+  }
+
+  return (
+    <button type="button" className="btn btn-primary btn-full" onClick={run} disabled={busy}
+      style={{ marginBottom: 12, minHeight: 48 }}>
+      {busy ? 'Apuntando…' : `✓ Lo hice tal cual estaba (${plannable.length} ejercicio${plannable.length === 1 ? '' : 's'})`}
+    </button>
+  )
+}
+
 const blankSet = (kind) => ({ kg: '', reps: '', time: '', dist: '' })
 
 export function LogSheet({ session, athleteId, target, onClose, onSaved, onDeleted }) {

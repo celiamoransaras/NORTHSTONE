@@ -7,6 +7,7 @@ import { getDismissed, dismissFatigueAlert, isFatigueDismissed, subscribeAlerts 
 import { TYPE_ICONS, TYPE_COLORS, TYPE_LABELS } from '../lib/constants'
 import { InstallGuide, InstallBanner } from '../components/InstallGuide'
 import PendingInbox from '../components/PendingInbox'
+import TeamPanel from '../components/TeamPanel'
 import { daysUntil, goalIcon, countdownLabel, formatGoalDate } from '../components/GoalCountdown'
 
 export default function Dashboard() {
@@ -232,7 +233,7 @@ export default function Dashboard() {
 
         {/* Seguimiento: lo que se mira cada semana */}
         <Fold id="team" title="Seguimiento del equipo" defaultOpen>
-          <WeeklyAdherenceSection athleteMap={athleteMap} />
+          <TeamPanel athleteMap={athleteMap} />
           <TeamWellnessSection />
           <TeamCycleSection athleteMap={athleteMap} />
           <UpcomingGoalsSection athleteMap={athleteMap} />
@@ -459,98 +460,6 @@ function TeamWellnessSection() {
         })}
       </div>
     </div>
-  )
-}
-
-function WeeklyAdherenceSection({ athleteMap }) {
-  const [data, setData] = useState(null)
-
-  useEffect(() => {
-    const load = async () => {
-      const now = new Date()
-      const mon = new Date(now)
-      mon.setDate(now.getDate() - ((now.getDay() + 6) % 7))
-      const sun = new Date(mon)
-      sun.setDate(mon.getDate() + 6)
-      const weekStart = ymd(mon)
-      const weekEnd = ymd(sun)
-
-      const sessions = await Sessions.getAll()
-      const weekSessions = sessions.filter(s => s.date >= weekStart && s.date <= weekEnd)
-      const sessionIds = weekSessions.map(s => s.id)
-
-      let rpeByAthlete = {}
-      if (sessionIds.length > 0) {
-        const { data: rpeData } = await supabase
-          .from('session_athletes')
-          .select('athlete_id, rpe')
-          .in('session_id', sessionIds)
-          .not('rpe', 'is', null)
-        ;(rpeData || []).forEach(r => {
-          if (!rpeByAthlete[r.athlete_id]) rpeByAthlete[r.athlete_id] = []
-          rpeByAthlete[r.athlete_id].push(r.rpe)
-        })
-      }
-
-      const athletes = Object.values(athleteMap)
-      const rows = athletes.map(a => {
-        const assigned = weekSessions.filter(s => s.athlete_ids?.includes(a.id))
-        const done = assigned.filter(s => s.attendance?.[a.id] === true)
-        const rpes = rpeByAthlete[a.id] || []
-        const avgRpe = rpes.length ? Math.round((rpes.reduce((s,v) => s+v, 0) / rpes.length) * 10) / 10 : null
-        return { ...a, assigned: assigned.length, done: done.length, avgRpe }
-      }).filter(a => a.assigned > 0).sort((a,b) => (b.done/Math.max(b.assigned,1)) - (a.done/Math.max(a.assigned,1)))
-      setData(rows)
-    }
-    load()
-  }, [athleteMap])
-
-  if (!data || data.length === 0) return null
-
-  const mon = new Date()
-  mon.setDate(mon.getDate() - ((mon.getDay() + 6) % 7))
-  const sun = new Date(mon); sun.setDate(mon.getDate() + 6)
-  const fmt = d => d.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })
-
-  const rpeColor = rpe => rpe >= 8 ? '#EF4444' : rpe >= 6 ? '#F59E0B' : '#10B981'
-
-  return (
-    <>
-      <div className="section-title" style={{ marginTop: 4 }}>
-        Carga semanal del equipo
-        <span style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 400, marginLeft: 6, textTransform: 'none', fontFamily: 'inherit' }}>
-          {fmt(mon)} – {fmt(sun)}
-        </span>
-      </div>
-      <div className="card">
-        {data.map((a, i) => {
-          const pct = Math.round((a.done / a.assigned) * 100)
-          const color = pct === 100 ? 'var(--success)' : pct >= 50 ? 'var(--warning)' : 'var(--error)'
-          return (
-            <div key={a.id} style={{ padding: '10px 16px', borderBottom: i < data.length - 1 ? '1px solid var(--border)' : 'none' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
-                {a.avatar_url
-                  ? <img src={a.avatar_url} style={{ width: 28, height: 28, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
-                  : <div style={{ width: 28, height: 28, borderRadius: '50%', background: a.color+'20', color: a.color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 12, flexShrink: 0, fontFamily: "'Barlow Condensed', sans-serif" }}>
-                      {a.name?.split(' ').map(w=>w[0]).join('').slice(0,2)}
-                    </div>
-                }
-                <div style={{ flex: 1, fontWeight: 600, fontSize: 13 }}>{a.name}</div>
-                {a.avgRpe !== null && (
-                  <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 800, fontSize: 13, color: rpeColor(a.avgRpe), background: rpeColor(a.avgRpe)+'15', padding: '2px 8px', borderRadius: 8 }}>
-                    RPE {a.avgRpe}
-                  </div>
-                )}
-                <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 900, fontSize: 16, color, minWidth: 32, textAlign: 'right' }}>{a.done}/{a.assigned}</div>
-              </div>
-              <div style={{ height: 4, background: 'var(--bg)', borderRadius: 2 }}>
-                <div style={{ height: '100%', width: `${pct}%`, background: color, borderRadius: 2, transition: 'width 0.4s ease' }} />
-              </div>
-            </div>
-          )
-        })}
-      </div>
-    </>
   )
 }
 

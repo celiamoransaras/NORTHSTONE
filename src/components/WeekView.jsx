@@ -1,10 +1,11 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { ymd } from '../lib/dates'
 import { TYPE_ICONS, TYPE_COLORS } from '../lib/constants'
 
 // ─────────────────────────────────────────────
 // Vista de semana para planificar: lunes a domingo, crear en un día con "+",
-// mover una sesión al día anterior/siguiente con ‹ › y ver cuántas sesiones tiene cada deportista.
+// arrastrar una sesión a otro día (asa ⠿, funciona con el dedo y con el ratón) o moverla con ‹ ›,
+// y ver cuántas sesiones tiene cada deportista.
 // ─────────────────────────────────────────────
 const DAY_NAMES = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']
 export const mondayOf = (dateStr) => {
@@ -26,6 +27,38 @@ export default function WeekView({ sessions, athletes, athleteFilter, onOpen, on
   const days = useMemo(() => Array.from({ length: 7 }, (_, i) => addDays(monday, i)), [monday])
   const sunday = days[6]
   const athleteById = useMemo(() => Object.fromEntries(athletes.map(a => [a.id, a])), [athletes])
+
+  // ---- Arrastrar y soltar ----
+  const [drag, setDrag] = useState(null) // { s, x, y, over }
+  const dragRef = useRef(null)
+  dragRef.current = drag
+  const dayAt = (x, y) => document.elementFromPoint(x, y)?.closest('[data-day]')?.getAttribute('data-day') || null
+  const startDrag = (e, s) => {
+    if (moving) return
+    e.preventDefault()
+    e.currentTarget.setPointerCapture?.(e.pointerId)
+    setDrag({ s, x: e.clientX, y: e.clientY, over: s.date })
+  }
+  useEffect(() => {
+    if (!drag) return
+    const move = (e) => {
+      const over = dayAt(e.clientX, e.clientY)
+      setDrag(d => d && { ...d, x: e.clientX, y: e.clientY, over: over || d.over })
+      if (e.clientY < 70) window.scrollBy(0, -12)
+      else if (e.clientY > window.innerHeight - 90) window.scrollBy(0, 12)
+    }
+    const end = (e) => {
+      const d = dragRef.current
+      setDrag(null)
+      if (!d) return
+      const target = e.type === 'pointercancel' ? null : (dayAt(e.clientX, e.clientY) || d.over)
+      if (target && target !== d.s.date) onMove(d.s, target)
+    }
+    window.addEventListener('pointermove', move)
+    window.addEventListener('pointerup', end)
+    window.addEventListener('pointercancel', end)
+    return () => { window.removeEventListener('pointermove', move); window.removeEventListener('pointerup', end); window.removeEventListener('pointercancel', end) }
+  }, [!!drag]) // eslint-disable-line
 
   const weekSessions = sessions.filter(s => s.date >= monday && s.date <= sunday)
     .filter(s => !athleteFilter || (s.athlete_ids || []).includes(athleteFilter))
@@ -63,7 +96,7 @@ export default function WeekView({ sessions, athletes, athleteFilter, onOpen, on
         const list = byDay[d]
         const isToday = d === today
         return (
-          <div key={d} className="card" style={{ padding: '10px 12px', border: isToday ? '1.5px solid var(--accent)' : undefined, opacity: d < today ? 0.75 : 1 }}>
+          <div key={d} data-day={d} className="card" style={{ padding: '10px 12px', border: drag && drag.over === d ? '2px dashed var(--accent)' : isToday ? '1.5px solid var(--accent)' : undefined, background: drag && drag.over === d ? 'var(--accent-dim)' : undefined, opacity: d < today && !(drag && drag.over === d) ? 0.75 : 1, transition: 'background 0.12s' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: list.length ? 8 : 0 }}>
               <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 800, fontSize: 14, textTransform: 'uppercase', color: isToday ? 'var(--accent)' : 'var(--text)' }}>
                 {DAY_NAMES[i]} <span style={{ color: 'var(--text-muted)', fontWeight: 600 }}>{new Date(d + 'T12:00:00').getDate()}</span>
@@ -76,7 +109,9 @@ export default function WeekView({ sessions, athletes, athleteFilter, onOpen, on
               const color = TYPE_COLORS[s.type] || 'var(--accent)'
               const ids = s.athlete_ids || []
               return (
-                <div key={s.id} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 8px', borderRadius: 10, background: 'var(--bg)', borderLeft: `4px solid ${color}`, marginTop: 6, opacity: moving === s.id ? 0.5 : 1 }}>
+                <div key={s.id} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 8px', borderRadius: 10, background: 'var(--bg)', borderLeft: `4px solid ${color}`, marginTop: 6, opacity: moving === s.id || drag?.s.id === s.id ? 0.4 : 1 }}>
+                  <span onPointerDown={e => startDrag(e, s)} role="button" aria-label={`Arrastrar ${s.title} a otro día`} title="Mantén y arrastra a otro día"
+                    style={{ touchAction: 'none', cursor: 'grab', minWidth: 28, minHeight: 40, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-dim)', fontSize: 18, userSelect: 'none' }}>⠿</span>
                   <button onClick={() => onMove(s, addDays(s.date, -1))} disabled={!!moving} className="btn btn-ghost btn-sm" aria-label="Mover al día anterior" title="Mover al día anterior" style={{ padding: 0, minWidth: 40, minHeight: 40, fontSize: 18 }}>‹</button>
                   <div onClick={() => onOpen(s)} role="button" style={{ flex: 1, minWidth: 0, cursor: 'pointer' }}>
                     <div style={{ fontWeight: 700, fontSize: 14, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{TYPE_ICONS[s.type] || '📅'} {s.title}</div>
@@ -98,6 +133,12 @@ export default function WeekView({ sessions, athletes, athleteFilter, onOpen, on
           </div>
         )
       })}
+      {drag && (
+        <div style={{ position: 'fixed', left: Math.max(8, Math.min(window.innerWidth - 228, drag.x - 110)), top: drag.y - 64, width: 220, pointerEvents: 'none', zIndex: 3000, padding: '10px 12px', borderRadius: 12, background: 'var(--card)', border: '1.5px solid var(--accent)', boxShadow: '0 10px 30px rgba(0,0,0,0.25)', fontWeight: 700, fontSize: 14, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+          {TYPE_ICONS[drag.s.type] || '📅'} {drag.s.title}
+          <div style={{ fontSize: 12, color: 'var(--accent)', fontWeight: 800, marginTop: 2 }}>→ {DAY_NAMES[(new Date(drag.over + 'T12:00:00').getDay() + 6) % 7]} {new Date(drag.over + 'T12:00:00').getDate()}</div>
+        </div>
+      )}
     </div>
   )
 }

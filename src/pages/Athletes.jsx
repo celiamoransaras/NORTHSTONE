@@ -10,6 +10,7 @@ import ZonesPanel from '../components/ZonesPanel'
 import { ExerciseProgress } from '../components/WorkoutLog'
 import { IntakeSummary } from '../components/Intake'
 import CoachNotes from '../components/CoachNotes'
+import HyroxPlanner from './HyroxPlanner'
 import { GoalsSection, RecordsSection, LoadChart, WellnessTodayCoach, WellnessHistory, MonthlyReport, WeightCoach, WeightMonthly, MeasurementsMonthly, ProgressPhotos } from './Progress'
 import { useToast } from '../contexts/ToastContext'
 import { sendPushToAthletes } from '../lib/pushNotifications'
@@ -903,7 +904,7 @@ function AthleteProgress({ athleteId, isFemale }) {
       <MonthlyReport athleteId={athleteId} sessions={sessions} isFemale={isFemale} />
       <WellnessTodayCoach athleteId={athleteId} />
       <WellnessHistory athleteId={athleteId} />
-      <LoadChart sessions={sessions} />
+      <LoadChart sessions={sessions} athleteId={athleteId} />
       <WeightMonthly athleteId={athleteId} />
       <MeasurementsMonthly athleteId={athleteId} />
       <ProgressPhotos athleteId={athleteId} canUpload={false} canDelete={true} />
@@ -911,7 +912,27 @@ function AthleteProgress({ athleteId, isFemale }) {
       <ExerciseProgress athleteId={athleteId} />
       <div className="section-title" style={{ marginBottom: 0 }}>🎯 Zonas y RM</div>
       <ZonesPanel athleteId={athleteId} isCoach embedded />
+      <HyroxFold athleteId={athleteId} />
       <RecordsSection athleteId={athleteId} canEdit={true} />
+    </div>
+  )
+}
+
+// Predicción de Hyrox de la deportista (sus tests y marcas), plegada para no alargar la ficha
+function HyroxFold({ athleteId }) {
+  const [open, setOpen] = useState(false)
+  return (
+    <div className="card" style={{ padding: open ? '14px 14px 4px' : 0 }}>
+      <button type="button" onClick={() => setOpen(o => !o)}
+        style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 12, padding: open ? '0 2px 12px' : '14px 16px', border: 'none', background: 'none', color: 'var(--text)', cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit' }}>
+        <span style={{ fontSize: 22 }}>🏁</span>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 800, fontSize: 16, textTransform: 'uppercase' }}>Predicción Hyrox</div>
+          <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>Tiempo estimado con sus tests y marcas, y dónde gana más</div>
+        </div>
+        <span style={{ color: 'var(--text-dim)', fontSize: 18 }}>{open ? '▴' : '▾'}</span>
+      </button>
+      {open && <HyroxPlanner athleteId={athleteId} embedded />}
     </div>
   )
 }

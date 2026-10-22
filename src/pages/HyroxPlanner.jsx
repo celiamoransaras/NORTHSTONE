@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Records } from '../lib/db'
-import { isTestOrRm } from '../lib/zones'
+import { isTestOrRm, latestTests } from '../lib/zones'
 
 // ─────────────────────────────────────────────
 // MI HYROX
@@ -23,6 +23,20 @@ const STATIONS = [
 ]
 const REF_PACE = 340        // 5:40 /km en carrera Hyrox
 const REF_ROXZONE = 420     // 7:00 en total (16 transiciones)
+
+// Estimaciones a partir de los tests de la app:
+//  · Carrera en Hyrox ≈ ritmo umbral (test 30') + 25 s/km por correr cansada entre estaciones.
+//    Sin test de 30', umbral ≈ ritmo VAM × 1,12.
+//  · SkiErg y remo 1.000 m ≈ 2 × ritmo /500 m del test 2k + 6 s.
+const RUN_PENALTY = 25
+export function estimateFromTests(tests = {}) {
+  const out = {}
+  const thr = tests.run30?.value || (tests.vam?.value ? tests.vam.value * 1.12 : null)
+  if (thr) out.pace = { sec: Math.round(thr + RUN_PENALTY), from: tests.run30 ? "test 30'" : 'test VAM' }
+  if (tests.ski?.value) out.ski = { sec: Math.round(tests.ski.value * 2 + 6), from: 'test Ski 2k' }
+  if (tests.row?.value) out.row = { sec: Math.round(tests.row.value * 2 + 6), from: 'test Row 2k' }
+  return out
+}
 
 // Reparto para el modo "Objetivo"
 const SHARE = { run: 0.52, stations: 0.40, roxzone: 0.08 }
@@ -118,7 +132,7 @@ const buildRows = (pace, stationTimes, roxTotal) => {
 
 const timeInput = { width: 74, textAlign: 'center', padding: '8px 6px', borderRadius: 10, border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text)', fontSize: 15, fontWeight: 700, fontFamily: 'inherit' }
 
-export default function HyroxPlanner({ athleteId }) {
+export default function HyroxPlanner({ athleteId, embedded = false }) {
   const [mode, setMode] = useState('mine')
 
   // ---- Modo "Mis ritmos" ----
@@ -126,6 +140,7 @@ export default function HyroxPlanner({ athleteId }) {
   const [roxTxt, setRoxTxt] = useState(fmt(REF_ROXZONE))
   const [stTxt, setStTxt] = useState(() => Object.fromEntries(STATIONS.map(s => [s.key, ''])))
   const [fromRecords, setFromRecords] = useState({})
+  const [fromTests, setFromTests] = useState({})
 
   // Rellenar estaciones con sus marcas personales (la más reciente de cada una)
   useEffect(() => {
@@ -137,6 +152,12 @@ export default function HyroxPlanner({ athleteId }) {
         const sec = recordToSeconds(r)
         if (sec) found[st.key] = sec
       })
+      const est = estimateFromTests(latestTests(recs))
+      if (est.pace) setPaceTxt(prev => prev === fmt(REF_PACE) ? fmt(est.pace.sec) : prev)
+      const fromT = {}
+      ;['ski', 'row'].forEach(k => { if (est[k] && !found[k]) { found[k] = est[k].sec; fromT[k] = est[k].from } })
+      if (est.pace) fromT.pace = est.pace.from
+      setFromTests({ ...fromT, paceSec: est.pace?.sec })
       if (Object.keys(found).length) {
         setFromRecords(found)
         setStTxt(prev => {
@@ -176,9 +197,9 @@ export default function HyroxPlanner({ athleteId }) {
   }, [minutes])
 
   return (
-    <div className="page fade-in">
-      <div className="page-header"><h2>🏁 Mi Hyrox</h2></div>
-      <div className="page-content">
+    <div className={embedded ? '' : 'page fade-in'}>
+      {!embedded && <div className="page-header"><h2>🏁 Mi Hyrox</h2></div>}
+      <div className={embedded ? '' : 'page-content'}>
         <Tabs value={mode} onChange={setMode} />
 
         {mode === 'mine' ? (
@@ -187,7 +208,9 @@ export default function HyroxPlanner({ athleteId }) {
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
                 <div>
                   <div style={{ fontWeight: 700, fontSize: 14 }}>Ritmo de carrera en Hyrox</div>
-                  <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>El de competición, cansada entre estaciones (min/km)</div>
+                  <div style={{ fontSize: 12, color: fromTests.pace && parseTime(paceTxt) === fromTests.paceSec ? 'var(--success)' : 'var(--text-muted)', marginTop: 2 }}>
+                    {fromTests.pace && parseTime(paceTxt) === fromTests.paceSec ? `✓ Estimado de tu ${fromTests.pace} (+${RUN_PENALTY} s/km por el cansancio)` : 'El de competición, cansada entre estaciones (min/km)'}
+                  </div>
                 </div>
                 <input style={timeInput} inputMode="numeric" value={paceTxt} onChange={e => setPaceTxt(e.target.value)} aria-label="Ritmo por kilómetro" placeholder="5:40" />
               </div>
@@ -207,7 +230,7 @@ export default function HyroxPlanner({ athleteId }) {
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontWeight: 700, fontSize: 14 }}>{st.name} <span style={{ fontWeight: 500, color: 'var(--text-muted)', fontSize: 12 }}>· {st.detail}</span></div>
                     <div style={{ fontSize: 12, color: fromRecords[st.key] && stTxt[st.key] === fmt(fromRecords[st.key]) ? 'var(--success)' : 'var(--text-muted)' }}>
-                      {fromRecords[st.key] && stTxt[st.key] === fmt(fromRecords[st.key]) ? '✓ De tus marcas' : `Referencia ${fmt(st.ref)}`}
+                      {fromRecords[st.key] && stTxt[st.key] === fmt(fromRecords[st.key]) ? (fromTests[st.key] ? `✓ Estimado de tu ${fromTests[st.key]}` : '✓ De tus marcas') : `Referencia ${fmt(st.ref)}`}
                     </div>
                   </div>
                   <input style={timeInput} inputMode="numeric" value={stTxt[st.key]} placeholder={fmt(st.ref)}

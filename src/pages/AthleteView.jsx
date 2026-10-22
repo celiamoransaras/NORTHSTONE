@@ -4,7 +4,7 @@ import ThemeToggle from '../components/ThemeToggle'
 import { InstallGuide, InstallBanner } from '../components/InstallGuide'
 import { isStandalone } from '../lib/install'
 import ZonesPanel from '../components/ZonesPanel'
-import { LoggableBlock, LogSheet, useSessionLog } from '../components/WorkoutLog'
+import { LoggableBlock, LogSheet, useSessionLog, QuickLogButton } from '../components/WorkoutLog'
 import { useLibrary } from '../components/Exercises'
 import { VideoList } from '../components/VideoEmbed'
 import SessionActions from '../components/SessionActions'
@@ -1693,6 +1693,16 @@ function AthleteTrainingWithRPE({ athleteId, athleteName, initialSessionId, onSe
               {detailSession.exercises?.length > 0 ? (
                 <>
                   <div className="section-title">Entrenamientos</div>
+                  {slog.available && slog.logs && detailSession.date <= ymd(new Date()) && (
+                    <QuickLogButton session={detailSession} athleteId={athleteId} library={library} logs={slog.logs}
+                      onSaved={slog.onSaved}
+                      onMarkDone={async () => {
+                        if (attendanceMap[detailSession.id]) return
+                        setAttendanceMap(m => ({ ...m, [detailSession.id]: true }))
+                        try { await Sessions.toggleAttendance(detailSession.id, athleteId, false) }
+                        catch { setAttendanceMap(m => ({ ...m, [detailSession.id]: false })) }
+                      }} />
+                  )}
                   {detailSession.exercises.map((ex, i) => (
                     <div key={i} style={{ background: 'var(--bg)', borderRadius: 'var(--radius-sm)', padding: 14, marginBottom: 10 }}>
                       <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 6 }}>{ex.name}</div>
