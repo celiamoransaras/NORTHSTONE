@@ -31,11 +31,11 @@ export default function Messages() {
     const marta = by(/marta/i), ana = by(/ana ruiz/i), paula = by(/paula/i)
     const t = (h) => new Date(Date.now() - h * 3600000).toISOString()
     return [
-      { id: 'dg1', group_id: 'general', sender: 'coach', sender_name: 'Celia (Entrenadora)', text: '¡Buenos días, equipo! Esta semana toca simulacro corto el jueves. Revisad vuestro ritmo Hyrox en la app 💪', created_at: t(26) },
-      marta && { id: 'dg2', group_id: 'general', sender: marta.id, sender_name: marta.name, text: '¡Vamos! Ya tengo mi ritmo: 4:55 el km 🔥', created_at: t(25) },
-      ana && { id: 'dg3', group_id: 'general', sender: ana.id, sender_name: ana.name, text: '¿Alguien se apunta a entrenar juntas el sábado en la pista?', created_at: t(20) },
-      paula && { id: 'dg4', group_id: 'general', sender: paula.id, sender_name: paula.name, text: 'Yo voy! Es mi primera vez en pista 😅', created_at: t(19) },
-      { id: 'dg5', group_id: 'general', sender: 'coach', sender_name: 'Celia (Entrenadora)', text: 'Me encanta. Paula, tú haz las series a ritmo cómodo, ya lo tienes puesto en tu sesión.', created_at: t(18) },
+      { id: 'dg1', group: 'general', sender: 'coach', senderName: 'Celia (Entrenadora)', text: '¡Buenos días, equipo! Esta semana toca simulacro corto el jueves. Revisad vuestro ritmo Hyrox en la app 💪', ts: t(26) },
+      marta && { id: 'dg2', group: 'general', sender: marta.id, senderName: marta.name, text: '¡Vamos! Ya tengo mi ritmo: 4:55 el km 🔥', ts: t(25) },
+      ana && { id: 'dg3', group: 'general', sender: ana.id, senderName: ana.name, text: '¿Alguien se apunta a entrenar juntas el sábado en la pista?', ts: t(20) },
+      paula && { id: 'dg4', group: 'general', sender: paula.id, senderName: paula.name, text: 'Yo voy! Es mi primera vez en pista 😅', ts: t(19) },
+      { id: 'dg5', group: 'general', sender: 'coach', senderName: 'Celia (Entrenadora)', text: 'Me encanta. Paula, tú haz las series a ritmo cómodo, ya lo tienes puesto en tu sesión.', ts: t(18) },
     ].filter(Boolean)
   }
   const [fatigueAlert, setFatigueAlert] = useState(location.state?.fatigueAlert || null)
