@@ -110,7 +110,7 @@ export default function TeamPanel({ athleteMap }) {
         })}
       </div>
       <div style={{ fontSize: 11, color: 'var(--text-muted)', lineHeight: 1.5, padding: '0 4px 6px' }}>
-        Carga = RPE × minutos. El número de la derecha es la carga de los últimos 7 días frente a la media de las 4 últimas semanas: entre 0,8 y 1,3 es lo habitual; por encima de 1,5, pico de carga. Aparece cuando hay 3 semanas de RPE.
+        Carga = RPE × minutos. El número de la derecha es la carga de los últimos 7 días frente a la media de las 4 últimas semanas: entre 0,8 y 1,3 es lo habitual; por encima de 1,5, pico de carga. Aparece cuando las 3 semanas anteriores tienen RPE.
       </div>
     </>
   )

@@ -36,10 +36,6 @@ export function athleteLoad(sessions = [], athleteId, today = ymd(new Date())) {
   const sum = (from) => done.filter(s => s.date >= from && s.date <= today).reduce((a, s) => a + (sessionLoad(s, athleteId) || 0), 0)
   const acute = sum(from7)
   const chronic = sum(from28) / 4
-  const firstRated = done.filter(s => sessionLoad(s, athleteId) != null).map(s => s.date).sort()[0]
-  // Solo damos ratio con al menos 3 semanas de datos, para no alarmar con poca historia
-  const enoughHistory = firstRated && firstRated <= addDays(today, -20)
-  const ratio = enoughHistory && chronic > 0 ? acute / chronic : null
 
   const mon = mondayOf(today), sun = addDays(mon, 6)
   const week = mine.filter(s => s.date >= mon && s.date <= sun)
@@ -57,6 +53,11 @@ export function athleteLoad(sessions = [], athleteId, today = ymd(new Date())) {
     const ws = done.filter(s => s.date >= start && s.date <= end)
     return { start, load: ws.reduce((a, s) => a + (sessionLoad(s, athleteId) || 0), 0), sessions: ws.length, current: i === 7 }
   })
+
+  // Solo damos ratio si las 3 semanas anteriores tienen RPE: con poca historia la crónica sale
+  // artificialmente baja y daría falsos «picos»
+  const enoughHistory = weeks.slice(4, 7).every(w => w.load > 0)
+  const ratio = enoughHistory && chronic > 0 ? acute / chronic : null
 
   return { acute, chronic, ratio, weekAssigned: week.length, weekDone: weekDone.length, missed: missed.length, avgRpe, lastDone, daysSince, unrated, weeks, assignedTotal: mine.length }
 }
