@@ -5,6 +5,7 @@ import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
 import { dismissFatigueAlert } from '../lib/alertState'
 import { sendPushToCoach, sendPushToAthletes } from '../lib/pushNotifications'
+import { isDemoMode } from '../lib/demoMode'
 import { useToast } from '../contexts/ToastContext'
 
 const REACTION_EMOJIS = ['👍','❤️','🔥','💪','😂','👏']
@@ -23,6 +24,12 @@ export default function Messages() {
     return params.get('chat') || location.state?.chatId || (!isCoach && profile?.athlete_id) || 'general'
   })()
   const [activeChat, setActiveChat] = useState(initialChat)
+  const demo = isDemoMode()
+  useEffect(() => {
+    if (!demo || activeChat !== 'general') return
+    const first = isCoach ? athletes[0]?.id : myAthleteId
+    if (first) setActiveChat(first)
+  }, [demo, activeChat, athletes, isCoach, myAthleteId]) // eslint-disable-line
   const [fatigueAlert, setFatigueAlert] = useState(location.state?.fatigueAlert || null)
   const [messages, setMessages] = useState([])
   const [reactions, setReactions] = useState({})
@@ -128,6 +135,7 @@ export default function Messages() {
 
   const send = async (text = input.trim(), fileUrl = null, fileType = null) => {
     if (!text && !fileUrl) return
+    if (demo && activeChat === 'general') return
     const prev = input
     setInput('')
     const senderName = isCoach ? 'Celia (Entrenadora)' : profile?.athletes?.name || 'Deportista'
@@ -236,7 +244,7 @@ export default function Messages() {
   }, [athletes, activeChat, isCoach, myAthleteId, refreshUnread])
 
   // Coach ve todos los chats, deportista solo el general y el suyo con la entrenadora
-  const chats = isCoach
+  const chatsAll = isCoach
     ? [
         { id: 'general', name: 'Grupo general', subtitle: `${athletes.length} deportistas`, icon: '👥' },
         ...athletes.map(a => ({ id: a.id, name: a.name, subtitle: a.sport || 'Deportista', color: a.color }))
@@ -245,6 +253,8 @@ export default function Messages() {
         { id: 'general', name: 'Grupo general', subtitle: 'Todo el equipo', icon: '👥' },
         { id: myAthleteId, name: 'Celia (Entrenadora)', subtitle: 'Chat privado', icon: '👩‍💼' }
       ]
+  // En modo demo el grupo no se enseña (lo leen las clientas reales)
+  const chats = demo ? chatsAll.filter(c => c.id !== 'general') : chatsAll
 
   const activeInfo = chats.find(c => c.id === activeChat)
   const formatTime = (ts) => new Date(ts).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })
