@@ -185,6 +185,7 @@ export default function Training({ athleteId = null, coachView = false, embedded
     if (error) { toast('No se pudo mover', 'error'); return }
     setSessions(prev => prev.map(x => x.id === s.id ? { ...x, date: newDate } : x).sort((a, b) => a.date.localeCompare(b.date)))
     haptic('light')
+    toast(`«${s.title}» movida al ${new Date(newDate + 'T12:00:00').toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric' })}`)
     if ((s.athlete_ids || []).length && newDate >= today) {
       try {
         sendPushToAthletes(s.athlete_ids, { title: '📅 Sesión movida', body: `${s.title} · ${new Date(newDate + 'T12:00:00').toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })}`, url: '/?tab=training' })

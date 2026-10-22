@@ -4,7 +4,7 @@ import { TYPE_ICONS, TYPE_COLORS } from '../lib/constants'
 
 // ─────────────────────────────────────────────
 // Vista de semana para planificar: lunes a domingo, crear en un día con "+",
-// arrastrar una sesión a otro día (asa ⠿, funciona con el dedo y con el ratón) o moverla con ‹ ›,
+// arrastrar una sesión a otro día (asa ⠿, funciona con el dedo y con el ratón); tocarla la abre,
 // y ver cuántas sesiones tiene cada deportista.
 // ─────────────────────────────────────────────
 const DAY_NAMES = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']
@@ -112,7 +112,6 @@ export default function WeekView({ sessions, athletes, athleteFilter, onOpen, on
                 <div key={s.id} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 8px', borderRadius: 10, background: 'var(--bg)', borderLeft: `4px solid ${color}`, marginTop: 6, opacity: moving === s.id || drag?.s.id === s.id ? 0.4 : 1 }}>
                   <span onPointerDown={e => startDrag(e, s)} role="button" aria-label={`Arrastrar ${s.title} a otro día`} title="Mantén y arrastra a otro día"
                     style={{ touchAction: 'none', cursor: 'grab', minWidth: 28, minHeight: 40, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-dim)', fontSize: 18, userSelect: 'none' }}>⠿</span>
-                  <button onClick={() => onMove(s, addDays(s.date, -1))} disabled={!!moving} className="btn btn-ghost btn-sm" aria-label="Mover al día anterior" title="Mover al día anterior" style={{ padding: 0, minWidth: 40, minHeight: 40, fontSize: 18 }}>‹</button>
                   <div onClick={() => onOpen(s)} role="button" style={{ flex: 1, minWidth: 0, cursor: 'pointer' }}>
                     <div style={{ fontWeight: 700, fontSize: 14, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{TYPE_ICONS[s.type] || '📅'} {s.title}</div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 3, flexWrap: 'wrap' }}>
@@ -126,7 +125,7 @@ export default function WeekView({ sessions, athletes, athleteFilter, onOpen, on
                       {ids.length > 6 && <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>+{ids.length - 6}</span>}
                     </div>
                   </div>
-                  <button onClick={() => onMove(s, addDays(s.date, 1))} disabled={!!moving} className="btn btn-ghost btn-sm" aria-label="Mover al día siguiente" title="Mover al día siguiente" style={{ padding: 0, minWidth: 40, minHeight: 40, fontSize: 18 }}>›</button>
+                  <button onClick={() => onOpen(s)} className="btn btn-ghost btn-sm" aria-label={`Abrir ${s.title}`} title="Abrir la sesión" style={{ padding: 0, minWidth: 40, minHeight: 40, fontSize: 18, color: 'var(--text-dim)' }}>›</button>
                 </div>
               )
             })}
