@@ -6,6 +6,10 @@ import { Sessions, isPendingPayment } from '../lib/db'
 import { sendPushToAthletes } from '../lib/pushNotifications'
 import { isTestOrRm } from '../lib/zones'
 import { intakeComplete, intakeFlags } from './Intake'
+import Icon from './Icon'
+
+// Iconos de línea para cada tipo de aviso (sustituyen a los emojis)
+const PENDING_ICON = { '💬': 'chat', '💳': 'card', '📈': 'progress', '📋': 'pencil', '🔄': 'calendar', '🗑': 'close', '😶': 'users', '⚠️': 'health', '📝': 'pencil' }
 import { useToast } from '../contexts/ToastContext'
 
 const fmtDay = (d) => new Date(d + 'T12:00:00').toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric', month: 'short' })
@@ -188,7 +192,7 @@ export default function PendingInbox({ athleteMap = {} }) {
   return (
     <div className="card" style={{ padding: '14px 16px' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: items.length ? 8 : 0 }}>
-        <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 800, fontSize: 16, textTransform: 'uppercase' }}>📥 Pendientes</div>
+        <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 800, fontSize: 16, textTransform: 'uppercase' }}>Pendientes</div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           {closable.length > 0 && (
             <button className="btn btn-ghost btn-sm" onClick={() => { dismiss(closable); toast(`${closable.length} aviso${closable.length > 1 ? 's' : ''} marcado${closable.length > 1 ? 's' : ''} como visto${closable.length > 1 ? 's' : ''}`) }}
@@ -204,7 +208,7 @@ export default function PendingInbox({ athleteMap = {} }) {
       {visible.map((it, i) => (
         <div key={it.key} onClick={it.go} role={it.go ? 'button' : undefined}
           style={{ display: 'flex', gap: 10, alignItems: 'flex-start', padding: '10px 0', borderTop: i ? '1px solid var(--border)' : 'none', cursor: it.go ? 'pointer' : 'default' }}>
-          <span style={{ fontSize: 18, lineHeight: 1.2 }}>{it.icon}</span>
+          <span style={{ width: 32, height: 32, borderRadius: '50%', background: 'var(--accent-dim)', color: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{PENDING_ICON[it.icon] ? <Icon name={PENDING_ICON[it.icon]} size={17} /> : <span style={{ fontSize: 15 }}>{it.icon}</span>}</span>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontWeight: 700, fontSize: 14, lineHeight: 1.35 }}>{it.title}</div>
             <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2, lineHeight: 1.4 }}>{it.sub}</div>

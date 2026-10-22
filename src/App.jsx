@@ -233,7 +233,7 @@ function CoachApp() {
       <nav className="glass-nav" style={{ display: 'flex', alignItems: 'stretch', height: 'var(--nav-height)', flexShrink: 0, paddingBottom: 'env(safe-area-inset-bottom)' }}>
         {NAV.map(({ to, icon, label }) => (
           <NavLink key={to} to={to} end={to === '/'}
-            style={({ isActive }) => ({ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4, textDecoration: 'none', color: isActive && !moreOpen ? 'var(--accent)' : 'var(--text-muted)', fontFamily: "'Barlow Condensed', sans-serif", fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px', transition: 'color 0.15s' })}>
+            style={({ isActive }) => ({ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4, textDecoration: 'none', color: isActive && !moreOpen ? 'var(--accent)' : 'var(--text-muted)', fontSize: 11, fontWeight: 700, transition: 'color 0.15s' })}>
             <span style={{ lineHeight: 1, position: 'relative', display: 'inline-block' }}>
               <Icon name={icon} size={24} />
               {to === '/messages' && unreadMessages > 0 && (
@@ -246,7 +246,7 @@ function CoachApp() {
           </NavLink>
         ))}
         <button onClick={() => setMoreOpen(o => !o)} aria-expanded={moreOpen}
-          style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4, background: 'none', border: 'none', cursor: 'pointer', color: moreOpen || inMore ? 'var(--accent)' : 'var(--text-muted)', fontFamily: "'Barlow Condensed', sans-serif", fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+          style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4, background: 'none', border: 'none', cursor: 'pointer', color: moreOpen || inMore ? 'var(--accent)' : 'var(--text-muted)', fontSize: 11, fontWeight: 700 }}>
           <Icon name="more" size={24} />
           Más
         </button>
