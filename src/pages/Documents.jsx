@@ -119,7 +119,7 @@ export default function Documents() {
                 </div>
                 {isCoach && (
                   <button className="btn btn-ghost btn-sm btn-icon" style={{ color: 'var(--error)', flexShrink: 0 }}
-                    onClick={e => { e.stopPropagation(); setConfirmDelete(doc.id) }}>🗑</button>
+                    onClick={e => { e.stopPropagation(); setConfirmDelete(doc.id) }} aria-label={`Borrar ${doc.name || "documento"}`} title="Borrar">🗑</button>
                 )}
               </div>
             ))}

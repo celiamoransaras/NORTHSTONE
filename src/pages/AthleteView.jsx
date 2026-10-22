@@ -1271,7 +1271,8 @@ function AthletePayments({ athleteId }) {
   const MONTHS = ['','Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
 
   useEffect(() => {
-    Payments.getByAthlete(athleteId).then(data => { setPayments(data); setLoading(false) })
+    // Los meses sin cuota (0 €) no se enseñan: no hay nada que pagar
+    Payments.getByAthlete(athleteId).then(data => { setPayments((data || []).filter(p => p.status === 'paid' || Number(p.amount) > 0)); setLoading(false) })
   }, [athleteId])
 
   const pending = payments.filter(isPendingPayment)
@@ -1322,7 +1323,7 @@ function AthletePayments({ athleteId }) {
         )}
 
         {payments.length === 0 ? (
-          <div className="empty-state"><div className="icon">💳</div><h3>Sin registros</h3></div>
+          <div className="empty-state"><div className="icon">💳</div><h3>Nada pendiente</h3><p>Aquí verás tus cuotas cuando Celia las registre.</p></div>
         ) : (
           <div className="card">
             {payments.map((p, i) => (
@@ -1568,7 +1569,7 @@ function AthleteTrainingWithRPE({ athleteId, athleteName, initialSessionId, onSe
                         {isToday && <span className="badge badge-green" style={{ fontSize: 11 }}>HOY</span>}
                       </div>
                       <div style={{ fontWeight: 700, fontSize: 15 }}>{s.title}</div>
-                      <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>{s.duration} min{s.exercises?.length > 0 ? ` · 📋 ${s.exercises.length} ejercicios` : ''}</div>
+                      <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>{s.duration} min{s.exercises?.length > 0 ? ` · 📋 ${s.exercises.length} ${s.exercises.length === 1 ? 'bloque' : 'bloques'}` : ''}</div>
                     </div>
                   </div>
                   <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
@@ -1621,7 +1622,7 @@ function AthleteTrainingWithRPE({ athleteId, athleteName, initialSessionId, onSe
                       <div style={{ fontWeight: 700, fontSize: 15 }}>{s.title}</div>
                       {hasUnseenReply
                         ? <div style={{ fontSize: 12, color: 'var(--accent)', fontWeight: 700, marginTop: 1 }}>💬 Celia ha respondido</div>
-                        : s.exercises?.length > 0 && <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 1 }}>📋 {s.exercises.length} ejercicios</div>}
+                        : s.exercises?.length > 0 && <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 1 }}>📋 {s.exercises.length} {s.exercises.length === 1 ? 'bloque' : 'bloques'}</div>}
                     </div>
                     <button onClick={e => { e.stopPropagation(); setRpeSheet(s); setRpe(0) }}
                       className="btn btn-sm"

@@ -52,7 +52,7 @@ function AnnualSummary({ year, athletes }) {
             <div className="avatar" style={{ background: a.color + '20', color: a.color, width: 36, height: 36, fontSize: 13, flexShrink: 0 }}>{initials(a.name)}</div>
             <div style={{ flex: 1 }}>
               <div style={{ fontWeight: 700, fontSize: 14 }}>{a.name}</div>
-              <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{a.paid} meses pagados · {a.pending} pendientes</div>
+              <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{a.paid} {a.paid === 1 ? 'mes pagado' : 'meses pagados'} · {a.pending} pendiente{a.pending === 1 ? '' : 's'}</div>
             </div>
             <div style={{ fontWeight: 800, fontSize: 15, color: 'var(--success)' }}>{a.amountPaid > 0 ? `${a.amountPaid}€` : '—'}</div>
           </div>

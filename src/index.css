@@ -424,7 +424,8 @@ textarea { resize: vertical; min-height: 88px; }
   height: 100%;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
-  padding-bottom: calc(var(--nav-height) + 20px);
+  /* hueco para la barra inferior y el botón + flotante, así el final nunca queda tapado */
+  padding-bottom: calc(var(--nav-height) + 96px);
 }
 
 .page-header {
@@ -505,6 +506,8 @@ textarea { resize: vertical; min-height: 88px; }
   padding-bottom: 2px;
 }
 .pill-tabs::-webkit-scrollbar { height: 0; }
+/* Pestañas que caben siempre en una fila (sin scroll lateral) */
+.pill-tabs.fit .pill-tab { flex: 1 1 0; min-width: 0; padding: 8px 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 .pill-tab {
   flex-shrink: 0;

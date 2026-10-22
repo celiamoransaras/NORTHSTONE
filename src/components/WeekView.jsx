@@ -36,7 +36,7 @@ export default function WeekView({ sessions, athletes, athleteFilter, onOpen, on
   const startDrag = (e, s) => {
     if (moving) return
     e.preventDefault()
-    e.currentTarget.setPointerCapture?.(e.pointerId)
+    try { e.currentTarget.setPointerCapture?.(e.pointerId) } catch { /* no hace falta para arrastrar */ }
     setDrag({ s, x: e.clientX, y: e.clientY, over: s.date })
   }
   useEffect(() => {

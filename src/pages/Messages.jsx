@@ -36,6 +36,11 @@ export default function Messages() {
   const mediaRecorderRef = useRef(null)
   const audioChunksRef = useRef([])
   const bottomRef = useRef(null)
+  const listRef = useRef(null)
+  const inputRef = useRef(null)
+  const [awayFromBottom, setAwayFromBottom] = useState(false)
+  const nearBottom = () => { const el = listRef.current; return !el || el.scrollHeight - el.scrollTop - el.clientHeight < 160 }
+  const toBottom = (smooth) => { const el = listRef.current; if (el) el.scrollTo({ top: el.scrollHeight, behavior: smooth ? 'smooth' : 'auto' }) }
   const fileRef = useRef(null)
 
   const STORAGE_KEY = 'ns_chat_last_read'
@@ -105,9 +110,19 @@ export default function Messages() {
     return () => channel?.unsubscribe()
   }, [activeChat])
 
+  // Al cargar o llegar mensajes: ir al último (y otra vez cuando terminan de cargar las fotos)
+  const firstLoad = useRef(true)
+  useEffect(() => { firstLoad.current = true }, [activeChat])
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages])
+    if (firstLoad.current || nearBottom()) { toBottom(!firstLoad.current); if (messages.length) firstLoad.current = false }
+  }, [messages]) // eslint-disable-line
+  // El cuadro de texto crece con lo que escribes (hasta 5 líneas)
+  useEffect(() => {
+    const el = inputRef.current
+    if (!el) return
+    el.style.height = 'auto'
+    el.style.height = Math.min(el.scrollHeight, 120) + 'px'
+  }, [input])
 
   const myId = isCoach ? 'coach' : (profile?.athlete_id || 'athlete')
 
@@ -296,7 +311,7 @@ export default function Messages() {
       </div>
 
       {/* Chat area */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', position: 'relative' }}>
 
         {reactionTarget && (
           <div onClick={() => setReactionTarget(null)}
@@ -319,7 +334,7 @@ export default function Messages() {
             }} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: 18, cursor: 'pointer', padding: 4 }}>✕</button>
           </div>
         )}
-        <div style={{ flex: 1, overflowY: 'auto', padding: 16 }}>
+        <div ref={listRef} onScroll={() => setAwayFromBottom(!nearBottom())} style={{ flex: 1, overflowY: 'auto', padding: 16, position: 'relative' }}>
           {messages.length === 0 && (
             <div className="empty-state"><div className="icon">💬</div><p>Empieza la conversación</p></div>
           )}
@@ -349,7 +364,7 @@ export default function Messages() {
                       <div style={{ display: 'flex', alignItems: 'flex-end', gap: 4, flexDirection: isMe ? 'row-reverse' : 'row' }}>
                       <div style={{ background: isMe ? 'var(--accent-gradient)' : 'var(--card)', color: isMe ? '#fff' : 'var(--text)', borderRadius: isMe ? '18px 18px 4px 18px' : '18px 18px 18px 4px', padding: msg.file_url && msg.file_type?.startsWith('image/') ? 4 : '10px 14px', fontSize: 14, border: isMe ? 'none' : '1px solid var(--border-light)', wordBreak: 'break-word', overflow: 'hidden', boxShadow: 'var(--shadow-sm)' }}>
                         {msg.file_url && msg.file_type?.startsWith('image/') ? (
-                          <img src={msg.file_url} alt="imagen" style={{ maxWidth: 220, maxHeight: 220, borderRadius: 14, display: 'block' }} />
+                          <img src={msg.file_url} alt="imagen" onLoad={() => { if (!awayFromBottom) toBottom(false) }} style={{ maxWidth: 220, maxHeight: 220, borderRadius: 14, display: 'block' }} />
                         ) : msg.file_url && msg.file_type?.startsWith('audio/') ? (
                           <audio controls src={msg.file_url} style={{ maxWidth: 200, height: 36 }} />
                         ) : msg.file_url ? (
@@ -394,6 +409,10 @@ export default function Messages() {
           ))}
           <div ref={bottomRef} />
         </div>
+        {awayFromBottom && (
+          <button type="button" onClick={() => toBottom(true)} aria-label="Ir al último mensaje"
+            style={{ position: 'absolute', right: 16, bottom: 76, zIndex: 5, width: 44, height: 44, borderRadius: '50%', border: '1px solid var(--border)', background: 'var(--card)', color: 'var(--accent)', boxShadow: 'var(--shadow-md)', fontSize: 20, fontWeight: 900, cursor: 'pointer' }}>↓</button>
+        )}
 
         <div style={{ padding: '10px 12px', background: 'var(--surface)', borderTop: '1px solid var(--border)', display: 'flex', gap: 8, alignItems: 'flex-end', flexShrink: 0 }}>
           <input ref={fileRef} type="file" accept="image/*,.pdf,.doc,.docx" style={{ display: 'none' }} onChange={handleFile} />
@@ -416,18 +435,18 @@ export default function Messages() {
           ) : (
             /* Barra normal */
             <>
-              <button onClick={() => fileRef.current.click()} disabled={uploading}
+              <button onClick={() => fileRef.current.click()} disabled={uploading} aria-label="Adjuntar foto o archivo" title="Adjuntar foto o archivo"
                 style={{ width: 42, height: 42, borderRadius: '50%', background: 'var(--card)', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, cursor: 'pointer', flexShrink: 0 }}>
                 {uploading ? '⏳' : '📎'}
               </button>
-              <button onClick={toggleRecording} disabled={uploading}
+              <button onClick={toggleRecording} disabled={uploading} aria-label="Grabar audio" title="Grabar audio"
                 style={{ width: 42, height: 42, borderRadius: '50%', background: 'var(--card)', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, cursor: 'pointer', flexShrink: 0 }}>
                 🎤
               </button>
-              <textarea value={input} onChange={e => setInput(e.target.value)} onKeyDown={handleKey}
-                placeholder={activeChat === 'general' ? 'Mensaje para todo el grupo...' : 'Escribe un mensaje...'} rows={1}
+              <textarea ref={inputRef} value={input} onChange={e => setInput(e.target.value)} onKeyDown={handleKey}
+                placeholder={activeChat === 'general' ? 'Mensaje al grupo' : 'Escribe un mensaje'} rows={1} aria-label="Mensaje"
                 style={{ flex: 1, resize: 'none', minHeight: 40, maxHeight: 120, padding: '10px 14px', borderRadius: 20, fontSize: 15, background: 'var(--card)', border: '1px solid var(--border)', color: 'var(--text)', outline: 'none', lineHeight: 1.4, fontFamily: 'inherit' }} />
-              <button onClick={() => send()} style={{ width: 42, height: 42, borderRadius: '50%', background: input.trim() ? 'var(--accent-gradient)' : 'var(--border)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, cursor: 'pointer', border: 'none', transition: 'all 0.15s', flexShrink: 0 }}>↑</button>
+              <button onClick={() => send()} aria-label="Enviar" style={{ width: 42, height: 42, borderRadius: '50%', background: input.trim() ? 'var(--accent-gradient)' : 'var(--border)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, cursor: 'pointer', border: 'none', transition: 'all 0.15s', flexShrink: 0 }}>↑</button>
             </>
           )}
         </div>

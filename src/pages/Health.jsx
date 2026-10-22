@@ -285,7 +285,7 @@ export default function Health() {
                 <label className="input-label">Deportista *</label>
                 <select className="input" value={form.athlete_id} onChange={e => setForm(f => ({ ...f, athlete_id: e.target.value }))}>
                   <option value="">Selecciona deportista</option>
-                  {athletes.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
+                  {athletes.filter(a => a.status !== 'inactive' || a.id === form.athlete_id).map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
                 </select>
               </div>
               <div style={{ display: 'flex', gap: 10 }}>

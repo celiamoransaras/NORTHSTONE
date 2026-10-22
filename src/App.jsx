@@ -145,7 +145,7 @@ function CoachApp() {
             style={{ background: pushSubscribed ? 'var(--accent-dim)' : 'var(--card)', border: `1px solid ${pushSubscribed ? 'var(--accent)' : 'var(--border)'}`, borderRadius: 10, padding: '6px 10px', cursor: 'pointer', fontSize: 16, lineHeight: 1, color: pushSubscribed ? 'var(--accent)' : 'var(--text-muted)', transition: 'all 0.15s' }}>
             {pushLoading ? '⏳' : pushSubscribed ? '🔔' : '🔕'}
           </button>
-          <div onClick={handleAvatarClick} className="avatar-ring" style={{ width: 38, height: 38, borderRadius: '50%', background: profile?.avatar_url ? 'transparent' : 'var(--accent-gradient)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 900, fontSize: 15, cursor: 'pointer', overflow: 'hidden', flexShrink: 0 }}>
+          <div onClick={handleAvatarClick} title="Cambiar tu foto" role="button" aria-label="Cambiar tu foto" className="avatar-ring" style={{ width: 38, height: 38, borderRadius: '50%', background: profile?.avatar_url ? 'transparent' : 'var(--accent-gradient)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 900, fontSize: 15, cursor: 'pointer', overflow: 'hidden', flexShrink: 0 }}>
             {profile?.avatar_url
               ? <img src={profile.avatar_url} alt="foto" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
               : 'C'}
@@ -173,7 +173,9 @@ function CoachApp() {
       </main>
 
       {/* Botón flotante: acciones rápidas */}
-      {location.pathname !== '/messages' && (
+      <ScrollTopButton />
+
+      {location.pathname !== '/messages' && !location.pathname.startsWith('/training') && (
         <>
           {fabOpen && (
             <>
@@ -284,7 +286,31 @@ function AppContent() {
       <Suspense fallback={<PageLoader />}>
         <AthleteView />
       </Suspense>
+      <ScrollTopButton />
     </ErrorBoundary>
+  )
+}
+
+// Botón «Arriba»: aparece al bajar mucho en una página o en una hoja larga
+function ScrollTopButton() {
+  const [target, setTarget] = useState(null)
+  const location = useLocation()
+  useEffect(() => { setTarget(null) }, [location.pathname])
+  useEffect(() => {
+    const onScroll = (e) => {
+      const t = e.target
+      if (!(t instanceof Element) || !t.matches('.page, .sheet, .sheet-body')) return
+      setTarget(prev => (t.scrollTop > 900 ? t : (prev === t ? null : prev)))
+    }
+    document.addEventListener('scroll', onScroll, true)
+    return () => document.removeEventListener('scroll', onScroll, true)
+  }, [])
+  if (!target || !target.isConnected) return null
+  return (
+    <button type="button" aria-label="Volver arriba" onClick={() => { target.scrollTo({ top: 0, behavior: 'smooth' }); setTarget(null) }}
+      style={{ position: 'fixed', left: '50%', transform: 'translateX(-50%)', bottom: 'calc(var(--nav-height) + env(safe-area-inset-bottom) + 14px)', zIndex: 2500, padding: '8px 16px', minHeight: 40, borderRadius: 20, border: '1px solid var(--border)', background: 'var(--card)', color: 'var(--text)', boxShadow: 'var(--shadow-md)', fontWeight: 800, fontSize: 13, cursor: 'pointer' }}>
+      ↑ Arriba
+    </button>
   )
 }
 

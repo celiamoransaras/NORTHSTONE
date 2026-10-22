@@ -412,11 +412,11 @@ export default function Training({ athleteId = null, coachView = false, embedded
       )}
 
       <div className="page-content">
-        <div className="pill-tabs">
+        <div className="pill-tabs fit">
           {!embedded && <button className={`pill-tab ${tab==='week'?'active':''}`} onClick={() => setTab('week')}>Semana</button>}
-          <button className={`pill-tab ${tab==='upcoming'?'active':''}`} onClick={() => { setTab('upcoming'); setFilterTypePersisted(null) }}>Próximos ({upcoming.length})</button>
-          <button className={`pill-tab ${tab==='past'?'active':''}`} onClick={() => { setTab('past'); setFilterTypePersisted(null) }}>Historial ({past.length})</button>
-          {!embedded && <button className={`pill-tab ${tab==='calendar'?'active':''}`} onClick={() => setTab('calendar')}>Calendario</button>}
+          <button className={`pill-tab ${tab==='upcoming'?'active':''}`} onClick={() => { setTab('upcoming'); setFilterTypePersisted(null) }}>Próximos <span style={{ opacity: 0.7 }}>{upcoming.length}</span></button>
+          <button className={`pill-tab ${tab==='past'?'active':''}`} onClick={() => { setTab('past'); setFilterTypePersisted(null) }}>Historial <span style={{ opacity: 0.7 }}>{past.length}</span></button>
+          {!embedded && <button className={`pill-tab ${tab==='calendar'?'active':''}`} onClick={() => setTab('calendar')} aria-label="Calendario del mes">Mes</button>}
         </div>
 
         {/* Buscar y filtrar por deportista */}
@@ -533,8 +533,8 @@ export default function Training({ athleteId = null, coachView = false, embedded
               </div>
               {(!athleteId || coachView) && (
                 <div style={{ display: 'flex', gap: 6 }}>
-                  <button className="btn btn-ghost btn-sm" onClick={() => duplicateSession(detailSession)} title="Duplicar sesión">⧉</button>
-                  <button className="btn btn-ghost btn-sm" onClick={() => openEdit(detailSession)}>✏️</button>
+                  <button className="btn btn-ghost btn-sm" onClick={() => duplicateSession(detailSession)} title="Duplicar sesión" aria-label="Duplicar sesión">⧉ Duplicar</button>
+                  <button className="btn btn-ghost btn-sm" onClick={() => openEdit(detailSession)} aria-label="Editar sesión">✏️ Editar</button>
                 </div>
               )}
               {!embedded && <button className="btn-close" aria-label="Cerrar" onClick={() => setSheet(null)}>✕</button>}
