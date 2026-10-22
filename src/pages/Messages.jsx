@@ -25,11 +25,19 @@ export default function Messages() {
   })()
   const [activeChat, setActiveChat] = useState(initialChat)
   const demo = isDemoMode()
-  useEffect(() => {
-    if (!demo || activeChat !== 'general') return
-    const first = isCoach ? athletes[0]?.id : myAthleteId
-    if (first) setActiveChat(first)
-  }, [demo, activeChat, athletes, isCoach, myAthleteId]) // eslint-disable-line
+  // Modo demo: el grupo real lo leen las clientas, así que se enseña uno de ejemplo (no se guarda)
+  const demoGroup = () => {
+    const by = (re) => athletes.find(a => re.test(a.name || ''))
+    const marta = by(/marta/i), ana = by(/ana ruiz/i), paula = by(/paula/i)
+    const t = (h) => new Date(Date.now() - h * 3600000).toISOString()
+    return [
+      { id: 'dg1', group_id: 'general', sender: 'coach', sender_name: 'Celia (Entrenadora)', text: '¡Buenos días, equipo! Esta semana toca simulacro corto el jueves. Revisad vuestro ritmo Hyrox en la app 💪', created_at: t(26) },
+      marta && { id: 'dg2', group_id: 'general', sender: marta.id, sender_name: marta.name, text: '¡Vamos! Ya tengo mi ritmo: 4:55 el km 🔥', created_at: t(25) },
+      ana && { id: 'dg3', group_id: 'general', sender: ana.id, sender_name: ana.name, text: '¿Alguien se apunta a entrenar juntas el sábado en la pista?', created_at: t(20) },
+      paula && { id: 'dg4', group_id: 'general', sender: paula.id, sender_name: paula.name, text: 'Yo voy! Es mi primera vez en pista 😅', created_at: t(19) },
+      { id: 'dg5', group_id: 'general', sender: 'coach', sender_name: 'Celia (Entrenadora)', text: 'Me encanta. Paula, tú haz las series a ritmo cómodo, ya lo tienes puesto en tu sesión.', created_at: t(18) },
+    ].filter(Boolean)
+  }
   const [fatigueAlert, setFatigueAlert] = useState(location.state?.fatigueAlert || null)
   const [messages, setMessages] = useState([])
   const [reactions, setReactions] = useState({})
@@ -89,6 +97,7 @@ export default function Messages() {
   }, [])
 
   const loadMessages = async () => {
+    if (demo && activeChat === 'general') { setMessages(demoGroup()); setReactions({}); return }
     const sinceDate = (!isCoach && profile?.athletes?.created_at) ? profile.athletes.created_at : null
     const msgs = await DB.getGroup(activeChat, sinceDate)
     setMessages(msgs)
@@ -116,6 +125,7 @@ export default function Messages() {
     const channel = DB.subscribe(activeChat, () => loadMessages())
     return () => channel?.unsubscribe()
   }, [activeChat])
+  useEffect(() => { if (demo && activeChat === 'general') setMessages(demoGroup()) }, [athletes]) // eslint-disable-line
 
   // Al cargar o llegar mensajes: ir al último (y otra vez cuando terminan de cargar las fotos)
   const firstLoad = useRef(true)
@@ -253,8 +263,7 @@ export default function Messages() {
         { id: 'general', name: 'Grupo general', subtitle: 'Todo el equipo', icon: '👥' },
         { id: myAthleteId, name: 'Celia (Entrenadora)', subtitle: 'Chat privado', icon: '👩‍💼' }
       ]
-  // En modo demo el grupo no se enseña (lo leen las clientas reales)
-  const chats = demo ? chatsAll.filter(c => c.id !== 'general') : chatsAll
+  const chats = chatsAll
 
   const activeInfo = chats.find(c => c.id === activeChat)
   const formatTime = (ts) => new Date(ts).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })
@@ -427,7 +436,11 @@ export default function Messages() {
         <div style={{ padding: '10px 12px', background: 'var(--surface)', borderTop: '1px solid var(--border)', display: 'flex', gap: 8, alignItems: 'flex-end', flexShrink: 0 }}>
           <input ref={fileRef} type="file" accept="image/*,.pdf,.doc,.docx" style={{ display: 'none' }} onChange={handleFile} />
 
-          {recording ? (
+          {demo && activeChat === 'general' ? (
+            <div style={{ flex: 1, fontSize: 13, color: 'var(--text-muted)', padding: '10px 6px', lineHeight: 1.4 }}>
+              Modo demo: este chat de grupo es de ejemplo. Aquí no se puede escribir para que no llegue a tus clientas.
+            </div>
+          ) : recording ? (
             /* Barra de grabación */
             <>
               <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 10, padding: '10px 16px', background: 'var(--error-dim)', borderRadius: 20, border: '1px solid var(--error)', minHeight: 42 }}>
