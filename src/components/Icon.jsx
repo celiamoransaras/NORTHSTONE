@@ -18,6 +18,21 @@ const P = {
   moon: <path d="M20.5 13.2A8.5 8.5 0 1 1 10.8 3.5a6.8 6.8 0 0 0 9.7 9.7z" />,
   auto: <><circle cx="12" cy="12" r="9" /><path d="M12 3v18" /><path d="M12 3a9 9 0 0 1 0 18z" fill="currentColor" stroke="none" /></>,
   close: <path d="M6 6l12 12M18 6 6 18" />,
+  // Tipos de sesión y elementos de la app
+  run: <><circle cx="14.5" cy="4.5" r="1.9" /><path d="m8 21 3.2-5.6 3.3 2.6V21" /><path d="M6 11.5 9.5 8l4.3 1.4 2.2 3.1 3.5 1" /><path d="m10.6 8.4-1.7 5.2 2.3 1.8" /></>,
+  dumbbell: <><path d="M6.5 6.5v11M17.5 6.5v11M3.5 9.5v5M20.5 9.5v5M6.5 12h11" /></>,
+  bolt: <path d="M13 2.5 4.5 13.5H11l-1 8 8.5-11H12z" />,
+  wave: <path d="M2.5 12c1.8 0 1.8-3.5 3.6-3.5S7.9 15.5 9.7 15.5s1.8-7 3.6-7 1.8 7 3.6 7 1.8-3.5 4.6-3.5" />,
+  erg: <><circle cx="7" cy="15.5" r="3.5" /><path d="M10.5 15.5h10M14.5 15.5 18.5 6" /></>,
+  heart: <path d="M20.4 5.6a5 5 0 0 0-7.1 0L12 6.9l-1.3-1.3a5 5 0 1 0-7.1 7.1L12 21l8.4-8.3a5 5 0 0 0 0-7.1z" />,
+  stretch: <><circle cx="12" cy="4.5" r="1.9" /><path d="M4 9h16M12 9v5l-4 7M12 14l4 7" /></>,
+  play: <path d="M8 5.5v13l10.5-6.5z" fill="currentColor" stroke="none" />,
+  medal: <><circle cx="12" cy="15" r="5.5" /><path d="M8.5 2.5h7l-2 7h-3z" /><path d="m12 12.6.9 1.6 1.7.3-1.2 1.2.3 1.7-1.7-.8-1.7.8.3-1.7-1.2-1.2 1.7-.3z" fill="currentColor" stroke="none" /></>,
+  flame: <path d="M12 21.5c4 0 6.5-2.7 6.5-6.3 0-4.4-4-6.7-4.5-11.7-3 2-4.6 5-4.3 8-1.2-.7-2-2-2.2-3.4C5.7 9.8 5.5 12 5.5 15.2c0 3.6 2.5 6.3 6.5 6.3z" />,
+  check: <path d="m5 12.5 4.5 4.5L19 7.5" />,
+  share: <><path d="M12 3.5v12" /><path d="m7.5 8 4.5-4.5L16.5 8" /><path d="M5 13v6a1.5 1.5 0 0 0 1.5 1.5h11A1.5 1.5 0 0 0 19 19v-6" /></>,
+  clock: <><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></>,
+  drop: <path d="M12 3.5s6.5 7 6.5 11.3a6.5 6.5 0 0 1-13 0C5.5 10.5 12 3.5 12 3.5z" />,
 }
 
 export default function Icon({ name, size = 22, strokeWidth = 1.9, style }) {

@@ -307,7 +307,7 @@ export default function Health() {
                 <div style={{ display: 'flex', gap: 8 }}>
                   {SEVERITY.map(s => (
                     <button key={s.value} onClick={() => setForm(f => ({ ...f, severity: s.value }))}
-                      style={{ flex: 1, padding: '12px 8px', borderRadius: 12, fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: "'Barlow Condensed', sans-serif", textTransform: 'uppercase', letterSpacing: '0.5px',
+                      style={{ flex: 1, padding: '12px 8px', borderRadius: 12, fontSize: 13, fontWeight: 700, cursor: 'pointer',
                         border: `2px solid ${form.severity === s.value ? s.color : 'var(--border)'}`,
                         background: form.severity === s.value ? s.bg : 'var(--bg)',
                         color: form.severity === s.value ? s.color : 'var(--text-muted)' }}>

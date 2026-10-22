@@ -108,12 +108,11 @@ export default function Dashboard() {
   return (
     <div className="page fade-in">
       {/* Hero */}
-      <div className="page-hero" style={{ padding: '28px 20px 20px', background: 'linear-gradient(160deg, rgba(37,99,235,0.05) 0%, transparent 60%)' }}>
+      <div className="page-hero" style={{ padding: '28px 20px 20px', background: 'transparent', paddingBottom: 8 }}>
         <div style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 6 }}>
           {dayNames[today.getDay()]}, {today.getDate()} {monthNames[today.getMonth()]}
         </div>
-        <h1 style={{ fontSize: 38, lineHeight: 1.0, marginBottom: 0 }}>{greeting},<br />Celia 👋</h1>
-        <div style={{ height: 3, width: 48, background: 'var(--accent-gradient)', borderRadius: 2, marginTop: 14 }} />
+        <h1 style={{ fontSize: 30, lineHeight: 1.05, marginBottom: 0 }}>{greeting}, Celia</h1>
       </div>
 
       <div className="page-content" style={{ paddingTop: 4 }}>
@@ -172,12 +171,11 @@ export default function Dashboard() {
         )}
 
         {/* Stats */}
-        <div className="section-title fade-in-1">Resumen</div>
-        <div className="grid-2 fade-in-2">
-          <StatCard value={stats.active} label="Activos" color="var(--success)" icon="👥" onClick={() => navigate('/athletes')} />
-          <StatCard value={stats.injured} label="Lesionados" color="var(--error)" icon="🩹" onClick={() => navigate('/health')} />
-          <StatCard value={stats.sessionsThisMonth} label="Sesiones" color="var(--accent)" icon="📅" onClick={() => navigate('/training')} />
-          <StatCard value={`${stats.paidCount}/${stats.totalPayments}`} label="Pagos al día" color="#059669" icon="💳" onClick={() => navigate('/payments')} />
+        <div className="card fade-in-1" style={{ padding: '6px 4px', display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)' }}>
+          <StatCard value={stats.active} label="En activo" color="var(--text)" onClick={() => navigate('/athletes')} />
+          <StatCard value={stats.injured} label="Lesiones" color={stats.injured ? 'var(--error)' : 'var(--text)'} onClick={() => navigate('/health')} />
+          <StatCard value={stats.sessionsThisMonth} label="Sesiones mes" color="var(--text)" onClick={() => navigate('/training')} />
+          <StatCard value={`${stats.paidCount}/${stats.totalPayments}`} label="Pagos al día" color={stats.paidCount < stats.totalPayments ? 'var(--warning)' : 'var(--text)'} onClick={() => navigate('/payments')} />
         </div>
 
         {/* Próximas sesiones */}
@@ -369,13 +367,12 @@ function TeamStatsSheet({ onClose }) {
   )
 }
 
-function StatCard({ value, label, color, icon, onClick }) {
+function StatCard({ value, label, color, onClick }) {
   return (
-    <div className="stat-card" onClick={onClick} style={{ cursor: onClick ? 'pointer' : 'default', position: 'relative', overflow: 'hidden' }}>
-      <div style={{ position: 'absolute', top: 12, right: 14, fontSize: 22, opacity: 0.15 }}>{icon}</div>
-      <div className="stat-value" style={{ color }}>{value}</div>
-      <div className="stat-label">{label}</div>
-    </div>
+    <button type="button" onClick={onClick} style={{ background: 'none', border: 'none', cursor: onClick ? 'pointer' : 'default', padding: '10px 4px', textAlign: 'center', color: 'var(--text)', fontFamily: 'inherit', minHeight: 56 }}>
+      <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 900, fontSize: 24, lineHeight: 1, color }}>{value}</div>
+      <div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, marginTop: 4 }}>{label}</div>
+    </button>
   )
 }
 
@@ -485,7 +482,7 @@ function SessionRow({ session, last, onClick }) {
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4, flexShrink: 0 }}>
         {isToday && <span className="badge badge-green" style={{ fontSize: 11 }}>HOY</span>}
-        <span style={{ fontSize: 18 }}>{icon}</span>
+        <span style={{ fontSize: 18, color }}>{icon}</span>
       </div>
     </div>
   )

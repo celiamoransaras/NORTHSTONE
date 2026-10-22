@@ -1310,7 +1310,7 @@ export function WeightSection({ athleteId }) {
           />
           <span style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', fontSize: 12, color: 'var(--text-muted)', fontWeight: 700 }}>kg</span>
         </div>
-        <button onClick={save} disabled={saving || !input} style={{ padding: '10px 18px', borderRadius: 10, background: 'var(--accent)', color: '#fff', fontWeight: 800, fontSize: 14, border: 'none', cursor: saving || !input ? 'not-allowed' : 'pointer', opacity: saving || !input ? 0.5 : 1, fontFamily: "'Barlow Condensed', sans-serif", textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+        <button onClick={save} disabled={saving || !input} style={{ padding: '10px 18px', borderRadius: 10, background: 'var(--accent)', color: '#fff', fontWeight: 800, fontSize: 14, border: 'none', cursor: saving || !input ? 'not-allowed' : 'pointer', opacity: saving || !input ? 0.5 : 1 }}>
           Guardar
         </button>
       </div>
@@ -1645,7 +1645,7 @@ export function ProgressPhotos({ athleteId, canUpload = false, canDelete = false
                   toast('Foto eliminada')
                 } catch { toast('Error al eliminar', 'error') }
               }}
-              style={{ marginTop: 16, padding: '10px 24px', borderRadius: 10, background: '#EF4444', color: '#fff', fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 800, fontSize: 14, textTransform: 'uppercase', letterSpacing: '0.5px', border: 'none', cursor: 'pointer' }}>
+              style={{ marginTop: 16, padding: '10px 24px', borderRadius: 10, background: '#EF4444', color: '#fff', fontWeight: 800, fontSize: 14, border: 'none', cursor: 'pointer' }}>
               🗑 Eliminar foto
             </button>
           )}

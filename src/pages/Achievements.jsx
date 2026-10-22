@@ -3,6 +3,8 @@ import { useState, useEffect } from 'react'
 import { Achievements, Records } from '../lib/db'
 import { supabase } from '../lib/supabase'
 import { sendPushToAthletes } from '../lib/pushNotifications'
+import { TYPE_COLORS, TYPE_ICONS } from '../lib/constants'
+import Icon from '../components/Icon'
 
 const ACHIEVEMENT_DEFS = [
   // Sesiones
@@ -144,11 +146,11 @@ export function StreakBadge({ streak }) {
     : streak >= 2  ? { text: '¡Vas muy bien! 💪', gradient: 'linear-gradient(135deg, #F97316, #EF4444)' }
     : { text: '¡Sigue así!', gradient: 'linear-gradient(135deg, #F97316, #EF4444)' }
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: msg.gradient, borderRadius: 16, padding: '8px 16px', marginBottom: 4 }}>
-      <span style={{ fontSize: 28 }}>🔥</span>
+    <div className="card" style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', marginBottom: 4 }}>
+      <span style={{ width: 40, height: 40, borderRadius: '50%', background: 'rgba(217,119,6,0.12)', color: '#D97706', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><Icon name="flame" size={22} /></span>
       <div>
-        <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 900, fontSize: 24, color: '#fff', lineHeight: 1 }}>{streak} semana{streak > 1 ? 's' : ''}</div>
-        <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.85)' }}>de racha. {msg.text}</div>
+        <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 900, fontSize: 22, color: 'var(--text)', lineHeight: 1 }}>{streak} semana{streak > 1 ? 's' : ''} de racha</div>
+        <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>{msg.text.replace(/\s*\p{Extended_Pictographic}\uFE0F?/gu, '')}</div>
       </div>
     </div>
   )
@@ -207,17 +209,17 @@ export function AchievementsHomeSection({ athleteId }) {
 
   return (
     <div style={{ background: 'var(--card)', borderRadius: 22, padding: '18px 16px', border: '1.5px solid var(--border)', boxShadow: '0 2px 16px rgba(0,0,0,0.05)' }}>
-      <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 800, fontSize: 12, textTransform: 'uppercase', letterSpacing: '1.5px', color: 'var(--text-muted)', marginBottom: 14 }}>🏆 Mis logros</div>
+      <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 800, fontSize: 12, textTransform: 'uppercase', letterSpacing: '1.5px', color: 'var(--text-muted)', marginBottom: 14 }}>Mis logros</div>
 
       {/* Logros desbloqueados */}
       {unlockedDefs.length > 0 && (
         <div style={{ display: 'flex', gap: 12, overflowX: 'auto', paddingBottom: 4, marginBottom: nextDef ? 16 : 0 }}>
           {unlockedDefs.map(def => (
             <div key={def.type} style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, minWidth: 68 }}>
-              <div style={{ width: 56, height: 56, borderRadius: 18, background: 'linear-gradient(135deg, #FCD34D, #F59E0B)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 28, boxShadow: '0 4px 16px rgba(245,158,11,0.3)' }}>
-                {def.icon}
+              <div style={{ width: 56, height: 56, borderRadius: '50%', background: 'var(--accent-dim)', border: '2px solid var(--accent)', color: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Icon name="medal" size={26} />
               </div>
-              <div style={{ fontSize: 11, fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)', textAlign: 'center', lineHeight: 1.2 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textAlign: 'center', lineHeight: 1.25, maxWidth: 76 }}>
                 {def.title}
               </div>
             </div>
@@ -230,15 +232,14 @@ export function AchievementsHomeSection({ athleteId }) {
         <>
           {unlockedDefs.length > 0 && <div style={{ height: 1, background: 'var(--border)', marginBottom: 14 }} />}
           <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-            <div style={{ width: 48, height: 48, borderRadius: 16, background: 'linear-gradient(135deg, #F1F5F9, #E2E8F0)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24, flexShrink: 0, filter: 'grayscale(1)', opacity: 0.5 }}>
-              {nextDef.icon}
+            <div style={{ width: 48, height: 48, borderRadius: '50%', border: '2px dashed var(--border)', color: 'var(--text-dim)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <Icon name="medal" size={22} />
             </div>
             <div style={{ flex: 1 }}>
               <div style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 800, textTransform: 'uppercase', letterSpacing: '1px' }}>Próximo logro</div>
               <div style={{ fontWeight: 700, fontSize: 14, marginTop: 2, color: 'var(--text)' }}>{nextDef.title}</div>
               <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>{nextDef.description}</div>
             </div>
-            <div style={{ fontSize: 22, opacity: 0.25 }}>🔒</div>
           </div>
         </>
       )}
@@ -247,8 +248,6 @@ export function AchievementsHomeSection({ athleteId }) {
 }
 
 export function WeeklyPlan({ sessions, athleteId, onOpenSession }) {
-  const TYPE_COLORS = { run: '#10B981', fuerza: '#F59E0B', series: '#EF4444', endurance: '#3B82F6', especifico: '#8B5CF6', ergometros: '#14B8A6', cardio: '#EC4899', rest_day: '#9CA3AF' }
-  const TYPE_ICONS = { run: '🏃', fuerza: '💪', series: '⚡', endurance: '🫁', especifico: '🎯', ergometros: '🚣', cardio: '❤️', rest_day: '😴' }
 
   const today = new Date()
   const todayStr = ymd(today)

@@ -4,6 +4,8 @@ import ThemeToggle from '../components/ThemeToggle'
 import { InstallGuide, InstallBanner } from '../components/InstallGuide'
 import { isStandalone } from '../lib/install'
 import ZonesPanel from '../components/ZonesPanel'
+import WeekRing from '../components/WeekRing'
+import Celebration from '../components/Celebration'
 import { LoggableBlock, LogSheet, useSessionLog, QuickLogButton } from '../components/WorkoutLog'
 import { useLibrary } from '../components/Exercises'
 import { VideoList } from '../components/VideoEmbed'
@@ -225,7 +227,7 @@ export default function AthleteView() {
             <span style={{ color: 'var(--accent)' }}>N</span>ORTHSTONE
           </div>
           <div style={{ fontFamily: "'Barlow', sans-serif", fontSize: 11, color: 'var(--text-muted)', fontWeight: 500, marginTop: 1 }}>
-            by Celia Morán Saras
+            con tu entrenadora Celia
           </div>
         </div>
         <div onClick={() => setProfileOpen(true)} style={{ cursor: 'pointer' }}>
@@ -287,7 +289,7 @@ export default function AthleteView() {
       <nav className="glass-nav" style={{ display: 'flex', height: 'var(--nav-height)', flexShrink: 0, paddingBottom: 'env(safe-area-inset-bottom)' }}>
         {NAV.map(({ id, icon, label }) => (
           <button key={id} onClick={() => id === 'more' ? setMoreOpen(o => !o) : (setTabDir(TAB_ORDER.indexOf(id) >= TAB_ORDER.indexOf(tab) ? 1 : -1), setTabKey(k=>k+1), setTab(id), setMoreOpen(false))}
-            style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 3, color: (id === 'more' ? moreOpen : tab===id) ? 'var(--accent)' : 'var(--text-muted)', fontFamily: "'Barlow Condensed', sans-serif", fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.3px', background: 'none', border: 'none', borderTop: (id === 'more' ? moreOpen : tab===id) ? '2px solid var(--accent)' : '2px solid transparent', cursor: 'pointer', transition: 'color 0.15s' }}>
+            style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 3, color: (id === 'more' ? moreOpen : tab===id) ? 'var(--accent)' : 'var(--text-muted)', fontSize: 11, fontWeight: 700, background: 'none', border: 'none', borderTop: (id === 'more' ? moreOpen : tab===id) ? '2px solid var(--accent)' : '2px solid transparent', cursor: 'pointer', transition: 'color 0.15s' }}>
             <span style={{ position: 'relative', display: 'inline-block' }}>
               <Icon name={icon} size={24} />
               {id === 'messages' && unreadMessages > 0 && <Badge count={unreadMessages} />}
@@ -559,12 +561,11 @@ function AthleteHome({ athlete, athleteId, onOpenSession, onGoTo, onInstall }) {
         {refreshing && <span style={{ marginLeft: 6 }}>Actualizando...</span>}
       </div>
       {/* Hero con fecha — igual que el coach */}
-      <div className="page-hero" style={{ padding: '28px 20px 20px', background: `linear-gradient(160deg, ${athlete.color}12 0%, transparent 60%)` }}>
+      <div className="page-hero" style={{ padding: '28px 20px 20px', background: 'transparent', paddingBottom: 8 }}>
         <div style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 6 }}>
           {dayNames[now.getDay()]}, {now.getDate()} {monthNames[now.getMonth()]}
         </div>
-        <h1 style={{ fontSize: 36, lineHeight: 1.05, marginBottom: 0 }}>{greeting},<br />{athlete.name.split(' ')[0]} 👋</h1>
-        <div style={{ height: 3, width: 48, background: athlete.color, borderRadius: 2, marginTop: 14 }} />
+        <h1 style={{ fontSize: 30, lineHeight: 1.05, marginBottom: 0 }}>{greeting}, {athlete.name.split(' ')[0]}</h1>
       </div>
 
       <div className="page-content">
@@ -584,7 +585,7 @@ function AthleteHome({ athlete, athleteId, onOpenSession, onGoTo, onInstall }) {
             {todaySession ? (
               <div className="card" style={{ padding: '16px', borderLeft: `4px solid ${athlete.color}`, cursor: 'pointer' }} onClick={() => onOpenSession?.(todaySession)}>
                 <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginBottom: 14 }}>
-                  <div style={{ width: 48, height: 48, borderRadius: 14, background: `${athlete.color}18`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24, flexShrink: 0 }}>
+                  <div style={{ width: 48, height: 48, borderRadius: 14, background: `${TYPE_COLORS[todaySession.type] || athlete.color}18`, color: TYPE_COLORS[todaySession.type] || athlete.color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24, flexShrink: 0 }}>
                     {TYPE_ICONS[todaySession.type] || '📅'}
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
@@ -609,8 +610,8 @@ function AthleteHome({ athlete, athleteId, onOpenSession, onGoTo, onInstall }) {
                     catch { setAttended(!next) }
                   }}
                   style={{
-                    width: '100%', padding: '11px', borderRadius: 10, fontFamily: "'Barlow Condensed', sans-serif",
-                    fontWeight: 700, fontSize: 13, textTransform: 'uppercase', letterSpacing: '0.5px', cursor: 'pointer',
+                    width: '100%', padding: '11px', borderRadius: 10,
+                    fontWeight: 700, fontSize: 13, cursor: 'pointer',
                     border: `1.5px solid ${attended ? 'var(--success)' : athlete.color}`,
                     background: attended ? 'var(--success-dim)' : `${athlete.color}12`,
                     color: attended ? 'var(--success)' : athlete.color,
@@ -681,14 +682,14 @@ function AthleteHome({ athlete, athleteId, onOpenSession, onGoTo, onInstall }) {
                 setSavingCycle(false)
               }
               return (
-                <div className="card" style={{ padding: '14px 16px', background: '#FDF2F8', border: '1px solid #FCE7F3' }}>
-                  <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
-                    <span style={{ fontSize: 22 }}>🌸</span>
+                <div className="card" style={{ padding: '14px 16px' }}>
+                  <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+                    <span style={{ width: 36, height: 36, borderRadius: '50%', background: 'rgba(219,39,119,0.1)', color: '#DB2777', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><Icon name="drop" size={18} /></span>
                     <div style={{ flex: 1 }}>
-                      <div style={{ fontWeight: 800, fontSize: 14, color: '#9D174D' }}>
+                      <div style={{ fontWeight: 800, fontSize: 14, color: 'var(--text)' }}>
                         {lastCycle === null ? 'Registra tu ciclo' : '¿Te ha bajado la regla?'}
                       </div>
-                      <div style={{ fontSize: 12, color: '#BE185D', marginTop: 2, lineHeight: 1.5 }}>
+                      <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2, lineHeight: 1.5 }}>
                         {lastCycle === null
                           ? 'Así Celia puede tener en cuenta cómo te encuentras en cada fase.'
                           : `Han pasado ${daysSince} días desde tu último registro.`}
@@ -697,14 +698,14 @@ function AthleteHome({ athlete, athleteId, onOpenSession, onGoTo, onInstall }) {
                   </div>
                   <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
                     {lastCycle === null ? (
-                      <button onClick={() => onGoTo?.('health')} className="btn btn-sm" style={{ flex: 1, background: '#DB2777', color: '#fff' }}>Registrar</button>
+                      <button onClick={() => onGoTo?.('health')} className="btn btn-sm btn-primary" style={{ flex: 1 }}>Registrar</button>
                     ) : (
                       <>
-                        <button onClick={logToday} disabled={savingCycle} className="btn btn-sm" style={{ flex: 1, background: '#DB2777', color: '#fff' }}>{savingCycle ? 'Guardando...' : 'Sí, hoy'}</button>
-                        <button onClick={() => onGoTo?.('health')} className="btn btn-sm" style={{ flex: 1, background: '#fff', color: '#9D174D', border: '1px solid #FBCFE8' }}>Otro día</button>
+                        <button onClick={logToday} disabled={savingCycle} className="btn btn-sm btn-primary" style={{ flex: 1 }}>{savingCycle ? 'Guardando...' : 'Sí, hoy'}</button>
+                        <button onClick={() => onGoTo?.('health')} className="btn btn-sm btn-secondary" style={{ flex: 1 }}>Otro día</button>
                       </>
                     )}
-                    <button onClick={() => snooze(lastCycle === null ? 7 : 3)} className="btn btn-sm" style={{ background: 'none', color: '#9D174D' }}>{lastCycle === null ? 'Luego' : 'Aún no'}</button>
+                    <button onClick={() => snooze(lastCycle === null ? 7 : 3)} className="btn btn-sm" style={{ background: 'none', color: 'var(--text-muted)' }}>{lastCycle === null ? 'Luego' : 'Aún no'}</button>
                   </div>
                 </div>
               )
@@ -715,22 +716,15 @@ function AthleteHome({ athlete, athleteId, onOpenSession, onGoTo, onInstall }) {
 
             {/* 2. STATS DE LA SEMANA */}
             <div className="section-title" style={{ marginTop: 4 }}>Esta semana</div>
-            <div className="card" style={{ padding: '14px 16px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-                <div>
-                  <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 900, fontSize: 32, color: 'var(--text)', lineHeight: 1 }}>{weekDone}</span>
-                  <span style={{ fontSize: 16, color: 'var(--text-muted)', fontWeight: 500 }}>/{weekTotal}</span>
-                  <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>sesiones completadas</div>
+            <div className="card" style={{ padding: '16px', display: 'flex', alignItems: 'center', gap: 16 }}>
+              <WeekRing done={weekDone} total={weekTotal} size={92} />
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontWeight: 800, fontSize: 16 }}>
+                  {weekTotal === 0 ? 'Semana libre' : weekDone >= weekTotal ? '¡Semana completa!' : `Te ${weekTotal - weekDone === 1 ? 'queda 1 sesión' : `quedan ${weekTotal - weekDone} sesiones`}`}
                 </div>
-                <div style={{ textAlign: 'right' }}>
-                  <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 900, fontSize: 28, color: weekTotal > 0 && (weekDone/weekTotal) >= 0.8 ? 'var(--success)' : 'var(--text)', lineHeight: 1 }}>
-                    {weekTotal > 0 ? Math.round((weekDone/weekTotal)*100) : 0}<span style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-muted)' }}>%</span>
-                  </div>
-                  <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>adherencia</div>
+                <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 3, lineHeight: 1.4 }}>
+                  {weekTotal === 0 ? 'Celia aún no ha planificado sesiones esta semana.' : weekDone >= weekTotal ? 'Has hecho todo lo planificado. Descansa y recupera.' : `${Math.round((weekDone / weekTotal) * 100)} % de la semana hecho.`}
                 </div>
-              </div>
-              <div style={{ height: 5, background: 'var(--border)', borderRadius: 99 }}>
-                <div style={{ height: '100%', width: weekTotal > 0 ? `${Math.min((weekDone/weekTotal)*100,100)}%` : '0%', background: athlete.color, borderRadius: 99, transition: 'width 0.6s ease' }} />
               </div>
             </div>
 
@@ -1378,6 +1372,7 @@ function AthleteTrainingWithRPE({ athleteId, athleteName, initialSessionId, onSe
   const [savingPre, setSavingPre] = useState(false)
   const [saving, setSaving] = useState(false)
   const [attendanceMap, setAttendanceMap] = useState({})
+  const [celebrate, setCelebrate] = useState(null)
 
   const getSeenReplies = () => { try { return JSON.parse(localStorage.getItem('ns_seen_replies') || '[]') } catch { return [] } }
   const markReplyAsSeen = (sessionId) => {
@@ -1464,6 +1459,15 @@ function AthleteTrainingWithRPE({ athleteId, athleteName, initialSessionId, onSe
     setSaving(true)
     try {
       await RPE.set(rpeSheet.id, athleteId, { rpe: rpe || null, fatigue_post: fatiguePost || null, mood_post: moodPost || null })
+      // Celebración: anillo de la semana con esta sesión ya contada
+      try {
+        const now = new Date(); const mon = new Date(now); mon.setDate(now.getDate() - ((now.getDay() + 6) % 7))
+        const sun = new Date(mon); sun.setDate(mon.getDate() + 6)
+        const a = ymd(mon), b = ymd(sun)
+        const inWeek = sessions.filter(x => x.date >= a && x.date <= b && x.type !== 'rest_day')
+        const done = inWeek.filter(x => x.id === rpeSheet.id || attendanceMap[x.id] || x.ratings?.[athleteId]?.rpe != null).length
+        if (rpeSheet.date >= a && rpeSheet.date <= b) setCelebrate({ session: rpeSheet, rpe, weekDone: done, weekTotal: inWeek.length })
+      } catch { /* la celebración es opcional */ }
       setRpeSheet(null)
       setRpe(0); setFatiguePost(0); setMoodPost(0)
       haptic('success')
@@ -1529,7 +1533,6 @@ function AthleteTrainingWithRPE({ athleteId, athleteName, initialSessionId, onSe
   }
 
   const RPE_LABELS = ['','Muy fácil 😴','Fácil 🙂','Ligero 🙂','Moderado 😐','Algo duro 😐','Duro 😤','Muy duro 😤','Muy muy duro 🥵','Casi máximo 🔥','Máximo 🔥']
-  const RPE_COLORS = ['','var(--success)','var(--success)','var(--success)','var(--success)','var(--warning)','var(--warning)','var(--warning)','var(--error)','var(--error)','var(--error)']
 
   if (loading) return (
     <div className="page">
@@ -1560,7 +1563,7 @@ function AthleteTrainingWithRPE({ athleteId, athleteName, initialSessionId, onSe
               return (
                 <div key={s.id} className="card" style={{ padding: '14px 16px', cursor: 'pointer' }} onClick={() => setDetailSession(s)}>
                   <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
-                    <div style={{ width: 44, height: 44, borderRadius: 12, background: isToday ? 'var(--accent)' : `${color}15`, border: isToday ? 'none' : `1.5px solid ${color}30`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, flexShrink: 0 }}>
+                    <div style={{ width: 44, height: 44, borderRadius: 12, background: isToday ? 'var(--accent)' : `${color}15`, border: isToday ? 'none' : `1.5px solid ${color}30`, color: isToday ? '#fff' : color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, flexShrink: 0 }}>
                       {icon}
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
@@ -1588,12 +1591,12 @@ function AthleteTrainingWithRPE({ athleteId, athleteName, initialSessionId, onSe
                         background: attendanceMap[s.id] ? 'var(--success-dim)' : 'var(--bg)',
                         border: `1px solid ${attendanceMap[s.id] ? 'var(--success)' : 'var(--border)'}`,
                         color: attendanceMap[s.id] ? 'var(--success)' : 'var(--text-muted)',
-                        fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700, fontSize: 12,
-                        textTransform: 'uppercase', letterSpacing: '0.5px', cursor: 'pointer' }}>
+                        fontWeight: 700, fontSize: 12,
+                        letterSpacing: '0.5px', cursor: 'pointer' }}>
                       {attendanceMap[s.id] ? '✓ Realizada' : '¿Ya la realizaste?'}
                     </button>}
                     <button onClick={e => { e.stopPropagation(); setPreSheet(s); setFatiguePre(0) }}
-                      style={{ flex: 1, padding: '8px 12px', borderRadius: 10, background: 'var(--accent-dim)', color: 'var(--accent)', border: '1px solid var(--accent)', fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700, fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.5px', cursor: 'pointer' }}>
+                      style={{ flex: 1, padding: '8px 12px', borderRadius: 10, background: 'var(--accent-dim)', color: 'var(--accent)', border: '1px solid var(--accent)', fontWeight: 700, fontSize: 12, cursor: 'pointer' }}>
                       😴 ¿Cómo llegas?
                     </button>
                   </div>
@@ -1614,7 +1617,7 @@ function AthleteTrainingWithRPE({ athleteId, athleteName, initialSessionId, onSe
               return (
                 <div key={s.id} className="card" style={{ padding: '14px 16px', cursor: 'pointer' }} onClick={() => setDetailSession(s)}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                    <div style={{ width: 44, height: 44, borderRadius: 12, background: `${color}15`, border: `1.5px solid ${color}30`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, flexShrink: 0 }}>
+                    <div style={{ width: 44, height: 44, borderRadius: 12, background: `${color}15`, border: `1.5px solid ${color}30`, color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, flexShrink: 0 }}>
                       {icon}
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
@@ -1643,8 +1646,8 @@ function AthleteTrainingWithRPE({ athleteId, athleteName, initialSessionId, onSe
                       background: attended ? 'var(--success-dim)' : 'var(--bg)',
                       border: `1px solid ${attended ? 'var(--success)' : 'var(--border)'}`,
                       color: attended ? 'var(--success)' : 'var(--text-muted)',
-                      fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700, fontSize: 12,
-                      textTransform: 'uppercase', letterSpacing: '0.5px', cursor: 'pointer' }}>
+                      fontWeight: 700, fontSize: 12,
+                      letterSpacing: '0.5px', cursor: 'pointer' }}>
                     {attended ? '✓ Realicé esta sesión' : '¿Realizaste esta sesión?'}
                   </button>
                 </div>
@@ -1791,6 +1794,7 @@ function AthleteTrainingWithRPE({ athleteId, athleteName, initialSessionId, onSe
       )}
 
       {/* Sheet: valorar RPE */}
+      {celebrate && <Celebration {...celebrate} athleteName={athleteName} onClose={() => setCelebrate(null)} />}
       {rpeSheet && (
         <>
           <div className="overlay" onClick={() => setRpeSheet(null)} />
@@ -1806,11 +1810,9 @@ function AthleteTrainingWithRPE({ athleteId, athleteName, initialSessionId, onSe
                 <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 800, fontSize: 18, textTransform: 'uppercase' }}>{rpeSheet.title}</div>
                 <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 2 }}>{formatDate(rpeSheet.date)}</div>
               </div>
-              <ScaleRow label="💪 Esfuerzo percibido (RPE)" value={rpe} onChange={setRpe} colors={RPE_COLORS} labels={RPE_LABELS} />
-              <ScaleRow label="🥵 Cansancio al acabar" value={fatiguePost} onChange={setFatiguePost}
-                colors={['','var(--success)','var(--success)','var(--success)','var(--success)','var(--warning)','var(--warning)','var(--warning)','var(--error)','var(--error)','var(--error)']} />
-              <ScaleRow label="😊 Ánimo al salir" value={moodPost} onChange={setMoodPost}
-                colors={['','var(--error)','var(--error)','var(--warning)','var(--warning)','var(--warning)','var(--success)','var(--success)','var(--success)','var(--success)','var(--success)']} />
+              <ScaleRow label="Esfuerzo percibido (RPE)" hint="1 muy fácil · 10 máximo" value={rpe} onChange={setRpe} labels={RPE_LABELS} />
+              <ScaleRow label="Cansancio al acabar" hint="1 fresca · 10 agotada" value={fatiguePost} onChange={setFatiguePost} />
+              <ScaleRow label="Ánimo al salir" hint="1 muy bajo · 10 genial" value={moodPost} onChange={setMoodPost} reverse />
               <button className="btn btn-primary btn-full" onClick={saveRpe} disabled={!canSave || saving} style={{ marginTop: 8 }}>
                 {saving ? 'Guardando...' : 'Guardar valoración'}
               </button>
@@ -1883,32 +1885,39 @@ function AthleteSessionRow({ session, last }) {
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4, flexShrink: 0 }}>
         {isToday && <span className="badge badge-green" style={{ fontSize: 11 }}>HOY</span>}
-        <span style={{ fontSize: 18 }}>{icon}</span>
+        <span style={{ fontSize: 18, color: TYPE_COLORS[session.type] || 'var(--accent)' }}>{icon}</span>
       </div>
     </div>
   )
 }
 
-function ScaleRow({ label, value, onChange, colors, labels }) {
+function ScaleRow({ label, hint, value, onChange, labels, reverse = false }) {
+  // Tira de color de suave a intenso: se responde de un vistazo
+  const hue = (v) => reverse ? 10 + (v - 1) * 15 : 150 - (v - 1) * 15
   return (
-    <div style={{ marginBottom: 20 }}>
-      <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700, fontSize: 14, marginBottom: 10, textTransform: 'uppercase', letterSpacing: '0.5px' }}>{label}</div>
-      <div style={{ display: 'flex', gap: 6, justifyContent: 'space-between' }}>
-        {[1,2,3,4,5,6,7,8,9,10].map(v => (
-          <button key={v} onClick={() => onChange(v)}
-            style={{ flex: 1, height: 42, borderRadius: 10, fontSize: 15, fontWeight: 800,
-              border: `2px solid ${value === v ? colors[v] : 'var(--border)'}`,
-              background: value === v ? colors[v]+'25' : 'var(--bg)',
-              color: value === v ? colors[v] : 'var(--text-muted)',
-              cursor: 'pointer', fontFamily: "'Barlow Condensed', sans-serif",
-              transition: 'all 0.1s' }}>
-            {v}
-          </button>
-        ))}
+    <div style={{ marginBottom: 22 }}>
+      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 10, gap: 8 }}>
+        <div style={{ fontWeight: 800, fontSize: 15 }}>{label}</div>
+        {hint && <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{hint}</div>}
+      </div>
+      <div style={{ display: 'flex', gap: 4 }} role="radiogroup" aria-label={label}>
+        {[1,2,3,4,5,6,7,8,9,10].map(v => {
+          const on = value === v
+          return (
+            <button key={v} type="button" role="radio" aria-checked={on} onClick={() => onChange(v)}
+              style={{ flex: 1, height: 44, borderRadius: 10, fontSize: 15, fontWeight: 800, border: 'none',
+                background: on ? `hsl(${hue(v)} 62% 42%)` : `hsl(${hue(v)} 70% 50% / 0.14)`,
+                color: on ? '#fff' : `hsl(${hue(v)} 55% 32%)`,
+                transform: on ? 'scale(1.1)' : 'none', boxShadow: on ? '0 4px 12px rgba(0,0,0,0.15)' : 'none',
+                cursor: 'pointer', fontFamily: "'Barlow Condensed', sans-serif", transition: 'all 0.12s' }}>
+              {v}
+            </button>
+          )
+        })}
       </div>
       {value > 0 && labels && (
-        <div style={{ textAlign: 'center', fontSize: 13, color: colors[value], fontWeight: 600, marginTop: 6 }}>
-          {labels[value]}
+        <div style={{ textAlign: 'center', fontSize: 14, color: `hsl(${hue(value)} 55% 35%)`, fontWeight: 700, marginTop: 8 }}>
+          {String(labels[value]).replace(/\s*\p{Extended_Pictographic}\uFE0F?/gu, '')}
         </div>
       )}
     </div>

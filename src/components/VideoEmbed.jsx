@@ -49,8 +49,8 @@ export function VideoList({ videos = [] }) {
         return (
           <div key={i}>
             <button type="button" onClick={() => setOpen(isOpen ? null : i)} aria-expanded={isOpen}
-              style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 8, background: isOpen ? 'var(--card)' : '#E11D2A', border: isOpen ? '1px solid var(--border)' : 'none', color: isOpen ? 'var(--text)' : '#fff', padding: '10px 12px', minHeight: 44, borderRadius: 10, fontSize: 13, fontWeight: 800, cursor: 'pointer', textAlign: 'left' }}>
-              <span>{isOpen ? '▾' : '▶'}</span><span style={{ flex: 1 }}>{v.label || 'Ver vídeo'}</span>{isOpen && <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Cerrar</span>}
+              style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 8, background: 'var(--card)', border: '1px solid var(--border)', color: 'var(--text)', padding: '8px 12px', minHeight: 44, borderRadius: 12, fontSize: 14, fontWeight: 700, cursor: 'pointer', textAlign: 'left' }}>
+              <span style={{ width: 28, height: 28, borderRadius: '50%', background: isOpen ? 'var(--border)' : 'var(--accent-dim)', color: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 11 }}>{isOpen ? '▾' : '▶'}</span><span style={{ flex: 1 }}>{v.label || 'Ver vídeo'}</span>{isOpen && <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Cerrar</span>}
             </button>
             {isOpen && <div style={{ marginTop: 8 }}><YouTubeEmbed id={id} title={v.label || 'Vídeo'} /></div>}
           </div>

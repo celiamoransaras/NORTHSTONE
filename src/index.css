@@ -117,11 +117,10 @@ button {
   gap: 8px;
   padding: 14px 24px;
   border-radius: var(--radius-sm);
-  font-family: 'Barlow Condensed', sans-serif;
-  font-size: 16px;
+  font-family: inherit;
+  font-size: 15px;
   font-weight: 700;
-  letter-spacing: 0.5px;
-  text-transform: uppercase;
+  letter-spacing: 0;
   transition: all 0.2s ease;
   cursor: pointer;
   border: none;
@@ -223,11 +222,10 @@ textarea { resize: vertical; min-height: 88px; }
   align-items: center;
   padding: 4px 10px;
   border-radius: 8px;
-  font-family: 'Barlow Condensed', sans-serif;
+  font-family: inherit;
   font-size: 12px;
   font-weight: 700;
-  letter-spacing: 0.5px;
-  text-transform: uppercase;
+  letter-spacing: 0;
 }
 .badge-green { background: var(--success-dim); color: var(--success); }
 .badge-red { background: var(--error-dim); color: var(--error); }
@@ -514,11 +512,10 @@ textarea { resize: vertical; min-height: 88px; }
   flex-shrink: 0;
   padding: 8px 18px;
   border-radius: 10px;
-  font-family: 'Barlow Condensed', sans-serif;
+  font-family: inherit;
   font-size: 13px;
   font-weight: 700;
-  letter-spacing: 0.5px;
-  text-transform: uppercase;
+  letter-spacing: 0;
   background: var(--card);
   border: none;
   color: var(--text-muted);

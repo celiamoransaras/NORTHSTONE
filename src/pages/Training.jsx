@@ -441,7 +441,7 @@ export default function Training({ athleteId = null, coachView = false, embedded
             <div style={{ display: 'flex', gap: 6, overflowX: 'auto', paddingBottom: 4, scrollbarWidth: 'none' }}>
               <button
                 onClick={() => setFilterTypePersisted(null)}
-                style={{ flexShrink: 0, padding: '4px 12px', borderRadius: 20, fontSize: 12, fontWeight: 700, border: '1.5px solid var(--border)', background: !filterType ? 'var(--accent)' : 'var(--surface)', color: !filterType ? '#fff' : 'var(--text-muted)', cursor: 'pointer', fontFamily: "'Barlow Condensed', sans-serif", textTransform: 'uppercase', letterSpacing: '0.5px' }}
+                style={{ flexShrink: 0, padding: '4px 12px', borderRadius: 20, fontSize: 12, fontWeight: 700, border: '1.5px solid var(--border)', background: !filterType ? 'var(--accent)' : 'var(--surface)', color: !filterType ? '#fff' : 'var(--text-muted)', cursor: 'pointer' }}
               >Todos</button>
               {typesInList.map(type => {
                 const opt = TYPE_OPTS.find(t => t.value === type)
@@ -450,7 +450,7 @@ export default function Training({ athleteId = null, coachView = false, embedded
                   <button
                     key={type}
                     onClick={() => setFilterTypePersisted(active ? null : type)}
-                    style={{ flexShrink: 0, padding: '4px 12px', borderRadius: 20, fontSize: 12, fontWeight: 700, border: `1.5px solid ${active ? TYPE_COLORS[type] : 'var(--border)'}`, background: active ? TYPE_COLORS[type] : 'var(--surface)', color: active ? '#fff' : 'var(--text-muted)', cursor: 'pointer', fontFamily: "'Barlow Condensed', sans-serif", textTransform: 'uppercase', letterSpacing: '0.5px' }}
+                    style={{ flexShrink: 0, padding: '4px 12px', borderRadius: 20, fontSize: 12, fontWeight: 700, border: `1.5px solid ${active ? TYPE_COLORS[type] : 'var(--border)'}`, background: active ? TYPE_COLORS[type] : 'var(--surface)', color: active ? '#fff' : 'var(--text-muted)', cursor: 'pointer' }}
                   >{opt?.label || type}</button>
                 )
               })}
@@ -662,7 +662,7 @@ export default function Training({ athleteId = null, coachView = false, embedded
               {/* Botón plantillas */}
               {templates.length > 0 && (
                 <button type="button" onClick={() => setShowTemplates(s => !s)}
-                  style={{ width: '100%', padding: '10px 14px', borderRadius: 12, background: 'var(--accent-dim)', border: '1px solid var(--accent)', color: 'var(--accent)', fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700, fontSize: 13, textTransform: 'uppercase', letterSpacing: '0.5px', cursor: 'pointer', marginBottom: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                  style={{ width: '100%', padding: '10px 14px', borderRadius: 12, background: 'var(--accent-dim)', border: '1px solid var(--accent)', color: 'var(--accent)', fontWeight: 700, fontSize: 13, cursor: 'pointer', marginBottom: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
                   📋 Usar plantilla {showTemplates ? '▲' : '▼'}
                 </button>
               )}
@@ -819,7 +819,7 @@ export default function Training({ athleteId = null, coachView = false, embedded
               ))}
 
               <button type="button" onClick={saveAsTemplate}
-                style={{ width: '100%', padding: '10px 14px', borderRadius: 12, background: 'var(--bg)', border: '1px solid var(--border)', color: 'var(--text-muted)', fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 700, fontSize: 13, textTransform: 'uppercase', letterSpacing: '0.5px', cursor: 'pointer', marginTop: 8 }}>
+                style={{ width: '100%', padding: '10px 14px', borderRadius: 12, background: 'var(--bg)', border: '1px solid var(--border)', color: 'var(--text-muted)', fontWeight: 700, fontSize: 13, cursor: 'pointer', marginTop: 8 }}>
                 💾 Guardar como plantilla
               </button>
               <button className="btn btn-primary btn-full" onClick={save} disabled={saving} style={{ marginTop: 20 }}>

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Sessions } from '../lib/db'
 import { athleteLoad, loadFlags, loadStatus } from '../lib/load'
+import WeekRing from './WeekRing'
 
 // ─────────────────────────────────────────────
 // VISTA DE EQUIPO: todas las deportistas en una pantalla.
@@ -61,8 +62,6 @@ export default function TeamPanel({ athleteMap }) {
       </div>
       <div className="card" style={{ padding: 0 }}>
         {shown.map(({ a, l, flags }, i) => {
-          const pct = l.weekAssigned ? Math.round(l.weekDone / l.weekAssigned * 100) : 0
-          const barColor = pct === 100 ? 'var(--success)' : pct >= 50 ? 'var(--warning)' : 'var(--error)'
           return (
             <button key={a.id} type="button" onClick={() => navigate('/athletes', { state: { openAthlete: a.id } })}
               aria-label={`Abrir ficha de ${a.name}`}
@@ -80,6 +79,7 @@ export default function TeamPanel({ athleteMap }) {
                     {l.avgRpe != null && <> · esfuerzo {l.avgRpe.toFixed(1).replace('.', ',')}/10</>}
                   </div>
                 </div>
+                <WeekRing done={l.weekDone} total={l.weekAssigned} size={36} label={false} />
                 {(() => { const st = loadStatus(l); return (
                   <div style={{ textAlign: 'right', width: 110, flexShrink: 0 }}>
                     <div style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase' }}>Carga</div>
@@ -87,11 +87,8 @@ export default function TeamPanel({ athleteMap }) {
                     {l.ratio != null && <div style={{ fontSize: 10, color: 'var(--text-muted)' }}>{st.detail}</div>}
                   </div>) })()}
               </div>
-              <div style={{ height: 4, background: 'var(--bg)', borderRadius: 2, marginTop: 8 }}>
-                <div style={{ height: '100%', width: `${pct}%`, background: barColor, borderRadius: 2 }} />
-              </div>
               {flags.length > 0 && (
-                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 8 }}>
+                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 8, paddingLeft: 42 }}>
                   {flags.slice(0, 3).map(f => <span key={f.text} style={pill(FLAG_COLOR[f.level])}>{f.text}</span>)}
                 </div>
               )}

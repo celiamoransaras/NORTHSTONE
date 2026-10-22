@@ -85,7 +85,7 @@ export default function ZonesPanel({ athleteId, athleteName = '', isCoach = fals
       <div style={{ display: 'flex', background: 'var(--card)', borderRadius: 12, padding: 4, gap: 4, border: embedded ? '1px solid var(--border)' : 'none' }}>
         {[{ id: 'zones', label: '🫀 Ritmos y zonas' }, { id: 'rm', label: '🏋️ Fuerza · RM' }].map(t => (
           <button key={t.id} onClick={() => setTab(t.id)}
-            style={{ flex: 1, padding: '9px 0', borderRadius: 9, border: 'none', cursor: 'pointer', fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 800, fontSize: 14, textTransform: 'uppercase', letterSpacing: '0.4px', background: tab === t.id ? 'var(--accent)' : 'transparent', color: tab === t.id ? '#fff' : 'var(--text-muted)' }}>
+            style={{ flex: 1, padding: '9px 0', borderRadius: 9, border: 'none', cursor: 'pointer', fontWeight: 800, fontSize: 14, background: tab === t.id ? 'var(--accent)' : 'transparent', color: tab === t.id ? '#fff' : 'var(--text-muted)' }}>
             {t.label}
           </button>
         ))}

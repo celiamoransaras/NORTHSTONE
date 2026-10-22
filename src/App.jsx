@@ -127,9 +127,6 @@ function CoachApp() {
           <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 900, fontSize: 20, letterSpacing: '1px', textTransform: 'uppercase', lineHeight: 1.1 }}>
             <span style={{ color: 'var(--accent)' }}>N</span>ORTHSTONE
           </div>
-          <div style={{ fontFamily: "'Barlow', sans-serif", fontSize: 11, color: 'var(--text-muted)', fontWeight: 500, letterSpacing: '0.3px', marginTop: 1 }}>
-            by Celia Morán Saras
-          </div>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <button
@@ -305,6 +302,12 @@ function ScrollTopButton() {
     document.addEventListener('scroll', onScroll, true)
     return () => document.removeEventListener('scroll', onScroll, true)
   }, [])
+  // Al cambiar de pestaña dentro de la misma pantalla no hay evento de scroll: lo comprobamos cada poco
+  useEffect(() => {
+    if (!target) return
+    const t = setInterval(() => { if (!target.isConnected || target.scrollTop < 600 || target.offsetParent === null) setTarget(null) }, 700)
+    return () => clearInterval(t)
+  }, [target])
   if (!target || !target.isConnected) return null
   return (
     <button type="button" aria-label="Volver arriba" onClick={() => { target.scrollTo({ top: 0, behavior: 'smooth' }); setTarget(null) }}
