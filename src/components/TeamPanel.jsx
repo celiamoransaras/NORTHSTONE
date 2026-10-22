@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Sessions } from '../lib/db'
-import { athleteLoad, loadFlags, ratioLabel, ratioColor, fmtRatio } from '../lib/load'
+import { athleteLoad, loadFlags, loadStatus } from '../lib/load'
 
 // ─────────────────────────────────────────────
 // VISTA DE EQUIPO: todas las deportistas en una pantalla.
@@ -12,21 +12,11 @@ import { athleteLoad, loadFlags, ratioLabel, ratioColor, fmtRatio } from '../lib
 const pill = (color) => ({ fontSize: 11, fontWeight: 800, padding: '2px 8px', borderRadius: 8, color, background: `color-mix(in srgb, ${color} 14%, transparent)`, whiteSpace: 'nowrap' })
 const FLAG_COLOR = { 3: 'var(--error)', 2: 'var(--warning)', 1: 'var(--text-muted)' }
 
-function Spark({ weeks }) {
-  const max = Math.max(...weeks.map(w => w.load), 1)
-  return (
-    <div style={{ display: 'flex', alignItems: 'flex-end', gap: 2, height: 22, width: 64 }} aria-hidden="true">
-      {weeks.map(w => (
-        <div key={w.start} style={{ flex: 1, height: Math.max(2, (w.load / max) * 22), borderRadius: 2, background: w.current ? 'var(--accent)' : 'var(--border)' }} />
-      ))}
-    </div>
-  )
-}
-
 export default function TeamPanel({ athleteMap }) {
   const navigate = useNavigate()
   const [sessions, setSessions] = useState(null)
   const [onlyAlerts, setOnlyAlerts] = useState(false)
+  const [help, setHelp] = useState(false)
 
   useEffect(() => { Sessions.getAll().then(setSessions).catch(() => setSessions([])) }, [])
 
@@ -86,16 +76,16 @@ export default function TeamPanel({ athleteMap }) {
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontWeight: 700, fontSize: 14, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{a.name}</div>
                   <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 1 }}>
-                    {l.weekDone}/{l.weekAssigned} esta semana
-                    {l.avgRpe != null && <> · RPE {l.avgRpe.toFixed(1).replace('.', ',')}</>}
-                    {' · '}carga 7 d {l.acute.toLocaleString('es-ES')}
+                    {l.weekDone}/{l.weekAssigned} hechas
+                    {l.avgRpe != null && <> · esfuerzo {l.avgRpe.toFixed(1).replace('.', ',')}/10</>}
                   </div>
                 </div>
-                <Spark weeks={l.weeks} />
-                <div style={{ textAlign: 'right', minWidth: 56 }}>
-                  <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 900, fontSize: 16, color: ratioColor(l.ratio) }}>{fmtRatio(l.ratio)}</div>
-                  <div style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase' }}>{ratioLabel(l.ratio) || 'Sin datos'}</div>
-                </div>
+                {(() => { const st = loadStatus(l); return (
+                  <div style={{ textAlign: 'right', width: 110, flexShrink: 0 }}>
+                    <div style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase' }}>Carga</div>
+                    <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: l.ratio == null ? 600 : 900, fontSize: l.ratio == null ? 13 : 17, color: st.color, lineHeight: 1.15 }}>{l.ratio == null ? 'Sin comparar aún' : st.word}</div>
+                    {l.ratio != null && <div style={{ fontSize: 10, color: 'var(--text-muted)' }}>{st.detail}</div>}
+                  </div>) })()}
               </div>
               <div style={{ height: 4, background: 'var(--bg)', borderRadius: 2, marginTop: 8 }}>
                 <div style={{ height: '100%', width: `${pct}%`, background: barColor, borderRadius: 2 }} />
@@ -109,9 +99,22 @@ export default function TeamPanel({ athleteMap }) {
           )
         })}
       </div>
-      <div style={{ fontSize: 11, color: 'var(--text-muted)', lineHeight: 1.5, padding: '0 4px 6px' }}>
-        Carga = RPE × minutos. El número de la derecha es la carga de los últimos 7 días frente a la media de las 4 últimas semanas: entre 0,8 y 1,3 es lo habitual; por encima de 1,5, pico de carga. Aparece cuando las 3 semanas anteriores tienen RPE.
-      </div>
+      <button type="button" onClick={() => setHelp(h => !h)}
+        style={{ background: 'none', border: 'none', color: 'var(--accent)', fontWeight: 700, fontSize: 13, cursor: 'pointer', padding: '0 4px 6px', textAlign: 'left', fontFamily: 'inherit' }}>
+        {help ? '▴ Cerrar' : 'ⓘ ¿Qué es la carga?'}
+      </button>
+      {help && (
+        <div className="card" style={{ padding: '14px 16px', fontSize: 13, lineHeight: 1.55 }}>
+          <div style={{ fontWeight: 800, marginBottom: 6 }}>La carga mide cuánto ha entrenado: tiempo × esfuerzo</div>
+          <div>Cada sesión suma sus minutos por el esfuerzo que marcó la deportista (RPE del 1 al 10). Ejemplo: 60 min a esfuerzo 6 = 360.</div>
+          <div style={{ marginTop: 8 }}>La app compara sus últimos 7 días con su media de las 4 últimas semanas:</div>
+          <div style={{ marginTop: 4 }}><b style={{ color: 'var(--success)' }}>Normal</b>: entrena como siempre.</div>
+          <div><b style={{ color: 'var(--warning)' }}>Alta</b>: un 30–50 % más de lo habitual. Vigila el cansancio.</div>
+          <div><b style={{ color: 'var(--error)' }}>Muy alta</b>: más de un 50 % por encima. Es cuando más lesiones aparecen; plantéate bajar.</div>
+          <div><b>Baja</b>: menos de lo habitual (descarga, viaje o lesión).</div>
+          <div style={{ marginTop: 8, color: 'var(--text-muted)' }}>Se activa cuando la deportista lleva 3 semanas valorando el RPE de sus sesiones.</div>
+        </div>
+      )}
     </>
   )
 }

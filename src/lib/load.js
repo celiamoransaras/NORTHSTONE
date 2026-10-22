@@ -62,20 +62,33 @@ export function athleteLoad(sessions = [], athleteId, today = ymd(new Date())) {
   return { acute, chronic, ratio, weekAssigned: week.length, weekDone: weekDone.length, missed: missed.length, avgRpe, lastDone, daysSince, unrated, weeks, assignedTotal: mine.length }
 }
 
+// "+85 % sobre su media" / "30 % menos que su media"
+export const pctVsAvg = (r) => {
+  const p = Math.round((r - 1) * 100)
+  return p >= 0 ? `+${p} % sobre su media` : `${-p} % menos que su media`
+}
+
+// Lectura en palabras de la carga de la semana frente a su media de 4 semanas
+export function loadStatus(l) {
+  const r = l?.ratio
+  if (r == null) return { word: 'Aún sin comparar', detail: 'Necesita 3 semanas valorando el RPE', color: 'var(--text-muted)' }
+  if (r > 1.5) return { word: 'Muy alta', detail: pctVsAvg(r), color: 'var(--error)' }
+  if (r > 1.3) return { word: 'Alta', detail: pctVsAvg(r), color: 'var(--warning)' }
+  if (r < 0.8) return { word: 'Baja', detail: pctVsAvg(r), color: 'var(--text-muted)' }
+  return { word: 'Normal', detail: 'Parecida a su media', color: 'var(--success)' }
+}
+
 // Avisos para la entrenadora, del más grave al más leve
 export function loadFlags(l) {
   const out = []
-  if (l.ratio != null && l.ratio > 1.5) out.push({ level: 3, text: `Pico de carga ×${l.ratio.toFixed(1).replace('.', ',')}` })
-  else if (l.ratio != null && l.ratio > 1.3) out.push({ level: 2, text: 'Carga subiendo rápido' })
-  if (l.avgRpe != null && l.avgRpe >= 8.5) out.push({ level: 2, text: `RPE muy alto (${l.avgRpe.toFixed(1).replace('.', ',')})` })
+  if (l.ratio != null && l.ratio > 1.5) out.push({ level: 3, text: 'Riesgo: entrena mucho más de lo habitual' })
+  else if (l.ratio != null && l.ratio > 1.3) out.push({ level: 2, text: 'Entrena más de lo habitual' })
+  if (l.avgRpe != null && l.avgRpe >= 8.5) out.push({ level: 2, text: `Esfuerzo muy alto (${l.avgRpe.toFixed(1).replace('.', ',')}/10)` })
   if (l.missed >= 2) out.push({ level: 2, text: `${l.missed} sesiones sin hacer en 7 días` })
   else if (l.missed === 1) out.push({ level: 1, text: '1 sesión sin hacer' })
   if (l.assignedTotal > 0 && l.daysSince != null && l.daysSince >= 5) out.push({ level: 2, text: `${l.daysSince} días sin registrar` })
-  if (l.ratio != null && l.ratio < 0.8) out.push({ level: 1, text: 'Carga más baja de lo habitual' })
-  if (l.unrated >= 2) out.push({ level: 1, text: `${l.unrated} sesiones sin RPE` })
+  if (l.ratio != null && l.ratio < 0.8) out.push({ level: 1, text: 'Entrena menos de lo habitual' })
+  if (l.unrated >= 2) out.push({ level: 1, text: `${l.unrated} sesiones sin valorar el esfuerzo` })
   return out.sort((a, b) => b.level - a.level)
 }
 
-export const ratioLabel = (r) => r == null ? null : r > 1.5 ? 'Pico' : r > 1.3 ? 'Subiendo' : r < 0.8 ? 'Baja' : 'Estable'
-export const ratioColor = (r) => r == null ? 'var(--text-muted)' : r > 1.5 ? 'var(--error)' : r > 1.3 ? 'var(--warning)' : r < 0.8 ? 'var(--text-muted)' : 'var(--success)'
-export const fmtRatio = (r) => r == null ? '–' : r.toFixed(2).replace('.', ',')

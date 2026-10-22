@@ -10,7 +10,7 @@ import { ExerciseProgress } from '../components/WorkoutLog'
 import { haptic } from '../lib/haptic'
 import { sendPushToCoach } from '../lib/pushNotifications'
 import { FEATURES } from '../lib/constants'
-import { athleteLoad, ratioLabel, ratioColor, fmtRatio } from '../lib/load'
+import { athleteLoad, loadStatus } from '../lib/load'
 
 // ─────────────────────────────────────────────
 // INFORME MENSUAL
@@ -597,13 +597,14 @@ function LoadChart({ sessions, athleteId }) {
         <div>
           <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 800, fontSize: 16, textTransform: 'uppercase', marginBottom: 4 }}>Carga semanal</div>
           <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 16 }}>
-            {hasLoad ? 'RPE × minutos de las sesiones hechas · últimas 8 semanas' : 'Sesiones hechas por semana · valora el RPE para ver la carga'}
+            {hasLoad ? 'Cuánto se ha entrenado cada semana: minutos × esfuerzo (RPE). Barra más alta = semana más dura.' : 'Sesiones hechas por semana · valora el esfuerzo (RPE) para ver la carga'}
           </div>
         </div>
         {l.ratio != null && (
           <div style={{ textAlign: 'right', flexShrink: 0 }}>
-            <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 900, fontSize: 20, color: ratioColor(l.ratio) }}>{fmtRatio(l.ratio)}</div>
-            <div style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase' }}>Aguda:crónica · {ratioLabel(l.ratio)}</div>
+            <div style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase' }}>Esta semana</div>
+            <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 900, fontSize: 20, color: loadStatus(l).color }}>{loadStatus(l).word}</div>
+            <div style={{ fontSize: 10, color: 'var(--text-muted)' }}>{loadStatus(l).detail}</div>
           </div>
         )}
       </div>
