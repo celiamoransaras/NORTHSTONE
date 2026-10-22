@@ -9,6 +9,7 @@ import Icon from './components/Icon'
 import ThemeToggle from './components/ThemeToggle'
 import { InstallGuide } from './components/InstallGuide'
 import { isStandalone } from './lib/install'
+import { isDemoMode, enableDemoMode, disableDemoMode } from './lib/demoMode'
 
 const Dashboard  = lazy(() => import('./pages/Dashboard'))
 const Athletes   = lazy(() => import('./pages/Athletes'))
@@ -171,6 +172,7 @@ function CoachApp() {
 
       {/* Botón flotante: acciones rápidas */}
       <ScrollTopButton />
+      <DemoBanner />
 
       {location.pathname !== '/messages' && !location.pathname.startsWith('/training') && (
         <>
@@ -220,6 +222,7 @@ function CoachApp() {
               })}
             </div>
             <ThemeToggle />
+            <DemoToggle />
             {!isStandalone() && (
               <button className="btn btn-secondary btn-full" style={{ marginTop: 12 }} onClick={() => { setMoreOpen(false); setInstallOpen(true) }}>
                 <Icon name="phone" size={18} /> Instalar la app
@@ -284,6 +287,7 @@ function AppContent() {
         <AthleteView />
       </Suspense>
       <ScrollTopButton />
+      <DemoBanner />
     </ErrorBoundary>
   )
 }
@@ -313,6 +317,43 @@ function ScrollTopButton() {
     <button type="button" aria-label="Volver arriba" onClick={() => { target.scrollTo({ top: 0, behavior: 'smooth' }); setTarget(null) }}
       style={{ position: 'fixed', left: '50%', transform: 'translateX(-50%)', bottom: 'calc(var(--nav-height) + env(safe-area-inset-bottom) + 14px)', zIndex: 2500, padding: '8px 16px', minHeight: 40, borderRadius: 20, border: '1px solid var(--border)', background: 'var(--card)', color: 'var(--text)', boxShadow: 'var(--shadow-md)', fontWeight: 800, fontSize: 13, cursor: 'pointer' }}>
       ↑ Arriba
+    </button>
+  )
+}
+
+// Modo demo: enseñar la app solo con deportistas de ejemplo (en este dispositivo)
+function DemoToggle() {
+  const toast = useToast()
+  const on = isDemoMode()
+  const [busy, setBusy] = useState(false)
+  const toggle = async () => {
+    setBusy(true)
+    try {
+      if (on) disableDemoMode()
+      else await enableDemoMode(supabase)
+      window.location.reload()
+    } catch (e) { toast('No se pudo activar: ' + (e.message || e), 'error'); setBusy(false) }
+  }
+  return (
+    <button type="button" onClick={toggle} disabled={busy} className="btn btn-secondary btn-full" style={{ marginTop: 12, justifyContent: 'space-between' }}>
+      <span style={{ textAlign: 'left' }}>
+        <span style={{ display: 'block' }}>Modo demo</span>
+        <span style={{ display: 'block', fontSize: 12, fontWeight: 500, color: 'var(--text-muted)' }}>{on ? 'Activo: solo se ven las deportistas de ejemplo' : 'Para enseñar la app sin mostrar a tus clientas'}</span>
+      </span>
+      <span style={{ width: 44, height: 26, borderRadius: 13, background: on ? 'var(--accent)' : 'var(--border)', position: 'relative', flexShrink: 0, transition: 'background 0.2s' }}>
+        <span style={{ position: 'absolute', top: 3, left: on ? 21 : 3, width: 20, height: 20, borderRadius: '50%', background: '#fff', transition: 'left 0.2s' }} />
+      </span>
+    </button>
+  )
+}
+
+// Aviso visible mientras el modo demo está activo
+export function DemoBanner() {
+  if (!isDemoMode()) return null
+  return (
+    <button type="button" onClick={() => { disableDemoMode(); window.location.reload() }}
+      style={{ position: 'fixed', top: 'calc(env(safe-area-inset-top, 0px) + 6px)', left: '50%', transform: 'translateX(-50%)', zIndex: 3000, padding: '4px 12px', borderRadius: 12, border: 'none', background: 'var(--accent)', color: '#fff', fontSize: 11, fontWeight: 800, cursor: 'pointer', boxShadow: 'var(--shadow-md)' }}>
+      Modo demo · salir
     </button>
   )
 }
