@@ -23,10 +23,10 @@ export default function GoalCountdown({ goal, color = 'var(--accent)', onClick }
   const unit = days < 29 ? (days === 1 ? 'día' : 'días') : 'semanas'
   return (
     <div className="card" onClick={onClick} role={onClick ? 'button' : undefined}
-      style={{ padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 14, cursor: onClick ? 'pointer' : 'default', border: `1.5px solid ${color}40`, background: `linear-gradient(135deg, ${color}10, transparent)` }}>
+      style={{ padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 14, cursor: onClick ? 'pointer' : 'default', }}>
       <div style={{ minWidth: 62, textAlign: 'center', flexShrink: 0 }}>
         {days === 0
-          ? <div style={{ fontSize: 34, lineHeight: 1 }}>🔥</div>
+          ? <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 900, fontSize: 30, lineHeight: 1, color }}>HOY</div>
           : <>
               <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 900, fontSize: 36, lineHeight: 1, color }}>{big}</div>
               <div style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.6px', color: 'var(--text-muted)' }}>{unit}</div>
@@ -34,7 +34,7 @@ export default function GoalCountdown({ goal, color = 'var(--accent)', onClick }
       </div>
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontSize: 12, fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.8px' }}>
-          {goalIcon(goal.title)} {days === 0 ? 'Hoy es el día' : 'Tu próximo objetivo'}
+          {days === 0 ? 'Hoy es el día' : 'Tu próximo objetivo'}
         </div>
         <div style={{ fontWeight: 800, fontSize: 15, marginTop: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{goal.title}</div>
         <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 1 }}>{formatGoalDate(goal.deadline)}</div>

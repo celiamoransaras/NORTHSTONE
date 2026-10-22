@@ -583,7 +583,7 @@ function AthleteHome({ athlete, athleteId, onOpenSession, onGoTo, onInstall }) {
             {/* 1. SESIÓN DE HOY — lo más importante */}
             <div className="section-title">Hoy</div>
             {todaySession ? (
-              <div className="card" style={{ padding: '16px', borderLeft: `4px solid ${athlete.color}`, cursor: 'pointer' }} onClick={() => onOpenSession?.(todaySession)}>
+              <div className="card" style={{ padding: '16px', cursor: 'pointer' }} onClick={() => onOpenSession?.(todaySession)}>
                 <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginBottom: 14 }}>
                   <div style={{ width: 48, height: 48, borderRadius: 14, background: `${TYPE_COLORS[todaySession.type] || athlete.color}18`, color: TYPE_COLORS[todaySession.type] || athlete.color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24, flexShrink: 0 }}>
                     {TYPE_ICONS[todaySession.type] || '📅'}
@@ -634,15 +634,15 @@ function AthleteHome({ athlete, athleteId, onOpenSession, onGoTo, onInstall }) {
             {todaySession && (() => {
               const rated = todaySession.ratings?.[athleteId]?.rpe != null
               const steps = [
-                { icon: '📝', label: 'Cómo estás', done: wellnessDone, action: () => setShowWellness(true) },
-                { icon: TYPE_ICONS[todaySession.type] || '🏋️', label: 'Entreno', done: attended, action: () => onOpenSession?.(todaySession) },
-                { icon: '⭐', label: 'Valorar', done: rated, action: () => onOpenSession?.(todaySession) },
+                { icon: <Icon name="pencil" size={20} />, label: 'Cómo estás', done: wellnessDone, action: () => setShowWellness(true) },
+                { icon: <span style={{ fontSize: 20 }}>{TYPE_ICONS[todaySession.type] || <Icon name="dumbbell" size={20} />}</span>, label: 'Entreno', done: attended, action: () => onOpenSession?.(todaySession) },
+                { icon: <Icon name="target" size={20} />, label: 'Valorar', done: rated, action: () => onOpenSession?.(todaySession) },
               ]
               const next = steps.findIndex(st => !st.done)
               return (
                 <div className="card" style={{ padding: '12px 14px' }}>
                   <div style={{ fontSize: 12, fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: 10 }}>
-                    {next === -1 ? '🎉 Día completado' : `Tu día · paso ${next + 1} de 3`}
+                    {next === -1 ? 'Día completado' : `Tu día · paso ${next + 1} de 3`}
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                     {steps.map((st, i) => (
@@ -651,7 +651,7 @@ function AthleteHome({ athlete, athleteId, onOpenSession, onGoTo, onInstall }) {
                           style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, padding: '10px 4px', borderRadius: 12, cursor: 'pointer',
                             border: `1.5px solid ${st.done ? 'var(--success)' : i === next ? athlete.color : 'var(--border)'}`,
                             background: st.done ? 'var(--success-dim)' : i === next ? `${athlete.color}12` : 'var(--bg)' }}>
-                          <span style={{ fontSize: 20 }}>{st.done ? '✅' : st.icon}</span>
+                          <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 22 }}>{st.done ? <Icon name="check" size={22} strokeWidth={2.6} /> : st.icon}</span>
                           <span style={{ fontSize: 12, fontWeight: 700, color: st.done ? 'var(--success)' : i === next ? athlete.color : 'var(--text-muted)' }}>{st.label}</span>
                         </button>
                         {i < steps.length - 1 && <span style={{ color: 'var(--text-dim)', fontSize: 12 }}>›</span>}
@@ -712,7 +712,7 @@ function AthleteHome({ athlete, athleteId, onOpenSession, onGoTo, onInstall }) {
             })()}
 
             {/* CUENTA ATRÁS AL PRÓXIMO OBJETIVO */}
-            {nextGoal && <GoalCountdown goal={nextGoal} color={athlete?.color || 'var(--accent)'} onClick={() => onGoTo?.('progress')} />}
+            {nextGoal && <GoalCountdown goal={nextGoal} color="var(--accent)" onClick={() => onGoTo?.('progress')} />}
 
             {/* 2. STATS DE LA SEMANA */}
             <div className="section-title" style={{ marginTop: 4 }}>Esta semana</div>
